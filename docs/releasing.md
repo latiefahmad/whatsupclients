@@ -71,18 +71,22 @@ satu rilis itu secara manual.
 
 ## Membuat rilis
 
-1. Commit dan push source beserta workflow ke repository GitHub.
-2. Pada commit yang akan dirilis, buat dan push tag versi baru, misalnya:
+1. Tulis section versi baru di `CHANGELOG.md` (paling atas, `## [vX.Y.Z] - YYYY-MM-DD`).
+   Workflow menerbitkannya verbatim sebagai release notes, dan gagal kalau
+   section-nya tidak ada — jadi changelog selalu ditulis sebelum tag.
+2. Commit dan push source beserta workflow ke repository GitHub.
+3. Pada commit yang akan dirilis, buat dan push tag versi baru, misalnya:
 
    ```sh
    git tag -a v1.0.0 -m "WhatsUpClients v1.0.0"
    git push origin v1.0.0
    ```
 
-3. Setelah kedua build berhasil, workflow langsung membuat **release yang
-   dipublikasikan** dengan semua file di atas dan release notes otomatis.
-   Aplikasi menawarkannya sebagai update begitu rilis terbit. Push tag berarti
-   langsung mengirim update ke pengguna, jadi periksa dulu sebelum push tag.
+4. Setelah kedua build berhasil, workflow langsung membuat **release yang
+   dipublikasikan** dengan semua file di atas dan isi `CHANGELOG.md` sebagai
+   release notes. Aplikasi menawarkannya sebagai update begitu rilis terbit.
+   Push tag berarti langsung mengirim update ke pengguna, jadi periksa dulu
+   sebelum push tag.
 
 Hanya job release yang memiliki izin `contents: write`. Kebijakan
 repository/organisasi harus mengizinkan GitHub Actions membuat release.

@@ -262,6 +262,22 @@ jobs:
           go mod init signrelease
           go run . "$GITHUB_WORKSPACE/dist/SHA256SUMS"
 
+      # The release notes come from CHANGELOG.md: the section headed
+      # "## [vX.Y.Z]" is published verbatim as the release body, so a
+      # release without a changelog entry fails here instead of shipping
+      # empty notes.
+      - name: Extract release notes
+        run: |
+          awk -v ver="${{ github.ref_name }}" '
+            index($0, "## [" ver "]") == 1 { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > dist/release_notes.md
+          if [ ! -s dist/release_notes.md ]; then
+            echo "CHANGELOG.md has no section for ${{ github.ref_name }}" >&2
+            exit 1
+          fi
+
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -293,7 +309,7 @@ jobs:
               dist/SHA256SUMS \
               dist/SHA256SUMS.sig \
               --verify-tag \
-              --generate-notes \
+              --notes-file dist/release_notes.md \
               --title "WhatsUpClients $RELEASE_TAG"
 
           fi
