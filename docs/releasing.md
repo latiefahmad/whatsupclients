@@ -74,17 +74,16 @@ satu rilis itu secara manual.
    git push origin v1.0.0
    ```
 
-3. Setelah kedua build berhasil, workflow membuat **draft release** dengan semua
-   file di atas dan release notes otomatis.
-4. Buka **Releases**, periksa draft, sunting catatan rilis (dan tandai prerelease
-   bila diperlukan), lalu pilih **Publish release**. Baru setelah itu aplikasi
-   menawarkannya sebagai update.
+3. Setelah kedua build berhasil, workflow langsung membuat **release yang
+   dipublikasikan** dengan semua file di atas dan release notes otomatis.
+   Aplikasi menawarkannya sebagai update begitu rilis terbit. Push tag berarti
+   langsung mengirim update ke pengguna, jadi periksa dulu sebelum push tag.
 
 Hanya job release yang memiliki izin `contents: write`. Kebijakan
 repository/organisasi harus mengizinkan GitHub Actions membuat release.
 
-Menjalankan ulang run tag memperbarui aset selama release masih draft. Aset
-release yang telah dipublikasikan tidak ditimpa; gunakan tag versi baru.
+Menjalankan ulang run tag tidak menimpa aset yang sudah terbit (workflow
+menolak mengganti aset release yang published); gunakan tag versi baru.
 Run manual dan push branch hanya menghasilkan artefak, tanpa membuat release.
 
 Untuk memeriksa unduhan di Linux, simpan file dan `SHA256SUMS` dalam satu
