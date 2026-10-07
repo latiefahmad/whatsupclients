@@ -9,6 +9,18 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.2.1] - 2026-10-07
+
+### 🔄 Updates
+
+- **Fixed automatic updates** — v1.1.0 and v1.2.0 could not update themselves
+  because the releases were signed with a key the app does not trust. This
+  release is signed correctly, so Check for updates (and the automatic offer)
+  work again. No app changes besides the fix; CI now refuses to sign with a
+  mismatched key.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.2.0...v1.2.1
+
 ## [v1.2.0] - 2026-10-07
 
 ### ❤️ Donate
