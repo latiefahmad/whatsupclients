@@ -9,6 +9,17 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.2.2] - 2026-10-07
+
+### 🔄 Updates
+
+- **Faster update discovery** — the silent background check now runs every 12
+  hours (was 24), so a new release is offered the same day even when the app
+  stays running. The offer itself is unchanged: once per version, Update now
+  or Later, your choice.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.2.1...v1.2.2
+
 ## [v1.2.1] - 2026-10-07
 
 ### 🔄 Updates

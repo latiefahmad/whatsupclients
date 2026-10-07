@@ -23,7 +23,7 @@ const prefUpdateSkipped = "update_skipped"
 // sync settle; updateRecheck repeats it while the app runs.
 const (
 	updateFirstCheck = 30 * time.Second
-	updateRecheck    = 24 * time.Hour
+	updateRecheck    = 12 * time.Hour
 )
 
 // updateStep is where an update stands. Nothing happens until the user
