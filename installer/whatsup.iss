@@ -1,6 +1,6 @@
 ; Inno Setup script for the Windows installer (see docs/releasing.md).
 ;
-;   iscc /DAppVersion=0.10.0 /DExe=..\bin\dist\WhatsUpClients-windows-amd64.exe installer\whatsup.iss
+;   iscc /DAppVersion=1.0.0 /DExe=..\bin\dist\WhatsUpClients-windows-amd64.exe installer\whatsup.iss
 ;
 ; It installs for the current user only, into %LocalAppData%\Programs,
 ; so neither installing nor the app's own updates (internal/update, which

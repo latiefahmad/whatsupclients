@@ -35,7 +35,7 @@ chat dan sesi WhatsApp (`%AppData%\WhatsUpClients`) ikut dihapus. Defaultnya tid
 
 Untuk membangunnya secara lokal, pasang [Inno Setup 6](https://jrsoftware.org/isinfo.php),
 build exe ke `bin/dist/WhatsUpClients-windows-amd64.exe`, lalu jalankan
-`iscc /DAppVersion=0.10.0 installer\whatsup.iss`.
+`iscc /DAppVersion=1.0.0 installer\whatsup.iss`.
 
 ## Update dari dalam aplikasi
 
@@ -70,8 +70,8 @@ satu rilis itu secara manual.
 2. Pada commit yang akan dirilis, buat dan push tag versi baru, misalnya:
 
    ```sh
-   git tag -a v0.1.0 -m "WhatsUpClients v0.1.0"
-   git push origin v0.1.0
+   git tag -a v1.0.0 -m "WhatsUpClients v1.0.0"
+   git push origin v1.0.0
    ```
 
 3. Setelah kedua build berhasil, workflow membuat **draft release** dengan semua
