@@ -63,6 +63,14 @@ Job release menandatangani `SHA256SUMS` dengan `cmd/signrelease` memakai secret
 `RELEASE_SIGNING_KEY` (seed ed25519 dalam base64). Tanpa secret itu job release
 gagal. Kunci publiknya ada di `publicKey` (`internal/update/update.go`).
 
+Isi secret dengan **isi file hasil `-keygen` (seed privat)**, bukan kunci
+publik yang dicetaknya. Keduanya sama-sama 32 byte base64, jadi kunci publik
+yang kepaste pun lolos dan menandatangani dengan kunci yang salah — tanpa ada
+yang gagal sampai pengguna tidak bisa update. CI mencegahnya: step Sign
+checksums membandingkan kunci hasil sign dengan `publicKey` di kode dan gagal
+kalau beda. Ritual tiap rilis: pastikan baris log `signed ... with public key`
+sama dengan `publicKey` di kode.
+
 Simpan cadangan kunci privat di tempat aman. Kalau kunci hilang atau bocor, buat
 kunci baru (`go run ./cmd/signrelease -keygen <file>`, yang mencetak kunci publik
 barunya), ganti `publicKey` dan secret-nya. Versi lama aplikasi tidak akan mau

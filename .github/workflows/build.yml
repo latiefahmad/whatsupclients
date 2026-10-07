@@ -260,7 +260,17 @@ jobs:
           cp cmd/signrelease/main.go "$sign/"
           cd "$sign"
           go mod init signrelease
-          go run . "$GITHUB_WORKSPACE/dist/SHA256SUMS"
+          sign_out=$(go run . "$GITHUB_WORKSPACE/dist/SHA256SUMS")
+          echo "$sign_out"
+          # The secret must be the seed matching the public key the app
+          # trusts. A public key pasted by mistake is also 32 bytes of
+          # base64, so it signs fine but no released app would accept it.
+          signed_pub=$(printf '%s\n' "$sign_out" | sed -n 's/.*with public key //p')
+          code_pub=$(sed -n 's/^[[:space:]]*var publicKey = mustKey("\([^"]*\)").*/\1/p' "$GITHUB_WORKSPACE/internal/update/update.go")
+          if [ -z "$signed_pub" ] || [ "$signed_pub" != "$code_pub" ]; then
+            echo "RELEASE_SIGNING_KEY does not match internal/update's publicKey ($code_pub)." >&2
+            exit 1
+          fi
 
       # The release notes come from CHANGELOG.md: the section headed
       # "## [vX.Y.Z]" is published verbatim as the release body, so a
