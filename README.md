@@ -200,9 +200,10 @@ photos exactly as they are.
 - 📊 Polls with Hide voter names and an end time when you create one
 - 🔗 Link previews, sent and received, with WhatsApp's big picture; group invite links, albums and documents
 - 1️⃣ View once messages, opened once, with screenshots blocked while one is shown
-- 🔍 Font size from 80% to 200% (*Settings > General*, or Ctrl with +, - and 0)
+- 🔍 Font size from 70% to 200% (*Settings > General*, or Ctrl with +, - and 0)
 - 🅰️ Initials on a color for people without a profile picture, and clickable @mentions
-- ⬆️ Built-in updates from signed GitHub releases (*Settings > Help > Check for updates*)
+- ⬆️ Built-in updates from signed GitHub releases: the app checks by itself and offers each one as **Update now** or **Later** (*Settings > Help > Check for updates* checks by hand)
+- ❤️ Donate button in the title bar, next to the window buttons
 
 ## Download
 
@@ -213,6 +214,9 @@ Prebuilt packages for **Windows** (amd64) and **Linux** (amd64) are on the
 - `WhatsUpClients-windows-amd64.exe` is the same app without an installer.
 
 To update, use **Settings > Help > Check for updates**, which installs the new release in place.
+The app also checks by itself shortly after start and then every 12 hours, offering each
+release once as **Update now** or **Later**. Every release ships its
+[CHANGELOG](CHANGELOG.md) section as notes, so the release page always tells you what's new.
 See [docs/releasing.md](docs/releasing.md) for how releases are made and signed.
 
 ## Try it without an account
@@ -244,6 +248,7 @@ and in the user config directory on other platforms.
 ## How it fits together
 
 ```
+CHANGELOG.md        user-facing release notes; each version's section ships as its release body
 cmd/whatsup/        the desktop app
 cmd/screenshot/    renders the UI headlessly to PNG, or next to a real WhatsApp screenshot
 cmd/memprobe/      memory and frame-time benchmark (Windows)

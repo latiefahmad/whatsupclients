@@ -9,6 +9,24 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.2.3] - 2026-10-07
+
+### 🌐 Landing page
+
+- **Project website added** — a landing page in `site/` presents the app with
+  a feature tour, screenshots, dark and light themes, and download buttons for
+  Windows (installer and portable) and Linux that always serve the newest
+  release. Its *Rilis* section shows the notes of the latest version, and a
+  button scrolls straight to the downloads.
+- **README brought up to date** — the 70%–200% font size, the automatic
+  update offer (*Update now* or *Later*, checked every 12 hours), and the
+  Donate button are now listed, and the download section describes how
+  updates arrive.
+
+The app itself is unchanged; its files are identical to v1.2.2.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.2.2...v1.2.3
+
 ## [v1.2.2] - 2026-10-07
 
 ### 🔄 Updates

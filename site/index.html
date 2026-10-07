@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsUp Clients — WhatsApp Desktop tanpa browser di dalamnya</title>
+<meta name="description" content="WhatsUp Clients adalah aplikasi WhatsApp Desktop native yang ringan: tampilan seperti aplikasi resmi, tanpa Electron, dengan update otomatis.">
+<link rel="stylesheet" href="styles.css">
+<script>
+// Set theme before paint to avoid a flash. Stored choice wins,
+// otherwise follow the OS.
+(function () {
+  try {
+    var t = localStorage.getItem("wuc-theme");
+    if (!t) t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" class="sprite" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></symbol>
+<symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></symbol>
+<symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6M12 19h8"/></symbol>
+<symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61M14.12 14.12a3 3 0 1 1-4.24-4.24m2.82-2.82L2 2"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M3 21v-5h5"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5M12 15V3"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+<symbol id="i-windows" viewBox="0 0 24 24"><rect x="3" y="3" width="9" height="9"/><rect x="12" y="3" width="9" height="9"/><rect x="3" y="12" width="9" height="9"/><rect x="12" y="12" width="9" height="9"/></symbol>
+<symbol id="i-package" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zm-18 4 9 5 9-5M12 22V12"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></symbol>
+<symbol id="i-arrowup" viewBox="0 0 24 24"><path d="M12 19V5m-7 7 7-7 7 7"/></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+<symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+<symbol id="i-github" viewBox="0 0 24 24"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></symbol>
+</defs></svg>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top"><span class="brand-mark"><svg class="ic"><use href="#i-chat"/></svg></span>WhatsUp Clients</a>
+    <div class="nav-right">
+      <nav id="nav-links" class="nav-links">
+        <a href="#fitur">Fitur</a>
+        <a href="#download">Download</a>
+        <a href="#terbaru">Rilis</a>
+        <a href="https://github.com/latiefahmad/whatsupclients" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Ganti tema">
+        <svg class="ic i-sun"><use href="#i-sun"/></svg>
+        <svg class="ic i-moon"><use href="#i-moon"/></svg>
+      </button>
+      <button id="menu-btn" class="menu-btn" aria-label="Buka menu" aria-expanded="false"><svg class="ic"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-in">
+      <div class="hero-text">
+        <p class="eyebrow"><span class="pulse"></span>Open source &middot; Windows &amp; Linux</p>
+        <h1>WhatsApp Desktop,<br><span class="hl">tanpa browser di dalamnya</span>.</h1>
+        <p class="lede">Aplikasi WhatsApp desktop native: tampil dan terasa seperti aplikasi resmi,
+          tapi hanya sebagian kecil memorinya. Tanpa WebView, tanpa Electron.</p>
+        <div class="cta">
+          <a id="cta-main" class="btn primary" href="https://github.com/latiefahmad/whatsupclients/releases/latest"><svg class="ic"><use href="#i-download"/></svg>Download</a>
+          <a class="btn ghost" href="#download">Semua versi</a>
+        </div>
+        <p id="cta-note" class="cta-note"></p>
+        <p class="ver-badge">Versi terbaru: <a id="ver-tag" href="https://github.com/latiefahmad/whatsupclients/releases/latest">&hellip;</a></p>
+      </div>
+      <div class="hero-shot">
+        <div class="shot-frame">
+          <img src="../docs/screenshots/hero.png" alt="WhatsUp Clients dalam tema terang dan gelap">
+        </div>
+        <span class="chip chip-a"><svg class="ic"><use href="#i-zap"/></svg>Native, tanpa Electron</span>
+        <span class="chip chip-b"><svg class="ic"><use href="#i-refresh"/></svg>Update otomatis</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="wrap stats-in">
+      <div class="stat"><svg class="ic"><use href="#i-monitor"/></svg><span>Windows 10/11 &amp; Linux x64</span></div>
+      <div class="stat"><svg class="ic"><use href="#i-zap"/></svg><span>Tanpa Electron / WebView</span></div>
+      <div class="stat"><svg class="ic"><use href="#i-code"/></svg><span>Open source (MIT)</span></div>
+      <div class="stat"><svg class="ic"><use href="#i-shield"/></svg><span>Update bertanda tangan</span></div>
+    </div>
+  </section>
+
+  <section id="fitur" class="section">
+    <div class="wrap">
+      <p class="kicker">Fitur</p>
+      <h2>Kenapa WhatsUp Clients?</h2>
+      <div class="grid">
+        <div class="card">
+          <span class="tile"><svg class="ic"><use href="#i-zap"/></svg></span>
+          <h3>Ringan &amp; native</h3>
+          <p>Satu file binary. Cache dibatasi ukuran, memori dikembalikan ke OS saat idle. Tutup jendela, koneksi tetap jalan dari tray.</p>
+        </div>
+        <div class="card">
+          <span class="tile"><svg class="ic"><use href="#i-layout"/></svg></span>
+          <h3>Familiar</h3>
+          <p>Layout, ukuran, dan warna diukur dari screenshot aplikasi resmi. Chat, grup, polling, status, channel, dan communities — semua ada.</p>
+        </div>
+        <div class="card">
+          <span class="tile"><svg class="ic"><use href="#i-terminal"/></svg></span>
+          <h3>Slash commands</h3>
+          <p>Ketik <code>/</code> seperti Discord: kelola grup, <code>/schedule</code> kirim nanti, <code>/afk</code> balas otomatis, <code>/calc</code>, snippet tersimpan, dan lainnya.</p>
+        </div>
+        <div class="card">
+          <span class="tile"><svg class="ic"><use href="#i-eyeoff"/></svg></span>
+          <h3>Privacy mode</h3>
+          <p>Layar bisa dilihat orang? Nama dan pesan jadi bar, gambar blur sampai ditunjuk. Plus ghost mode, edit history, dan pesan terjadwal.</p>
+        </div>
+        <div class="card">
+          <span class="tile"><svg class="ic"><use href="#i-bell"/></svg></span>
+          <h3>Notifikasi &amp; multi-akun</h3>
+          <p>Notifikasi sistem (Reply dan Mark as read di Windows), beberapa akun tertaut, draft per chat, @mention, dan formatting.</p>
+        </div>
+        <div class="card">
+          <span class="tile"><svg class="ic"><use href="#i-refresh"/></svg></span>
+          <h3>Update otomatis</h3>
+          <p>Aplikasi memeriksa rilis baru sendiri dan menawarkan <b>Update now</b> atau <b>Later</b>. Setiap rilis bertanda tangan dan terverifikasi.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="shots">
+    <div class="wrap">
+      <div class="shot-row">
+        <figure><img src="../docs/screenshots/slash.png" alt="Slash command"><figcaption>Slash commands seperti Discord</figcaption></figure>
+        <figure><img src="../docs/screenshots/editor.png" alt="Editor foto"><figcaption>Editor foto sebelum kirim</figcaption></figure>
+        <figure><img src="../docs/screenshots/privacy.png" alt="Privacy mode"><figcaption>Privacy mode sekali tekan</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="terbaru" class="section alt">
+    <div class="wrap">
+      <p class="kicker">Rilis</p>
+      <h2>Yang baru di <span id="news-tag">versi terbaru</span></h2>
+      <div id="news-body" class="card news"><p class="muted">Memuat catatan rilis&hellip;</p></div>
+    </div>
+  </section>
+
+  <section id="download" class="section">
+    <div class="wrap">
+      <p class="kicker">Unduh</p>
+      <h2>Download</h2>
+      <p class="muted">Selalu versi terbaru. Link di bawah mengikuti rilis paling baru secara otomatis.</p>
+      <div class="grid dl" id="dl-grid">
+        <div class="card dl-card" data-os="windows">
+          <span class="tile"><svg class="ic fill"><use href="#i-windows"/></svg></span>
+          <h3>Windows</h3>
+          <p class="file">WhatsUpClients-Setup.exe</p>
+          <p>Installer per user, tanpa perlu admin. Windows 10/11 x64.</p>
+          <a class="btn primary" href="https://github.com/latiefahmad/whatsupclients/releases/latest/download/WhatsUpClients-Setup.exe"><svg class="ic"><use href="#i-download"/></svg>Download installer</a>
+        </div>
+        <div class="card dl-card" data-os="windows">
+          <span class="tile"><svg class="ic"><use href="#i-package"/></svg></span>
+          <h3>Windows portable</h3>
+          <p class="file">WhatsUpClients-windows-amd64.exe</p>
+          <p>Tanpa installer. Taruh di folder milikmu, jalankan langsung.</p>
+          <a class="btn primary" href="https://github.com/latiefahmad/whatsupclients/releases/latest/download/WhatsUpClients-windows-amd64.exe"><svg class="ic"><use href="#i-download"/></svg>Download portable</a>
+        </div>
+        <div class="card dl-card" data-os="linux">
+          <span class="tile"><svg class="ic"><use href="#i-monitor"/></svg></span>
+          <h3>Linux</h3>
+          <p class="file">WhatsUpClients-linux-amd64</p>
+          <p>Executable Linux x64. Butuh lingkungan desktop + runtime library Gio (X11/Wayland).</p>
+          <a class="btn primary" href="https://github.com/latiefahmad/whatsupclients/releases/latest/download/WhatsUpClients-linux-amd64"><svg class="ic"><use href="#i-download"/></svg>Download Linux</a>
+        </div>
+      </div>
+      <div class="note">
+        <svg class="ic"><use href="#i-shield"/></svg>
+        <div><b>Catatan untuk Windows:</b> saat pertama dibuka, SmartScreen mungkin menampilkan
+          &ldquo;Unknown publisher&rdquo; karena installer belum ditandatangani Authenticode — pilih
+          <b>Run anyway</b> jika file berasal dari halaman ini. Update berikutnya tiba otomatis
+          dari dalam aplikasi, tanpa perlu unduh manual lagi.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="wrap donate">
+      <div>
+        <p class="kicker">Dukung</p>
+        <h2>Suka aplikasinya?</h2>
+        <p class="muted">WhatsUp Clients gratis dan open source (MIT). Traktir secangkir kopi agar pengembangannya jalan terus.</p>
+      </div>
+      <a class="btn donate-btn" href="https://saweria.co/latiefahmad" target="_blank" rel="noopener"><svg class="ic"><use href="#i-heart"/></svg>Donate via Saweria</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span class="foot-brand"><svg class="ic"><use href="#i-chat"/></svg>WhatsUp Clients &mdash; <a href="https://github.com/latiefahmad/whatsupclients/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a></span>
+    <span class="muted">Aplikasi tidak resmi; tidak berafiliasi dengan WhatsApp/Meta.</span>
+    <a class="foot-gh" href="https://github.com/latiefahmad/whatsupclients" target="_blank" rel="noopener"><svg class="ic fill"><use href="#i-github"/></svg>GitHub</a>
+  </div>
+</footer>
+
+<button id="to-top" aria-label="Kembali ke atas"><svg class="ic"><use href="#i-arrowup"/></svg></button>
+<script src="releases.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
