@@ -17,7 +17,7 @@ import (
 const prefZoom = "zoom" // 100 if ""
 
 // zoomLevels are the zooms to choose from; Ctrl+ and Ctrl- step through them.
-var zoomLevels = []int{80, 90, 100, 110, 125, 150, 175, 200}
+var zoomLevels = []int{70, 80, 90, 100, 110, 125, 150, 175, 200}
 
 // zoomBubbleFor is how long the bubble showing the zoom stays after a
 // change, unless the pointer is on it.
