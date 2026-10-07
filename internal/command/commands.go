@@ -103,11 +103,11 @@ var All = []*Command{
 		Gray: true, Run: runGhost,
 	},
 	{
-		Name: "snippet", Description: "Sends a saved message, or saves the message you reply to",
+		Name: "snippet", Description: "Sends a saved message, or saves one as a snippet",
 		Options: []Option{
-			{Name: "action", Description: "send a saved message, or save the message you reply to",
+			{Name: "action", Description: "send a saved message, or save one: the message you reply to, or the text you type",
 				Kind: Choice, Choices: []string{"send", "save"}, Required: true},
-			{Name: "snippet", Description: "the snippet to send, or the name to save it under (made up when empty)",
+			{Name: "snippet", Description: "the snippet to send; to save, its name (with a reply) or its text (without one)",
 				Kind: Snippet},
 		},
 		Run: runSnippet,

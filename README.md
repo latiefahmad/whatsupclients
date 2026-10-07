@@ -163,7 +163,7 @@ back on asks again.
 | `/afk <reason>` | Auto-replies while you're away, until you send something |
 | `/ghost` | Goes invisible: no read receipts, shown offline, no sending (an ethically gray feature) |
 | `/snippet send <name>` | Sends a saved message; the picker over the composer offers them as you type |
-| `/snippet save [name]` | Saves the whole message you reply to (a poll, document or photo too), under that name or a generated one |
+| `/snippet save [name or text]` | Saves the message you reply to (a poll, document or photo too) under that name or a generated one; without a reply, saves the text itself |
 | `/catch` | Opens the stored payload of the message you reply to, with Copy JSON and Export JSON |
 
 Manage saved messages in **Settings > Snippets**: search, add text or message JSON,

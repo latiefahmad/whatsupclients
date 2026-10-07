@@ -32,6 +32,8 @@ func (u *UI) layoutTitleBar(gtx C) D {
 	if privacyBtn {
 		moveW -= btnW
 	}
+	donateW := gtx.Dp(96) // heart, "Donate" and padding
+	moveW -= donateW      // donate, left of the privacy button
 	gtx.Constraints = layout.Exact(image.Pt(moveW, h))
 	u.deco.LayoutMove(gtx, func(gtx C) D {
 		return vcenter(gtx, h, func(gtx C) D {
@@ -58,6 +60,10 @@ func (u *UI) layoutTitleBar(gtx C) D {
 		{system.ActionClose, glyphClose, true},
 	}
 	x := moveW
+	t := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
+	u.layoutDonateButton(gtx, donateW, h)
+	t.Pop()
+	x += donateW
 	if privacyBtn {
 		t := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
 		u.layoutPrivacyButton(gtx, btnW, h)
@@ -71,6 +77,34 @@ func (u *UI) layoutTitleBar(gtx C) D {
 		t.Pop()
 	}
 	return D{Size: image.Pt(w, h)}
+}
+
+// donateURL is where the title bar's heart opens.
+const donateURL = "https://saweria.co/latiefahmad"
+
+// layoutDonateButton is the title bar's donate button, w×h px: a heart
+// and "Donate" that open the donation page in the browser.
+func (u *UI) layoutDonateButton(gtx C, w, h int) {
+	p := u.pal
+	c := u.btn("title:donate")
+	// Before the button is laid out: Clickable.Layout drops clicks no one
+	// has read.
+	if c.Clicked(gtx) {
+		openURL(donateURL)
+	}
+	gtx.Constraints = layout.Exact(image.Pt(w, h))
+	c.Layout(gtx, func(gtx C) D {
+		if a := u.hover(gtx, c); a > 0 {
+			fillRect(gtx, image.Rect(0, 0, w, h), faded(p.Hover, a))
+		}
+		return layout.Center.Layout(gtx, func(gtx C) D {
+			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+				layout.Rigid(func(gtx C) D { return drawIcon(gtx, icHeart, 18, p.FrameText) }),
+				layout.Rigid(layout.Spacer{Width: 6}.Layout),
+				layout.Rigid(u.label(12.5, "Donate", p.FrameText).Layout),
+			)
+		})
+	})
 }
 
 func (u *UI) captionButton(gtx C, c *widget.Clickable, w, h int, isClose bool, glyph func(C, color.NRGBA)) {

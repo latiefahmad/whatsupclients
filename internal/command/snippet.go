@@ -3,6 +3,8 @@ package command
 import (
 	"errors"
 	"strings"
+
+	"github.com/latiefahmad/whatsupclients/internal/model"
 )
 
 func runSnippet(c *Context) error {
@@ -51,24 +53,40 @@ func (c *Context) note() *Note {
 
 func saveSnippet(c *Context, name string) error {
 	if c.Reply == nil {
-		return errors.New("Reply to a message, then use /snippet save.")
+		// Without a reply there is no message to save: keep the text
+		// itself as a new snippet, under a generated name.
+		if name == "" {
+			return errors.New("Reply to a message, then use /snippet save — or type the text to save after it.")
+		}
+		n := busy(c, "Saving snippet…")
+		c.Do(func() func() {
+			s, err := c.Backend.SaveSnippet(model.Snippet{Body: name})
+			return savedNote(c, n, s, err)
+		})
+		return nil
 	}
 	chat, id := c.Reply.ChatID, c.Reply.ID
 	n := busy(c, "Saving snippet…")
 	c.Do(func() func() {
 		s, err := c.Backend.SaveMessageSnippet(chat, id, name)
-		return func() {
-			if err != nil {
-				fail(n, err.Error())
-				return
-			}
-			c.SnippetsChanged()
-			n.Busy = false
-			n.Text = "Saved as " + s.Name + ". Send it with /snippet send " + s.Name + "."
-			n.Buttons = []Button{{Label: "Edit in Settings", Run: func() { c.EditSnippet(s.ID) }}}
-		}
+		return savedNote(c, n, s, err)
 	})
 	return nil
+}
+
+// savedNote reports a snippet save: the snippet with an Edit button, or
+// the error.
+func savedNote(c *Context, n *Note, s model.Snippet, err error) func() {
+	return func() {
+		if err != nil {
+			fail(n, err.Error())
+			return
+		}
+		c.SnippetsChanged()
+		n.Busy = false
+		n.Text = "Saved as " + s.Name + ". Send it with /snippet send " + s.Name + "."
+		n.Buttons = []Button{{Label: "Edit in Settings", Run: func() { c.EditSnippet(s.ID) }}}
+	}
 }
 
 func runCatch(c *Context) error {

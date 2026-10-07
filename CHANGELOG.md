@@ -9,6 +9,22 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.2.0] - 2026-10-07
+
+### ❤️ Donate
+
+- **Donate button in the title bar** — a heart with "Donate" next to the
+  window buttons opens the donation page in your browser.
+
+### 📝 Snippets
+
+- **`/snippet save` without a reply** — typing `/snippet save some text`
+  keeps the text itself as a new snippet (before, saving required replying
+  to a message). With a reply it still saves that message under the given
+  name, as before.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.1.0...v1.2.0
+
 ## [v1.1.0] - 2026-10-07
 
 ### 🔄 Update offer
