@@ -1,12 +1,12 @@
-// Generates site/releases.js from CHANGELOG.md (newest section).
-// Run: node site/build-releases.js
+// Generates releases.js from CHANGELOG.md (newest section).
+// Run: node build-releases.js
 // The landing page reads the generated file, so it works with a
 // private repo, offline, and without any API rate limit.
 "use strict";
 const fs = require("fs");
 const path = require("path");
 
-const root = path.join(__dirname, "..");
+const root = __dirname;
 const md = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
 
 function parse(text) {
@@ -39,12 +39,12 @@ if (!data.ver) {
 }
 
 const out = [
-  "// Generated from CHANGELOG.md by site/build-releases.js — do not edit by hand.",
+  "// Generated from CHANGELOG.md by build-releases.js — do not edit by hand.",
   "// Re-run it whenever CHANGELOG.md gains a release section.",
   "window.WUC_RELEASE = " + JSON.stringify(data, null, 2) + ";",
   "",
 ].join("\n");
 
-fs.writeFileSync(path.join(__dirname, "releases.js"), out, "utf8");
-console.log("build-releases: wrote site/releases.js for " + data.ver
+fs.writeFileSync(path.join(root, "releases.js"), out, "utf8");
+console.log("build-releases: wrote releases.js for " + data.ver
   + " (" + data.items.length + " items)");

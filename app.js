@@ -112,7 +112,7 @@
 })();
 
 // Release info: version badge + the first highlights of the newest section.
-// Primary source is site/releases.js (generated from CHANGELOG.md) — it
+// Primary source is releases.js (generated from CHANGELOG.md) — it
 // works with a private repo, offline, and without any rate limit. The raw
 // GitHub fetch is only a fallback when that file is missing.
 (function () {

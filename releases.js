@@ -1,4 +1,4 @@
-// Generated from CHANGELOG.md by site/build-releases.js — do not edit by hand.
+// Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
   "ver": "v1.2.3",
