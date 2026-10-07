@@ -40,10 +40,15 @@ build exe ke `bin/dist/WhatsUpClients-windows-amd64.exe`, lalu jalankan
 ## Update dari dalam aplikasi
 
 **Settings > Help** menampilkan versi aplikasi dan tombol **Check for updates**.
-Aplikasi tidak menghubungi GitHub sampai tombol itu ditekan. Kalau ada versi yang
-lebih baru, tombol yang sama mengunduh exe untuk sistem ini, mencocokkannya dengan
-`SHA256SUMS`, memeriksa tanda tangan `SHA256SUMS.sig` dengan kunci publik di
-`internal/update`, menukar exe yang sedang berjalan, lalu me-restart aplikasi.
+Aplikasi juga memeriksa sendiri dengan diam-diam: sekali sesaat setelah
+dijalankan, lalu sehari sekali. Pemeriksaan hanya mengambil metadata rilis
+GitHub (tanpa data pengguna); unduhan hanya terjadi kalau pengguna memilih
+**Update now**. Kalau ada versi yang lebih baru, aplikasi menawarkan dialog
+**Update now** atau **Later**. **Later** melewatkan versi itu sampai pengguna
+memeriksa sendiri dari Settings > Help, sedangkan tombol Help itu sendiri
+mengunduh exe untuk sistem ini, mencocokkannya dengan `SHA256SUMS`, memeriksa
+tanda tangan `SHA256SUMS.sig` dengan kunci publik di `internal/update`,
+menukar exe yang sedang berjalan, lalu me-restart aplikasi.
 
 - Hanya build dari tag (`-X main.version=v1.2.3`) yang bisa update. Build lain,
   dan prerelease seperti `v1.2.3-rc1`, adalah development build.

@@ -112,6 +112,7 @@ func Run(b model.Backend, o Options) error {
 		h.openWindow()
 	}
 	b.Start(h.poke)
+	go h.upd.autoCheck()
 	for {
 		select {
 		case e := <-h.events:

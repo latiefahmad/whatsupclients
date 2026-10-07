@@ -682,6 +682,7 @@ func (u *UI) layoutWindow(gtx C) D {
 		u.layoutPicker(gtx, image.Point{}, gtx.Constraints.Max.X)
 	}
 	u.layoutCtxMenu(gtx)
+	u.offerUpdate()
 	u.layoutDialog(gtx)
 	u.layoutToast(gtx)
 	u.trackMouse(gtx)

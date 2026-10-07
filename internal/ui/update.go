@@ -9,8 +9,21 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/latiefahmad/whatsupclients/internal/update"
+)
+
+// prefUpdateSkipped remembers the release version the user answered "Later"
+// to, so the offer isn't repeated for it. The Help page still offers it,
+// until the user updates or a newer release arrives.
+const prefUpdateSkipped = "update_skipped"
+
+// updateFirstCheck delays the first automatic check so login and history
+// sync settle; updateRecheck repeats it while the app runs.
+const (
+	updateFirstCheck = 30 * time.Second
+	updateRecheck    = 24 * time.Hour
 )
 
 // updateStep is where an update stands. Nothing happens until the user
@@ -40,6 +53,9 @@ type updater struct {
 	rel         *update.Release
 	done, total int64
 	err         error
+	// offered is the release version already offered, so closing the
+	// offer without answering doesn't open it again every frame.
+	offered string
 }
 
 // canUpdate reports whether this build updates itself: a release (not a
@@ -78,6 +94,69 @@ func (up *updater) check() {
 			}
 		})
 	}()
+}
+
+// autoCheck looks for updates in the background: once shortly after start,
+// then daily. It only checks; offerUpdate asks the user what to do with
+// what it finds.
+func (up *updater) autoCheck() {
+	t := time.NewTimer(updateFirstCheck)
+	defer t.Stop()
+	for {
+		<-t.C
+		t.Reset(updateRecheck)
+		up.auto()
+	}
+}
+
+// auto asks once, unless updates can't run or a check, download or offer is
+// already in flight.
+func (up *updater) auto() {
+	h := up.h
+	if h == nil || !h.canUpdate() {
+		return
+	}
+	up.mu.Lock()
+	step := up.step
+	up.mu.Unlock()
+	if step != updIdle && step != updLatest {
+		return
+	}
+	up.check()
+}
+
+// offerUpdate opens the update offer once per release: "Update now"
+// downloads and restarts, "Later" skips this version until the user checks
+// by hand from Settings > Help.
+func (u *UI) offerUpdate() {
+	h := u.host
+	if h == nil || h.b == nil || !h.canUpdate() || u.dialog.isOpen() {
+		return
+	}
+	up := &h.upd
+	up.mu.Lock()
+	defer up.mu.Unlock()
+	rel := up.rel
+	if up.step != updAvailable || rel == nil {
+		return
+	}
+	if rel.Version == up.offered || rel.Version == h.b.Pref(prefUpdateSkipped) {
+		return
+	}
+	up.offered = rel.Version
+	sub := "Update now to download and restart, or later from Settings > Help."
+	if n := rel.Size(); n > 0 {
+		sub = "Update now to download (" + formatSize(n) + ") and restart, or later from Settings > Help."
+	}
+	u.dialog = dialogState{
+		kind:  dialogConfirm,
+		title: "Update to " + rel.Version + " is available",
+		body:  sub,
+		buttons: []dialogButton{
+			{label: "Update now", primary: true, run: func() { up.install() }},
+			{label: "Later", run: func() { h.b.SetPref(prefUpdateSkipped, rel.Version) }},
+		},
+	}
 }
 
 // install downloads the release found, puts it in place and restarts.
