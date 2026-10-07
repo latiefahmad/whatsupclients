@@ -270,6 +270,10 @@ found in the pinned Gio version, and the screenshot tooling used to match WhatsA
 Low memory use is the reason this project exists, so measure with `cmd/memprobe` before and
 after a change. Run `gofmt`, `go vet ./...` and `go build ./...` before you send it.
 
+## License
+
+[MIT](LICENSE).
+
 ## Disclaimer
 
 This is an unofficial client. It isn't affiliated with or endorsed by WhatsApp or Meta.
