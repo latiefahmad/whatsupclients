@@ -1,0 +1,576 @@
+package ui
+
+import (
+	"image"
+	"strings"
+	"time"
+
+	"gioui.org/font"
+	"gioui.org/io/semantic"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/text"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
+
+	"github.com/latiefahmad/whatsupclients/internal/model"
+)
+
+type dialogKind int
+
+const (
+	dialogNone dialogKind = iota
+	dialogConfirm
+	dialogForward
+	dialogPoll
+	dialogInvite  // a group's invite link (invite.go)
+	dialogTheme   // a chat's theme (chatmenu.go); title is the chat's ID
+	dialogEdits   // an edited message's earlier texts (edit.go)
+	dialogPayload // a message's payload (/catch, snippets.go)
+)
+
+type dialogButton struct {
+	label    string
+	primary  bool // filled green
+	danger   bool // filled red
+	flat     bool // green text alone, without the outline
+	disabled bool
+	run      func()
+}
+
+// dialogState is the open modal: a confirmation or the forward picker.
+type dialogState struct {
+	kind    dialogKind
+	title   string
+	body    string
+	snippet *snippetDialog // dialogPayload's
+	bodyFn  func() string  // a body that can change while it's open, instead of body
+	buttons []dialogButton
+	scrim   widget.Clickable
+	closing bool // fading out
+	anim    tween
+
+	// Optional acknowledgment: primary actions wait until it is checked.
+	agreement string
+	agreed    bool
+
+	// Forward picker, which also picks contacts to share, or the chats to
+	// share one contact with.
+	contacts bool
+	share    string   // the contact to share
+	addTo    string   // the group to add the picked people to
+	members  []string // addTo's members, left out of the list
+	fwd      []*model.Message
+	picked   []string // chat IDs, in the order they were picked
+	search   widget.Editor
+	list     widget.List
+	chats    []*model.Chat // matching chats, a buffer reused every frame
+	bar      tween         // the send bar, shown once a chat is picked
+
+	poll   pollState
+	invite inviteState
+
+	// Edit history: the message and its earlier texts.
+	editOf   *model.Message
+	versions []model.Version
+}
+
+// isOpen reports whether a dialog is open and not fading out.
+func (d *dialogState) isOpen() bool { return d.kind != dialogNone && !d.closing }
+
+// closeDialog fades the dialog out.
+func (u *UI) closeDialog() { u.dialog.closing = true }
+
+// confirm asks before a destructive action. A Cancel button is added.
+func (u *UI) confirm(title, body string, buttons ...dialogButton) {
+	u.dialog = dialogState{kind: dialogConfirm, title: title, body: body,
+		buttons: append(buttons, dialogButton{label: "Cancel"})}
+}
+
+// confirmDelete offers "Delete for everyone" when all messages are yours,
+// or you administer the group, and they are still recent, like WhatsApp
+// (which allows about two days).
+func (u *UI) confirmDelete(msgs []*model.Message) {
+	b := u.backend
+	everyone := len(msgs) > 0
+	admin := false
+	if c := u.selected; c != nil && c.IsGroup {
+		admin = u.amAdmin(c.ID)
+	}
+	for _, m := range msgs {
+		if (!m.FromMe && !admin) || m.Kind == model.KindDeleted || u.now().Sub(m.Time) > 60*time.Hour {
+			everyone = false
+		}
+	}
+	title := "Delete message?"
+	if len(msgs) > 1 {
+		title = "Delete " + itoa(len(msgs)) + " messages?"
+	}
+	var buttons []dialogButton
+	if everyone {
+		buttons = append(buttons, dialogButton{label: "Delete for everyone", danger: true, run: func() {
+			for _, m := range msgs {
+				b.Delete(m, true)
+			}
+			u.endSelect()
+		}})
+	}
+	buttons = append(buttons, dialogButton{label: "Delete for me", danger: !everyone, run: func() {
+		for _, m := range msgs {
+			b.Delete(m, false)
+		}
+		u.endSelect()
+	}})
+	u.confirm(title, "", buttons...)
+}
+
+func (u *UI) openForward(msgs []*model.Message) {
+	var keep []*model.Message
+	for _, m := range msgs {
+		if m.Kind != model.KindViewOnce { // can't be forwarded, as in WhatsApp
+			keep = append(keep, m)
+		}
+	}
+	if msgs = keep; len(msgs) == 0 {
+		return
+	}
+	u.dialog = dialogState{kind: dialogForward, fwd: msgs}
+	u.dialog.search.SingleLine = true
+	u.dialog.list.Axis = layout.Vertical
+	u.requestFocus(&u.dialog.search)
+}
+
+func (u *UI) layoutDialog(gtx C) {
+	d := &u.dialog
+	if d.kind == dialogNone {
+		return
+	}
+	p := u.pal
+	if d.isOpen() && d.scrim.Clicked(gtx) {
+		u.closeDialog()
+	}
+	v := d.anim.step(gtx, d.isOpen(), durDialog)
+	if v == 0 && d.closing {
+		u.dialog = dialogState{}
+		return
+	}
+	e := easeOut(v)
+	sz := gtx.Constraints.Max
+	if d.closing {
+		var done func()
+		gtx, done = fadeOut(gtx)
+		defer done()
+		fillRect(gtx, image.Rectangle{Max: sz}, faded(p.Scrim, e))
+	} else {
+		sgtx := gtx
+		sgtx.Constraints = layout.Exact(sz)
+		d.scrim.Layout(sgtx, func(gtx C) D { return fill(gtx, faded(p.Scrim, e)) })
+	}
+
+	var panel part
+	switch d.kind {
+	case dialogConfirm:
+		panel = record(gtx, u.confirmPanel)
+	case dialogForward:
+		panel = record(gtx, u.forwardPanel)
+	case dialogPoll:
+		panel = record(gtx, u.pollPanel)
+	case dialogInvite:
+		panel = record(gtx, u.invitePanel)
+	case dialogTheme:
+		panel = record(gtx, u.themePanel)
+	case dialogEdits:
+		panel = record(gtx, u.editsPanel)
+	case dialogPayload:
+		panel = record(gtx, u.snippetPanel)
+	}
+	x, y := (sz.X-panel.size.X)/2, (sz.Y-panel.size.Y)/2
+	r := gtx.Dp(16)
+	rect := image.Rectangle{Max: panel.size}.Add(image.Pt(x, y))
+	defer pushFx(gtx, e, scaleAt(rect.Min.Add(rect.Size().Div(2)), lerp(0.95, 1, e))).Pop()
+	fillRRect(gtx, rect.Add(image.Pt(0, gtx.Dp(4))).Inset(-gtx.Dp(3)), r+gtx.Dp(3), p.Shadow)
+	fillRRect(gtx, rect, r, p.Dialog)
+	if !d.closing {
+		// Swallow clicks on the panel so they don't reach the scrim.
+		t := op.Offset(rect.Min).Push(gtx.Ops)
+		pg := gtx
+		pg.Constraints = layout.Exact(panel.size)
+		u.btn("dialog:panel").Layout(pg, func(gtx C) D { return D{Size: panel.size} })
+		t.Pop()
+	}
+	panel.at(gtx, x, y)
+}
+
+func (u *UI) confirmPanel(gtx C) D {
+	d := &u.dialog
+	p := u.pal
+	if d.agreement != "" && d.isOpen() && u.btn("dialog:agreement").Clicked(gtx) {
+		d.agreed = !d.agreed
+	}
+	for i, bt := range d.buttons {
+		blocked := bt.disabled || (d.agreement != "" && bt.primary && !d.agreed)
+		if u.btn("dialog:"+itoa(i+1)).Clicked(gtx) && d.isOpen() && !blocked {
+			u.closeDialog() // and keep drawing it as it fades
+			if bt.run != nil {
+				bt.run()
+			}
+			break
+		}
+	}
+	w := min(gtx.Dp(480), gtx.Constraints.Max.X-gtx.Dp(32))
+	gtx.Constraints = layout.Constraints{Min: image.Pt(w, 0), Max: image.Pt(w, gtx.Constraints.Max.Y)}
+	return layout.UniformInset(24).Layout(gtx, func(gtx C) D {
+		children := []layout.FlexChild{
+			layout.Rigid(func(gtx C) D {
+				l := u.label(19.5, d.title, p.Text, labelOpts{weight: font.Medium})
+				l.MaxLines = 0
+				return l.Layout(gtx)
+			}),
+		}
+		body := d.body
+		if d.bodyFn != nil {
+			body = d.bodyFn()
+		}
+		if body != "" {
+			children = append(children,
+				layout.Rigid(layout.Spacer{Height: 12}.Layout),
+				layout.Rigid(func(gtx C) D {
+					l := u.label(14.5, body, p.TextSecondary)
+					l.MaxLines = 0
+					return l.Layout(gtx)
+				}))
+		}
+		if d.agreement != "" {
+			children = append(children,
+				layout.Rigid(layout.Spacer{Height: 18}.Layout),
+				layout.Rigid(u.dialogAgreement))
+		}
+		children = append(children, layout.Rigid(layout.Spacer{Height: 26}.Layout))
+		// Buttons: stacked when there are three (delete), in a row otherwise.
+		stack := len(d.buttons) > 2
+		var btns []layout.FlexChild
+		for i, bt := range d.buttons {
+			i, bt := i, bt
+			bt.disabled = bt.disabled || (d.agreement != "" && bt.primary && !d.agreed)
+			if i > 0 {
+				if stack {
+					btns = append(btns, layout.Rigid(layout.Spacer{Height: 10}.Layout))
+				} else {
+					btns = append(btns, layout.Rigid(layout.Spacer{Width: 12}.Layout))
+				}
+			}
+			btns = append(btns, layout.Rigid(func(gtx C) D {
+				return u.dialogButton(gtx, "dialog:"+itoa(i+1), bt)
+			}))
+		}
+		if stack {
+			children = append(children, layout.Rigid(func(gtx C) D {
+				return layout.E.Layout(gtx, func(gtx C) D {
+					return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx, btns...)
+				})
+			}))
+		} else {
+			// Cancel goes first (left), the action last, like WhatsApp.
+			for i, j := 0, len(btns)-1; i < j; i, j = i+1, j-1 {
+				btns[i], btns[j] = btns[j], btns[i]
+			}
+			children = append(children, layout.Rigid(func(gtx C) D {
+				return layout.E.Layout(gtx, func(gtx C) D {
+					return layout.Flex{Alignment: layout.Middle}.Layout(gtx, btns...)
+				})
+			}))
+		}
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
+	})
+}
+
+func (u *UI) dialogAgreement(gtx C) D {
+	d, p := &u.dialog, u.pal
+	return clickable(gtx, u.btn("dialog:agreement"), func(gtx C) D {
+		semantic.CheckBox.Add(gtx.Ops)
+		semantic.SelectedOp(d.agreed).Add(gtx.Ops)
+		semantic.LabelOp(d.agreement).Add(gtx.Ops)
+		gtx.Constraints.Min.X = gtx.Constraints.Max.X
+		box, col := icCheckBoxEmpty, p.TextSecondary
+		if d.agreed {
+			box, col = icCheckBox, p.Green
+		}
+		return layout.Flex{Alignment: layout.Start}.Layout(gtx,
+			layout.Rigid(iconW(box, 24, col)),
+			layout.Rigid(layout.Spacer{Width: 12}.Layout),
+			layout.Flexed(1, func(gtx C) D {
+				l := u.label(14.5, d.agreement, p.Text)
+				l.MaxLines = 0
+				return l.Layout(gtx)
+			}),
+		)
+	})
+}
+
+// dialogButton is a pill button: green or red when it's the action,
+// outlined otherwise.
+func (u *UI) dialogButton(gtx C, key string, bt dialogButton) D {
+	p := u.pal
+	c := u.btn(key)
+	if bt.disabled {
+		gtx = gtx.Disabled()
+	}
+	return clickable(gtx, c, func(gtx C) D {
+		gtx.Constraints.Min = image.Point{}
+		fg, bg, border := p.Green, p.Dialog, p.PopupBorder
+		switch {
+		case bt.disabled:
+			fg, bg, border = p.TextSecondary, p.PopupBorder, p.PopupBorder
+		case bt.danger:
+			fg, bg, border = p.OnGreen, p.Danger, p.Danger
+		case bt.primary:
+			fg, bg, border = p.OnGreen, p.Green, p.Green
+		}
+		if !bt.disabled {
+			bg = mix(bg, p.Text, 0.08*u.hover(gtx, c))
+		}
+		if bt.flat {
+			border = bg
+		}
+		lbl := record(gtx, u.label(14.5, bt.label, fg, labelOpts{weight: font.Medium, maxLines: 1}).Layout)
+		h := gtx.Dp(40)
+		w := lbl.size.X + gtx.Dp(48)
+		borderRRect(gtx, image.Rect(0, 0, w, h), h/2, bg, border)
+		lbl.at(gtx, (w-lbl.size.X)/2, (h-lbl.size.Y)/2)
+		return D{Size: image.Pt(w, h)}
+	})
+}
+
+// forwardPanel lists chats to forward to, with search and a send bar.
+func (u *UI) forwardPanel(gtx C) D {
+	d := &u.dialog
+	p := u.pal
+	if u.btn("fwd:close").Clicked(gtx) {
+		u.closeDialog()
+	}
+	if u.btn("fwd:send").Clicked(gtx) && len(d.picked) > 0 && d.isOpen() {
+		if d.addTo != "" {
+			u.addMembers(d.addTo, d.picked)
+		} else if d.share != "" {
+			for _, id := range d.picked {
+				m := u.backend.SendContacts(id, []string{d.share})
+				if m != nil && u.selected != nil && u.selected.ID == id {
+					u.upsertMessage(m)
+					u.scrollMessages(layout.Position{})
+				}
+			}
+		} else if d.contacts {
+			if u.selected != nil {
+				if m := u.backend.SendContacts(u.selected.ID, d.picked); m != nil {
+					u.upsertMessage(m)
+					u.scrollMessages(layout.Position{})
+				}
+			}
+		} else {
+			u.backend.Forward(d.fwd, d.picked)
+			u.endSelect()
+		}
+		u.closeDialog()
+	}
+	bar := easeOut(d.bar.step(gtx, len(d.picked) > 0, durGrow))
+	q := strings.ToLower(trimSpace(d.search.Text()))
+	chats := d.chats[:0] // reused every frame
+	for _, c := range u.chats {
+		if d.contacts && (c.IsGroup || c.Self || isChannelID(c.ID)) {
+			continue // only people can be shared
+		}
+		if d.share != "" && (c.ID == d.share || isChannelID(c.ID)) {
+			continue
+		}
+		if d.addTo != "" && indexOf(d.members, c.ID) >= 0 {
+			continue // already in the group
+		}
+		if q == "" || strings.Contains(strings.ToLower(c.Name), q) {
+			chats = append(chats, c)
+		}
+	}
+	d.chats = chats
+	for _, c := range chats {
+		if u.btn("fwd:" + c.ID).Clicked(gtx) {
+			if i := indexOf(d.picked, c.ID); i >= 0 {
+				d.picked = append(d.picked[:i:i], d.picked[i+1:]...)
+			} else {
+				d.picked = append(d.picked, c.ID)
+			}
+		}
+	}
+	title := "Forward message to"
+	switch {
+	case d.addTo != "":
+		title = "Add member"
+	case d.share != "":
+		title = "Share contact"
+	case d.contacts:
+		title = "Share contacts"
+	}
+	w := min(gtx.Dp(460), gtx.Constraints.Max.X-gtx.Dp(32))
+	h := min(gtx.Dp(640), gtx.Constraints.Max.Y-gtx.Dp(48))
+	gtx.Constraints = layout.Exact(image.Pt(w, h))
+	defer clip.UniformRRect(image.Rectangle{Max: image.Pt(w, h)}, gtx.Dp(16)).Push(gtx.Ops).Pop()
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			return vcenter(gtx, gtx.Dp(64), func(gtx C) D {
+				return layout.Inset{Left: 12, Right: 20}.Layout(gtx, func(gtx C) D {
+					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+						layout.Rigid(func(gtx C) D { return u.iconButton(gtx, u.btn("fwd:close"), icClose, 40, 24, p.IconStrong) }),
+						layout.Rigid(layout.Spacer{Width: 12}.Layout),
+						layout.Flexed(1, u.label(18, title, p.Text, labelOpts{weight: font.Medium, maxLines: 1}).Layout),
+					)
+				})
+			})
+		}),
+		layout.Rigid(func(gtx C) D {
+			return layout.Inset{Left: 16, Right: 16, Bottom: 8}.Layout(gtx, func(gtx C) D {
+				return u.searchField(gtx, &d.search, "Search name or number")
+			})
+		}),
+		layout.Flexed(1, func(gtx C) D {
+			return u.scrollList(gtx, &d.list, len(chats), func(gtx C, i int) D {
+				c := chats[i]
+				on := indexOf(d.picked, c.ID) >= 0
+				cl := u.btn("fwd:" + c.ID)
+				return clickable(gtx, cl, func(gtx C) D {
+					gtx.Constraints.Min.X = gtx.Constraints.Max.X
+					bg := mix(p.Dialog, p.Hover, u.hover(gtx, cl))
+					return background(gtx, bg, 0, func(gtx C) D {
+						return vcenter(gtx, gtx.Dp(64), func(gtx C) D {
+							return layout.Inset{Left: 20, Right: 20}.Layout(gtx, func(gtx C) D {
+								box, col := icCheckBoxEmpty, p.TextSecondary
+								if on {
+									box, col = icCheckBox, p.Green
+								}
+								return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+									layout.Rigid(iconW(box, 24, col)),
+									layout.Rigid(layout.Spacer{Width: 18}.Layout),
+									layout.Rigid(func(gtx C) D { return u.avatar(gtx, c.ID, c.Name, c.IsGroup, 44) }),
+									layout.Rigid(layout.Spacer{Width: 14}.Layout),
+									layout.Flexed(1, u.label(16, c.Name, p.Text, labelOpts{maxLines: 1}).Layout),
+								)
+							})
+						})
+					})
+				})
+			})
+		}),
+		layout.Rigid(func(gtx C) D {
+			if bar == 0 {
+				return D{}
+			}
+			// The bar slides up as the list makes room for it.
+			full := record(gtx, func(gtx C) D { return u.forwardBar(gtx, d) })
+			h := lerpInt(0, full.size.Y, bar)
+			defer clip.Rect{Max: image.Pt(full.size.X, h)}.Push(gtx.Ops).Pop()
+			full.at(gtx, 0, 0)
+			return D{Size: image.Pt(full.size.X, h)}
+		}),
+	)
+}
+
+// forwardBar names the picked chats next to the send button.
+func (u *UI) forwardBar(gtx C, d *dialogState) D {
+	p := u.pal
+	var names []string
+	for _, id := range d.picked {
+		if c := u.chatByID(id); c != nil {
+			names = append(names, c.Name)
+		}
+	}
+	gtx.Constraints.Min.X = gtx.Constraints.Max.X
+	return background(gtx, p.Panel, 0, func(gtx C) D {
+		return vcenter(gtx, gtx.Dp(72), func(gtx C) D {
+			return layout.Inset{Left: 24, Right: 16}.Layout(gtx, func(gtx C) D {
+				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Flexed(1, u.label(15, strings.Join(names, ", "), p.TextSecondary, labelOpts{maxLines: 1}).Layout),
+					layout.Rigid(layout.Spacer{Width: 12}.Layout),
+					layout.Rigid(func(gtx C) D {
+						c := u.btn("fwd:send")
+						return clickable(gtx, c, func(gtx C) D {
+							sz := gtx.Dp(52)
+							fillCircle(gtx, image.Pt(sz/2, sz/2), sz/2, mix(p.Green, p.Text, 0.1*u.hover(gtx, c)))
+							return centerIn(gtx, sz, iconW(icSend, 24, p.OnGreen))
+						})
+					}),
+				)
+			})
+		})
+	})
+}
+
+func indexOf(s []string, v string) int {
+	for i, x := range s {
+		if x == v {
+			return i
+		}
+	}
+	return -1
+}
+
+// searchField is a rounded search box around an editor.
+func (u *UI) searchField(gtx C, ed *widget.Editor, hint string) D {
+	p := u.pal
+	gtx.Constraints.Min.X = gtx.Constraints.Max.X
+	return background(gtx, p.Search, 20, func(gtx C) D {
+		return vcenter(gtx, gtx.Dp(40), func(gtx C) D {
+			return layout.Inset{Left: 14, Right: 12}.Layout(gtx, func(gtx C) D {
+				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Rigid(iconW(icSearch, 20, p.TextSecondary)),
+					layout.Rigid(layout.Spacer{Width: 12}.Layout),
+					layout.Flexed(1, func(gtx C) D {
+						e := material.Editor(u.th, ed, hint)
+						e.TextSize = 15
+						e.Color = p.Text
+						e.HintColor = p.TextSecondary
+						return e.Layout(gtx)
+					}),
+				)
+			})
+		})
+	})
+}
+
+// toastState is a short notice at the bottom of the window.
+type toastState struct {
+	text  string
+	until time.Time
+	anim  tween
+}
+
+func (u *UI) toast(s string) { u.toastMsg.text, u.toastMsg.until = s, u.now().Add(4*time.Second) }
+
+func (u *UI) layoutToast(gtx C) {
+	t := &u.toastMsg
+	if t.text == "" {
+		return
+	}
+	on := u.now().Before(t.until)
+	v := t.anim.step(gtx, on, durDialog)
+	if v == 0 && !on {
+		t.text = ""
+		return
+	}
+	if on {
+		gtx.Execute(op.InvalidateCmd{At: t.until})
+	}
+	p := u.pal
+	sz := gtx.Constraints.Max
+	card := record(gtx, func(gtx C) D {
+		gtx.Constraints = layout.Constraints{Max: image.Pt(min(gtx.Dp(560), sz.X-gtx.Dp(32)), sz.Y)}
+		return layout.Inset{Left: 20, Right: 20, Top: 13, Bottom: 13}.Layout(gtx,
+			u.label(14.5, t.text, p.ToastText, labelOpts{maxLines: 2, align: text.Start}).Layout)
+	})
+	x := gtx.Dp(railWidth) + gtx.Dp(24)
+	y := sz.Y - card.size.Y - gtx.Dp(24)
+	// It rises into place and sinks away.
+	e := easeOut(v)
+	defer pushFx(gtx, e, moveBy(0, float32(gtx.Dp(16))*(1-e))).Pop()
+	rect := image.Rectangle{Max: card.size}.Add(image.Pt(x, y))
+	fillRRect(gtx, rect.Add(image.Pt(0, gtx.Dp(2))).Inset(-gtx.Dp(1)), gtx.Dp(9), p.Shadow)
+	fillRRect(gtx, rect, gtx.Dp(8), p.Toast)
+	card.at(gtx, x, y)
+}

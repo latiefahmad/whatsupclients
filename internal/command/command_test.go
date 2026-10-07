@@ -1,0 +1,238 @@
+package command
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/latiefahmad/whatsupclients/internal/model"
+)
+
+var testMembers = []model.Member{
+	{ID: "me@lid", Name: "You", Admin: true, Me: true},
+	{ID: "budi@lid", Name: "Budi Santoso"},
+	{ID: "siti@lid", Name: "Siti", Admin: true},
+	{ID: "sigit@lid", Name: "Sigit"},
+}
+
+func TestParseNotCommands(t *testing.T) {
+	for _, s := range []string{"", "hello", " /kick", "/nope arg", "/kickx @a"} {
+		if _, ok := Parse(s, len([]rune(s)), nil, testMembers); ok {
+			t.Errorf("Parse(%q) is a command", s)
+		}
+	}
+}
+
+func TestParseNaming(t *testing.T) {
+	in, ok := Parse("/ki", 3, nil, testMembers)
+	if !ok || !in.Naming || in.Cmd != nil || in.Word != "ki" {
+		t.Fatalf("Parse(/ki) = %+v, %v", in, ok)
+	}
+	in, ok = Parse("/kick", 5, nil, testMembers)
+	if !ok || !in.Naming || in.Cmd == nil || in.Cmd.Name != "kick" {
+		t.Fatalf("Parse(/kick) = %+v, %v", in, ok)
+	}
+	if _, ok := Parse("/zz", 3, nil, testMembers); ok {
+		t.Fatal("Parse(/zz) matches a command")
+	}
+}
+
+func TestParseMembers(t *testing.T) {
+	mentions := []Mention{{Name: "Budi Santoso", ID: "budi@lid"}}
+	s := "/kick @Budi Santoso @si"
+	in, ok := Parse(s, len([]rune(s)), mentions, testMembers)
+	if !ok || in.Cmd.Name != "kick" || in.Naming {
+		t.Fatalf("not parsed: %+v", in)
+	}
+	vs := in.Values[0]
+	if len(vs) != 2 || vs[0].ID != "budi@lid" || vs[0].Text != "@Budi Santoso" {
+		t.Fatalf("values = %+v", vs)
+	}
+	// "@si" could be Siti or Sigit.
+	if vs[1].Err == "" {
+		t.Fatalf("@si resolved to %q", vs[1].ID)
+	}
+	if in.Current != 0 || in.Word != "@si" {
+		t.Fatalf("current %d, word %q", in.Current, in.Word)
+	}
+	s = "/kick @sig"
+	in, _ = Parse(s, len([]rune(s)), nil, testMembers)
+	if v := in.Values[0][0]; v.ID != "sigit@lid" || v.Err != "" {
+		t.Fatalf("@sig = %+v", v)
+	}
+	if p := in.Problem(); p != "" {
+		t.Fatalf("problem %q", p)
+	}
+}
+
+func TestParseFilter(t *testing.T) {
+	// Siti is an admin already.
+	s := "/promote @Siti"
+	in, _ := Parse(s, len([]rune(s)), []Mention{{Name: "Siti", ID: "siti@lid"}}, testMembers)
+	if in.Values[0][0].Err == "" {
+		t.Fatal("promoted an admin")
+	}
+	s = "/demote @Siti"
+	in, _ = Parse(s, len([]rune(s)), []Mention{{Name: "Siti", ID: "siti@lid"}}, testMembers)
+	if p := in.Problem(); p != "" {
+		t.Fatalf("problem %q", p)
+	}
+}
+
+func TestParseMissing(t *testing.T) {
+	in, ok := Parse("/kick ", 6, nil, testMembers)
+	if !ok || in.Current != 0 || in.Word != "" || len(in.Missing()) != 1 || in.Problem() == "" {
+		t.Fatalf("Parse(/kick ) = %+v", in)
+	}
+}
+
+func TestParseContacts(t *testing.T) {
+	s := "/add +62 812 5550 1234, @Mom 0812"
+	in, _ := Parse(s, len([]rune(s)), []Mention{{Name: "Mom", ID: "mom@lid"}}, testMembers)
+	vs := in.Values[0]
+	if len(vs) != 3 {
+		t.Fatalf("values = %+v", vs)
+	}
+	if vs[0].Text != "+62 812 5550 1234" || vs[0].ID != "" || vs[0].Err != "" {
+		t.Errorf("phone = %+v", vs[0])
+	}
+	if vs[1].ID != "mom@lid" {
+		t.Errorf("contact = %+v", vs[1])
+	}
+	if vs[2].Err == "" {
+		t.Errorf("short number accepted: %+v", vs[2])
+	}
+}
+
+func TestParseChoiceAndText(t *testing.T) {
+	in, _ := Parse("/lockdown OFF", 13, nil, testMembers)
+	if v := in.Values[0]; len(v) != 1 || v[0].Text != "off" {
+		t.Fatalf("mode = %+v", v)
+	}
+	in, _ = Parse("/lockdown", 9, nil, testMembers)
+	if !in.Naming {
+		t.Fatal("not naming")
+	}
+	in, _ = Parse("/lockdown maybe", 15, nil, testMembers)
+	if len(in.Extra) != 1 || in.Problem() == "" {
+		t.Fatalf("maybe accepted: %+v", in)
+	}
+	s := "/description Hello  *world*  "
+	in, _ = Parse(s, len([]rune(s)), nil, testMembers)
+	if v := in.Values[0]; len(v) != 1 || v[0].Text != "Hello  *world*" {
+		t.Fatalf("text = %+v", v)
+	}
+	if in.Current != 0 {
+		t.Fatalf("current %d", in.Current)
+	}
+}
+
+func TestUsage(t *testing.T) {
+	if u := Lookup("lockdown").Usage(); u != "/lockdown [mode]" {
+		t.Errorf("usage %q", u)
+	}
+	if u := Lookup("kick").Usage(); u != "/kick member" {
+		t.Errorf("usage %q", u)
+	}
+}
+
+func TestMatching(t *testing.T) {
+	var outside []string
+	for _, c := range Matching("", false) {
+		outside = append(outside, c.Name)
+	}
+	if strings.Join(outside, " ") != "sticker purge calc schedule scheduled afk ghost snippet catch" {
+		t.Errorf("outside groups: %v", outside)
+	}
+	if got := Matching("d", true); len(got) != 2 {
+		t.Errorf("d: %v", got)
+	}
+}
+
+func TestParseSeparator(t *testing.T) {
+	for _, c := range []struct {
+		text, top, bottom string
+		current           int
+	}{
+		{"/sticker When the code#works ", "When the code", "works", 1},
+		{"/sticker  only the top", "only the top", "", 0},
+		{"/sticker #only the bottom", "", "only the bottom", 1},
+		{"/sticker top #", "top", "", 1},
+		{"/sticker a#b#c", "a", "b#c", 1},
+	} {
+		in, ok := Parse(c.text, len([]rune(c.text)), nil, nil)
+		if !ok || in.Problem() != "" {
+			t.Errorf("%q: ok %v, problem %q", c.text, ok, in.Problem())
+			continue
+		}
+		get := func(i int) string {
+			if len(in.Values[i]) == 0 {
+				return ""
+			}
+			return in.Values[i][0].Text
+		}
+		if get(0) != c.top || get(1) != c.bottom || in.Current != c.current {
+			t.Errorf("%q: top %q, bottom %q, current %d; want %q, %q, %d",
+				c.text, get(0), get(1), in.Current, c.top, c.bottom, c.current)
+		}
+	}
+}
+
+func TestParseNumber(t *testing.T) {
+	s := "/purge 25"
+	in, ok := Parse(s, len([]rune(s)), nil, nil)
+	if !ok || in.Problem() != "" || in.Values[0][0].Text != "25" {
+		t.Fatalf("/purge 25 = %+v (%q)", in, in.Problem())
+	}
+	for _, s := range []string{"/purge 0", "/purge 101", "/purge five", "/purge "} {
+		in, _ := Parse(s, len([]rune(s)), nil, nil)
+		if in.Problem() == "" {
+			t.Errorf("%q runs", s)
+		}
+	}
+	// An optional number can be left out.
+	s = "/raffle"
+	in, _ = Parse(s+" ", len([]rune(s))+1, nil, testMembers)
+	if in.Problem() != "" || len(in.Values[0]) != 0 {
+		t.Fatalf("%q = %+v", s, in.Values)
+	}
+	s = "/raffle 3 tickets"
+	in, _ = Parse(s, len([]rune(s)), nil, testMembers)
+	if in.Problem() == "" {
+		t.Fatalf("%q runs", s)
+	}
+}
+
+func TestRaffleText(t *testing.T) {
+	text, ids := raffleText("Lady Luck smiles on", testMembers[1:3], 3)
+	want := "🎲 *Raffle*\nLady Luck smiles on:\n1. @budi\n2. @siti\n_Drawn at random from 3 members._"
+	if text != want || len(ids) != 2 || ids[0] != "budi@lid" {
+		t.Fatalf("raffleText = %q, %v", text, ids)
+	}
+}
+
+func TestRaffleLines(t *testing.T) {
+	seen := map[string]bool{}
+	for _, l := range raffleLines {
+		if l == "" || seen[l] || strings.ContainsAny(l[len(l)-1:], ":.!?") {
+			t.Errorf("raffle line %q", l)
+		}
+		seen[l] = true
+	}
+	if len(seen) != 100 {
+		t.Errorf("%d raffle lines, want 100", len(seen))
+	}
+}
+
+func TestSnippetOptions(t *testing.T) {
+	in, ok := Parse("/snippet send Office hours", 26, nil, nil)
+	if !ok || in.Problem() != "" || in.Text("action") != "send" || in.Text("snippet") != "Office hours" {
+		t.Fatalf("send: %+v", in)
+	}
+	in, _ = Parse("/snippet save", 13, nil, nil)
+	if in.Problem() != "" || in.Text("snippet") != "" {
+		t.Fatalf("save: %q", in.Problem())
+	}
+	if in, _ = Parse("/snippet Greeting", 17, nil, nil); in.Problem() == "" {
+		t.Fatal("a name without send or save ran")
+	}
+}
