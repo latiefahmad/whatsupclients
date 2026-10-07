@@ -2,3 +2,7 @@ bin/
 /third_party/
 .idea/
 .freebuff/
+# Release signing key: private, never commit. Its public half lives in
+# internal/update/update.go; the seed goes in the RELEASE_SIGNING_KEY secret.
+release.key
+*.key

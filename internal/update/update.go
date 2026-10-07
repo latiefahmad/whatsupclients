@@ -33,7 +33,7 @@ import (
 const Repo = "latiefahmad/whatsupclients"
 
 // publicKey verifies SHA256SUMS.sig (base64 of the raw ed25519 key).
-var publicKey = mustKey("ZWM/XcP64aZqK/pqRanY3woixOKnW0Cl16tKQPtkOEI=")
+var publicKey = mustKey("+Bsd4QqKsjfjusJ6OtLKd7s6ZDk5vhBRNb3wSFt+JcE=")
 
 func mustKey(s string) ed25519.PublicKey {
 	k, err := base64.StdEncoding.DecodeString(s)
