@@ -106,6 +106,14 @@ html[data-theme="dark"] .i-sun, html[data-theme="light"] .i-moon { display: none
 }
 .menu-btn .ic { pointer-events: none; }
 
+/* Safari ignores grid/flex centering inside <button>, so the icons slipped
+   to a corner and overlapped the border. Center them absolutely instead;
+   works in every browser. */
+.theme-toggle, .menu-btn, #to-top { position: relative; padding: 0; }
+.theme-toggle .ic, .menu-btn .ic, #to-top .ic {
+  position: absolute; inset: 0; margin: auto;
+}
+
 .progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; }
 #progress-bar {
   display: block; height: 100%; width: 0;
