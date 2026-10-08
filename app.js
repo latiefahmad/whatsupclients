@@ -111,6 +111,46 @@
   els.forEach(function (el) { io.observe(el); });
 })();
 
+// Total downloads: sum of every release asset's download_count.
+// Cached in localStorage for an hour; fails silently (badge just stays empty).
+(function () {
+  var el = document.getElementById("dl-count");
+  if (!el) return;
+
+  function short(n) {
+    var v;
+    if (n >= 1e9) v = [n / 1e9, " mld"];
+    else if (n >= 1e6) v = [n / 1e6, " jt"];
+    else if (n >= 1e3) v = [n / 1e3, " rb"];
+    else return n.toLocaleString("id-ID");
+    return (Math.round(v[0] * 10) / 10).toString().replace(".", ",") + v[1];
+  }
+
+  function show(n) {
+    el.textContent = " \u00B7 " + short(n) + " unduhan";
+  }
+
+  try {
+    var c = JSON.parse(localStorage.getItem("wuc-dl") || "null");
+    if (c && Date.now() - c.t < 3600e3) {
+      show(c.n);
+      return;
+    }
+  } catch (e) {}
+
+  fetch("https://api.github.com/repos/latiefahmad/whatsupclients/releases?per_page=100")
+    .then(function (r) { if (!r.ok) throw new Error("http " + r.status); return r.json(); })
+    .then(function (rels) {
+      var total = 0;
+      (rels || []).forEach(function (rel) {
+        (rel.assets || []).forEach(function (a) { total += a.download_count || 0; });
+      });
+      show(total);
+      try { localStorage.setItem("wuc-dl", JSON.stringify({ t: Date.now(), n: total })); } catch (e) {}
+    })
+    .catch(function () {});
+})();
+
 // Release info: version badge + the first highlights of the newest section.
 // Primary source is releases.js (generated from CHANGELOG.md) — it
 // works with a private repo, offline, and without any rate limit. The raw
