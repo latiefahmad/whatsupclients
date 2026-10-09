@@ -58,6 +58,16 @@ func TestClickRedraws(t *testing.T) {
 		return nil
 	}
 	settle()
+	// Open every page once, so the images its first draw loads (channel
+	// avatars and the like) finish while settling here and not in the
+	// middle of the clicks below, where a load landing between the two
+	// compared frames would fail the click it lands on.
+	for _, pg := range []page{pageCalls, pageStatus, pageChannels, pageCommunities, pageSettings} {
+		u.setPage(pg)
+		settle()
+	}
+	u.setPage(pageChats)
+	settle()
 	var at time.Duration
 	for y := 10; y < 700; y += 46 {
 		for x := 10; x < 1100; x += 37 {
