@@ -52,10 +52,12 @@ type UI struct {
 	zoom zoomState
 	// voiceRate is the speed voice messages play at (files.go).
 	voiceRate float64
-	now       func() time.Time
-	window    *app.Window // nil when rendering headless
-	host      *host       // nil when rendering headless (see Run)
-	deco      widget.Decorations
+	// volume is the sound's volume, 0 to 1 (volume.go).
+	volume float32
+	now    func() time.Time
+	window *app.Window // nil when rendering headless
+	host   *host       // nil when rendering headless (see Run)
+	deco   widget.Decorations
 	// winWidth is the window width in px, for panels sized relative to it.
 	winWidth int
 
@@ -327,12 +329,14 @@ func New(b model.Backend) *UI {
 	u.doodles = true
 	u.zoom.pct = 100
 	u.voiceRate = 1
+	u.volume = 1
 	u.split.anim.snap(true)
 	if b != nil { // nil in some tests
 		u.applyTheme()
 		u.doodles = prefOn(b, prefDoodles)
 		u.loadZoom()
 		u.loadVoiceRate()
+		u.loadVolume()
 		u.loadSplit()
 	}
 	u.images = newImageCache(240, 32<<20)
