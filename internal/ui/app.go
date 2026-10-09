@@ -1389,7 +1389,8 @@ func (u *UI) applyReceipt(e model.ReceiptEvent) {
 // "mute", "lists", "msgmenu", "stickermenu" (a received sticker's), "emoji", "sticker", "viewer", "forward", "reply", "replyphoto" (a reply to a photo), "linkpreview" (a link's preview
 // over the composer), "delete", "select", "edit" (your last message in the composer to edit), "edits" (an edited message's Edit history), "msginfo" (your last message's Message info), "votes" (the
 // first poll's or event's votes), "reactions" (who reacted to the first message with reactions), "attach", "poll", "contacts", "invite" (a demo group's invite link), "tray", "search" (the search panel, with
-// $WHATSUP_DEMO_SEARCH typed in), "membersearch"; on the Status page "statusadd",
+// $WHATSUP_DEMO_SEARCH typed in), "membersearch"; the chat list's search "listsearch" (also
+// $WHATSUP_DEMO_SEARCH), its first list's chip "listchip" and the New list dialog "newlist"; on the Status page "statusadd",
 // "statusmenu", "statusprivacy", "statustext" and "statussend"; the zoom's "zoombubble" and
 // Font size "zoommenu"; or the New chat panel:
 // "newchat", "newnumber" (a typed phone number), "newmembers" (Create a similar group of the
@@ -1559,6 +1560,20 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 			q = "the"
 		}
 		u.search.query.SetText(q)
+	case "listsearch":
+		// The chat list's search, with $WHATSUP_DEMO_SEARCH typed in.
+		q := os.Getenv("WHATSUP_DEMO_SEARCH")
+		if q == "" {
+			q = "an"
+		}
+		u.sidebar.search.SetText(q)
+	case "listchip":
+		u.pickChip(u.chipItems()[len(filterNames)]) // the first custom list
+	case "newlist":
+		u.openNewList([]string{"gym"})
+		u.dialog.listName.SetText("Friends")
+		u.dialog.anim.snap(true)
+		u.dialog.bar.snap(true)
 	case "membersearch":
 		u.openInfo(u.selected.ID)
 		u.info.anim.snap(true)
