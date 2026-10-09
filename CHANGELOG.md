@@ -9,6 +9,59 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.3.0] - 2026-10-09
+
+### 😀 Reaksi
+
+- **Ringkasan reaksi** — pil di bawah pesan menampilkan sampai tiga emoji
+  terbanyak plus jumlahnya. Klik untuk melihat siapa memberi apa (satu tab
+  per emoji); klik barisanmu sendiri untuk menarik reaksimu.
+
+### 💬 Chat
+
+- **System messages di chat** — anggota keluar/masuk, ganti nama, ikon dan
+  deskripsi grup, timer disappearing, pesan PIN, link undangan, ganti kode
+  keamanan dan panggilan tak terjawab tampil sebagai chip abu di tengah,
+  sekaligus jadi pesan terakhir di daftar chat.
+- **Tombol kembali ke terbaru** — tombol ⌄ di kanan bawah saat kamu scroll
+  ke atas, lengkap dengan jumlah pesan belum dibaca di bawahnya; tanggal
+  menempel di atas selama scroll.
+- **"Dihapus admin *Nama*"** — pesan yang dihapus admin grup kini menyebut
+  siapa yang menghapus.
+
+### 📋 Daftar chat
+
+- **Chip filter** — daftar custom tampil sebagai chip (Favourites, Groups,
+  buatanmu) dengan **+** untuk membuat baru.
+- **Search yang lebih luas** — menemukan chat arsip, kontak yang belum ada
+  chat-nya, dan pesan di semua chat; hanya cocok terbaru yang ditampilkan.
+- **Badge timer** — chat dengan disappearing messages punya badge jam di
+  fotonya, dan urutan indikator baris mengikuti WhatsApp.
+
+### 🎙️ Media
+
+- **Kecepatan voice message 1×/1.5×/2×** — pilihanmu diingat untuk berikutnya.
+- **Volume slider** — video, status dan voice message punya pengatur volume
+  yang diingat setelah restart.
+- **GIF autoplay** — GIF di chat berputar sendiri selagi terlihat (mute,
+  loop, maks 3 bersamaan), seperti stiker.
+- **Tombol stiker** — setelah memakai tab stiker, tombol emoji komposer
+  menjadi tombol stiker.
+
+### ⚙️ Pengaturan & sinkron
+
+- **Settings > Performance** — matikan animasi dan smooth scrolling, atur
+  kapan GIF/stiker animasi berputar, plus halaman Advanced berisi angka
+  memori live, tombol Free memory, dan kenop cache, GC dan CPU.
+- **System default theme** — mengikuti terang/gelap sistem (sekarang default).
+- **Sync dari HP** — PIN, mute, arsip dan bacaan yang diatur di HP kini
+  diterapkan di sini; history lama tak lagi menimpanya.
+- Buka grup besar tak lagi freeze (media info panel dihitung di background),
+  logout minta konfirmasi, `//kick` mengirim `/kick` sebagai teks, tombol
+  bekerja tanpa menunggu mouse gerak, dan duplikat tombol Cancel dihapus.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.2.3...v1.3.0
+
 ## [v1.2.3] - 2026-10-07
 
 ### 🌐 Landing page

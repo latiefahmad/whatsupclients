@@ -1,10 +1,12 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.2.3",
-  "date": "2026-10-07",
+  "ver": "v1.3.0",
+  "date": "2026-10-09",
   "items": [
-    "**Project website added** — a landing page in `site/` presents the app with a feature tour, screenshots, dark and light themes, and download buttons for Windows (installer and portable) and Linux that always serve the newest release. Its *Rilis* section shows the notes of the latest version, and a button scrolls straight to the downloads.",
-    "**README brought up to date** — the 70%–200% font size, the automatic update offer (*Update now* or *Later*, checked every 12 hours), and the Donate button are now listed, and the download section describes how updates arrive."
+    "**Ringkasan reaksi** — pil di bawah pesan menampilkan sampai tiga emoji terbanyak plus jumlahnya. Klik untuk melihat siapa memberi apa (satu tab per emoji); klik barisanmu sendiri untuk menarik reaksimu.",
+    "**System messages di chat** — anggota keluar/masuk, ganti nama, ikon dan deskripsi grup, timer disappearing, pesan PIN, link undangan, ganti kode keamanan dan panggilan tak terjawab tampil sebagai chip abu di tengah, sekaligus jadi pesan terakhir di daftar chat.",
+    "**Tombol kembali ke terbaru** — tombol ⌄ di kanan bawah saat kamu scroll ke atas, lengkap dengan jumlah pesan belum dibaca di bawahnya; tanggal menempel di atas selama scroll.",
+    "**\"Dihapus admin *Nama*\"** — pesan yang dihapus admin grup kini menyebut siapa yang menghapus."
   ]
 };

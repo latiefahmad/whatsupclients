@@ -198,6 +198,8 @@ photos exactly as they are.
 - 🎙️ Voice messages and videos played by the system's own decoders (no bundled codecs)
 - 📌 Pinned, archived and muted chats, Favourites and custom lists, disappearing messages, chat themes
 - 📊 Polls with Hide voter names and an end time when you create one
+- 😀 Reaction summaries (who reacted to what), system messages as grey chips, and a scroll-to-bottom button with the unread count
+- 🎚️ Voice speed 1×–2×, a volume slider, GIF autoplay, sticker button, System default theme, and Settings > Performance with memory/CPU knobs
 - 🔗 Link previews, sent and received, with WhatsApp's big picture; group invite links, albums and documents
 - 1️⃣ View once messages, opened once, with screenshots blocked while one is shown
 - 🔍 Font size from 70% to 200% (*Settings > General*, or Ctrl with +, - and 0)
