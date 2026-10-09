@@ -331,8 +331,9 @@ func (s *msgStore) setField(ctx context.Context, jid, field string, v any) error
 		_, err := s.db.ExecContext(ctx, `UPDATE wz_chats SET `+field+` = ? WHERE jid = ?`, v, jid)
 		return err
 	}
-	// This device can set a chat's settings before its history comes, so the
-	// chat is created if needed. It isn't listed until it has a message.
+	// App state can set a chat's settings before its history comes (on a
+	// new link, it always does), so the chat is created if needed. It isn't
+	// listed until it has a message (see chats).
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO wz_chats (jid, is_group, `+field+`, settled) VALUES (?1, ?2, ?3, ?4)
 		ON CONFLICT (jid) DO UPDATE SET `+field+` = ?3, settled = settled | ?4`,
@@ -346,6 +347,42 @@ func (s *msgStore) listed(ctx context.Context, jid string) bool {
 	_ = s.db.QueryRowContext(ctx, `SELECT last_ts > 0 OR EXISTS (SELECT 1 FROM wz_messages WHERE chat = ?1)
 		FROM wz_chats WHERE jid = ?1`, jid).Scan(&ok)
 	return ok
+}
+
+// readUpTo marks a chat read up to the newest of ids, which were read on
+// another device: it keeps only the unread messages after them. A chat
+// marked as unread stays so.
+func (s *msgStore) readUpTo(ctx context.Context, jid string, ids []string) error {
+	var ts sql.NullInt64
+	if len(ids) > 0 {
+		args := []any{jid}
+		for _, id := range ids {
+			args = append(args, id)
+		}
+		_ = s.db.QueryRowContext(ctx, `SELECT MAX(ts) FROM wz_messages WHERE chat = ? AND id IN (`+
+			placeholders(len(ids))+`)`, args...).Scan(&ts)
+	}
+	return s.readAfter(ctx, jid, ts.Int64, false)
+}
+
+// readAfter keeps a chat's unread count to its incoming messages after ts
+// (unix seconds; 0 reads them all). unmark reads a chat marked as unread
+// too.
+func (s *msgStore) readAfter(ctx context.Context, jid string, ts int64, unmark bool) error {
+	var after int
+	if ts > 0 {
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM wz_messages
+			WHERE chat = ? AND from_me = 0 AND ts > ? AND kind != ?`, jid, ts, int(model.KindSystem)).Scan(&after); err != nil {
+			return err
+		}
+	}
+	unread := "unread"
+	if unmark {
+		unread = "MAX(unread, 0)"
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE wz_chats SET unread = MIN(`+unread+`, ?1),
+		settled = settled | ?2 WHERE jid = ?3`, after, settledBits["unread"], jid)
+	return err
 }
 
 // addUnread counts one more unread message, which is for you (forMe) or
