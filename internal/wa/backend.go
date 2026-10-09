@@ -81,6 +81,8 @@ type Backend struct {
 
 	galleryMu     sync.Mutex
 	galleryCancel context.CancelFunc // the running Gallery
+	summaryMu     sync.Mutex
+	summaryCancel context.CancelFunc // the running MediaSummary
 
 	accountMu      sync.Mutex  // guards the cached account details
 	accountFetched atomic.Bool // account details refreshed this session

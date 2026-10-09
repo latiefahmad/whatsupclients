@@ -41,7 +41,6 @@ func (b *Backend) Info(chatID string) *model.ChatInfo {
 			info.Phone = b.lookup(ctx, jid).phone
 		}
 	}
-	info.MediaCount, info.Media = b.store.mediaSummary(ctx, chatID, 4)
 	if !info.IsGroup {
 		// A contact's timer is the chat's, which messages keep up to date.
 		if secs, ok := b.store.timer(ctx, chatID); ok {
@@ -49,6 +48,26 @@ func (b *Backend) Info(chatID string) *model.ChatInfo {
 		}
 	}
 	return info
+}
+
+// MediaSummary implements model.Backend. It reads the whole chat (100 ms
+// and more in a big group), so it runs in the background, and only for
+// the info panel.
+func (b *Backend) MediaSummary(chatID string) {
+	ctx, cancel := context.WithCancel(b.ctx)
+	b.summaryMu.Lock()
+	if b.summaryCancel != nil {
+		b.summaryCancel()
+	}
+	b.summaryCancel = cancel
+	b.summaryMu.Unlock()
+	go func() {
+		defer cancel()
+		count, media := b.store.mediaSummary(ctx, chatID, 4)
+		if ctx.Err() == nil {
+			b.emit(model.MediaSummaryEvent{ChatID: chatID, Count: count, Media: media})
+		}
+	}()
 }
 
 // mediaSummary counts a chat's media, links and documents, and returns the
