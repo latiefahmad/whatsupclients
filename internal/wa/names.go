@@ -298,6 +298,13 @@ func (b *Backend) resolve(ctx context.Context, r rawMsg, isGroup bool) *model.Me
 	if m.Quote != nil && strings.Contains(m.Quote.Text, "@") {
 		m.Quote.Text = b.guessMentions(ctx, m.Quote.Text)
 	}
+	if r.revokedBy != "" {
+		if j, err := types.ParseJID(r.revokedBy); err == nil && b.isMe(j) {
+			m.DeletedByMe = true
+		} else {
+			m.DeletedBy = b.senderNameStr(ctx, r.revokedBy, "")
+		}
+	}
 	b.fillVotes(ctx, m)
 	return m
 }
