@@ -38,6 +38,25 @@ const (
 	// KindViewOnce is a view once photo, video or voice message: a pill
 	// that opens it (see Message.Opened and Message.OnPhone).
 	KindViewOnce
+	// KindSystem is a note about the chat rather than a message: "Alice
+	// added Bob", "Bob changed the group name", a missed call. It is drawn
+	// as a grey chip in the middle (Text, with Notice saying how).
+	KindSystem
+)
+
+// Notice is what a system message (KindSystem) is about, for the ones the
+// chat draws differently from a plain note.
+type Notice int
+
+const (
+	NoticePlain Notice = iota
+	// NoticeMissedCall shows a red phone and the call's time.
+	NoticeMissedCall
+	// NoticeSecurity is a contact's security code changing; clicking it
+	// shows the code.
+	NoticeSecurity
+	// NoticeTimer is disappearing messages turned on or off.
+	NoticeTimer
 )
 
 // ButtonKind is what a message button does.
@@ -150,6 +169,8 @@ type Message struct {
 	// it: WhatsApp sends view once media only to the phone, so it shows
 	// once someone replies to it, which carries it along.
 	Opened, OnPhone bool
+	// Notice is what a system message (KindSystem) is about.
+	Notice Notice
 }
 
 // Location is a place or position someone shared.
