@@ -241,6 +241,9 @@ type UI struct {
 		scrollTo *layout.Position
 		// scrollAbove is room to leave above scrollTo's row.
 		scrollAbove unit.Dp
+		// float is the ⌄ button and the day pinned over the messages
+		// (scrolldown.go).
+		float convFloat
 		// unread is the "N unread messages" divider (unread.go).
 		unread unreadDivider
 		// olderMore and newerMore report stored messages past either end
@@ -567,6 +570,7 @@ func (u *UI) open(c *model.Chat) {
 	u.chatRead(c.ID)
 	u.conv.list.Position = layout.Position{}
 	u.conv.list.ScrollToEnd = true
+	u.conv.float = convFloat{below: unread}
 	u.showUnread(unread)
 	u.conv.composer.SetText("")
 	u.conv.reply, u.conv.mentions = nil, nil
@@ -1107,6 +1111,7 @@ func (u *UI) applyEvents() {
 		case model.ChatEvent:
 			u.upsertChat(e.Chat)
 		case model.MessageEvent:
+			u.newBelow(e)
 			u.upsertMessage(e.Msg)
 			u.searchChatChanged(e.Msg.ChatID)
 			u.votesChanged(e.Msg)
