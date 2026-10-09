@@ -11,54 +11,59 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 
 ## [v1.3.0] - 2026-10-09
 
-### 😀 Reaksi
+### 😀 Reactions
 
-- **Ringkasan reaksi** — pil di bawah pesan menampilkan sampai tiga emoji
-  terbanyak plus jumlahnya. Klik untuk melihat siapa memberi apa (satu tab
-  per emoji); klik barisanmu sendiri untuk menarik reaksimu.
+- **Reaction summaries** — the pill under a message shows up to three
+  emojis, the most given first, plus their counts. Click it to see who
+  reacted, with a tab per emoji; click your own row to take your
+  reaction back.
 
-### 💬 Chat
+### 💬 Chats
 
-- **System messages di chat** — anggota keluar/masuk, ganti nama, ikon dan
-  deskripsi grup, timer disappearing, pesan PIN, link undangan, ganti kode
-  keamanan dan panggilan tak terjawab tampil sebagai chip abu di tengah,
-  sekaligus jadi pesan terakhir di daftar chat.
-- **Tombol kembali ke terbaru** — tombol ⌄ di kanan bawah saat kamu scroll
-  ke atas, lengkap dengan jumlah pesan belum dibaca di bawahnya; tanggal
-  menempel di atas selama scroll.
-- **"Dihapus admin *Nama*"** — pesan yang dihapus admin grup kini menyebut
-  siapa yang menghapus.
+- **System messages in chats** — members joining or leaving, name, icon
+  and description changes, disappearing timers, pins, invite links,
+  security code changes and missed calls show as grey chips down the
+  middle, and as the chat list's last message.
+- **Scroll-to-bottom button** — a ⌄ button at the bottom right while
+  you're scrolled up, with the unread count below it; the day stays
+  pinned at the top while you scroll.
+- **"Deleted by admin *Name*"** — a message a group admin deleted now
+  says who did it.
 
-### 📋 Daftar chat
+### 📋 Chat list
 
-- **Chip filter** — daftar custom tampil sebagai chip (Favourites, Groups,
-  buatanmu) dengan **+** untuk membuat baru.
-- **Search yang lebih luas** — menemukan chat arsip, kontak yang belum ada
-  chat-nya, dan pesan di semua chat; hanya cocok terbaru yang ditampilkan.
-- **Badge timer** — chat dengan disappearing messages punya badge jam di
-  fotonya, dan urutan indikator baris mengikuti WhatsApp.
+- **Filter chips** — custom lists show as chips (Favourites, Groups and
+  yours) with a **+** for a new one.
+- **Wider search** — finds archived chats, contacts you have no chat
+  with yet, and messages in every chat; only the newest matches show.
+- **Timer badge** — chats with disappearing messages get a clock badge
+  on their picture, and row indicators are ordered like WhatsApp.
 
 ### 🎙️ Media
 
-- **Kecepatan voice message 1×/1.5×/2×** — pilihanmu diingat untuk berikutnya.
-- **Volume slider** — video, status dan voice message punya pengatur volume
-  yang diingat setelah restart.
-- **GIF autoplay** — GIF di chat berputar sendiri selagi terlihat (mute,
-  loop, maks 3 bersamaan), seperti stiker.
-- **Tombol stiker** — setelah memakai tab stiker, tombol emoji komposer
-  menjadi tombol stiker.
+- **Voice message speed 1×/1.5×/2×** — the speed you pick is kept for
+  the next ones.
+- **Volume slider** — videos, statuses and voice messages share one
+  volume, remembered after a restart.
+- **GIF autoplay** — GIFs play while they're on screen, muted and
+  looping, at most 3 at once, like stickers.
+- **Sticker button** — after you use the sticker tab, the composer's
+  emoji button becomes the sticker button and opens there again.
 
-### ⚙️ Pengaturan & sinkron
+### ⚙️ Settings & sync
 
-- **Settings > Performance** — matikan animasi dan smooth scrolling, atur
-  kapan GIF/stiker animasi berputar, plus halaman Advanced berisi angka
-  memori live, tombol Free memory, dan kenop cache, GC dan CPU.
-- **System default theme** — mengikuti terang/gelap sistem (sekarang default).
-- **Sync dari HP** — PIN, mute, arsip dan bacaan yang diatur di HP kini
-  diterapkan di sini; history lama tak lagi menimpanya.
-- Buka grup besar tak lagi freeze (media info panel dihitung di background),
-  logout minta konfirmasi, `//kick` mengirim `/kick` sebagai teks, tombol
-  bekerja tanpa menunggu mouse gerak, dan duplikat tombol Cancel dihapus.
+- **Settings > Performance** — switch off animations and smooth wheel
+  scrolling, choose when GIFs and animated stickers play, plus an
+  Advanced page with live memory numbers, a Free memory button, and
+  cache, GC and CPU knobs.
+- **System default theme** — follows your system's light or dark mode,
+  now the default.
+- **Synced from your phone** — pins, mutes, archives and reads made on
+  the phone now apply here, and old history no longer undoes them.
+- Big groups open without freezing (their media is counted in the
+  background), logging out asks first, `//kick` sends `/kick` as text,
+  buttons redraw without waiting for the mouse to move, and the doubled
+  Cancel button is gone.
 
 **Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.2.3...v1.3.0
 

@@ -4,9 +4,9 @@ window.WUC_RELEASE = {
   "ver": "v1.3.0",
   "date": "2026-10-09",
   "items": [
-    "**Ringkasan reaksi** — pil di bawah pesan menampilkan sampai tiga emoji terbanyak plus jumlahnya. Klik untuk melihat siapa memberi apa (satu tab per emoji); klik barisanmu sendiri untuk menarik reaksimu.",
-    "**System messages di chat** — anggota keluar/masuk, ganti nama, ikon dan deskripsi grup, timer disappearing, pesan PIN, link undangan, ganti kode keamanan dan panggilan tak terjawab tampil sebagai chip abu di tengah, sekaligus jadi pesan terakhir di daftar chat.",
-    "**Tombol kembali ke terbaru** — tombol ⌄ di kanan bawah saat kamu scroll ke atas, lengkap dengan jumlah pesan belum dibaca di bawahnya; tanggal menempel di atas selama scroll.",
-    "**\"Dihapus admin *Nama*\"** — pesan yang dihapus admin grup kini menyebut siapa yang menghapus."
+    "**Reaction summaries** — the pill under a message shows up to three emojis, the most given first, plus their counts. Click it to see who reacted, with a tab per emoji; click your own row to take your reaction back.",
+    "**System messages in chats** — members joining or leaving, name, icon and description changes, disappearing timers, pins, invite links, security code changes and missed calls show as grey chips down the middle, and as the chat list's last message.",
+    "**Scroll-to-bottom button** — a ⌄ button at the bottom right while you're scrolled up, with the unread count below it; the day stays pinned at the top while you scroll.",
+    "**\"Deleted by admin *Name*\"** — a message a group admin deleted now says who did it."
   ]
 };
