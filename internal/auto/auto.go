@@ -25,8 +25,10 @@ import (
 
 // Pref keys for the state it keeps.
 const (
-	prefJobs = "auto_scheduled"
-	prefAway = "auto_away"
+	prefJobs  = "auto_scheduled"
+	prefAway  = "auto_away"
+	prefAllow = "auto_afk_allow"
+	prefHours = "auto_afk_hours"
 )
 
 // Job is a scheduled message.
@@ -53,6 +55,54 @@ type Away struct {
 	Told []string `json:"told,omitempty"`
 }
 
+// AFKMember is one contact the AFK reply may go to.
+type AFKMember struct {
+	// ID is the JID as picked, or the digits for a typed number.
+	ID string `json:"id"`
+	// Name is as picked or typed, for listing.
+	Name string `json:"name,omitempty"`
+}
+
+// AFKAllow is who the AFK reply goes to (Settings > AFK list). Without Only, or
+// with no members, everyone answers() names gets it.
+type AFKAllow struct {
+	Only    bool        `json:"only,omitempty"`
+	Members []AFKMember `json:"members,omitempty"`
+}
+
+// AFKHours confines AFK replies to a daily span, in minutes since
+// midnight. Overnight spans (from after to) wrap past midnight.
+type AFKHours struct {
+	On   bool `json:"on,omitempty"`
+	From int  `json:"from,omitempty"`
+	To   int  `json:"to,omitempty"`
+}
+
+// ParseHour reads "21:00" or "21" as minutes since midnight.
+func ParseHour(s string) (int, error) {
+	if h, m, ok := strings.Cut(s, ":"); ok {
+		hh, err1 := strconv.Atoi(h)
+		mm, err2 := strconv.Atoi(m)
+		if err1 != nil || err2 != nil || hh < 0 || hh > 23 || mm < 0 || mm > 59 {
+			return 0, errors.New("type an hour like 21:00")
+		}
+		return hh*60 + mm, nil
+	}
+	if hh, err := strconv.Atoi(s); err == nil && hh >= 0 && hh <= 23 {
+		return hh * 60, nil
+	}
+	return 0, errors.New("type an hour like 21:00")
+}
+
+// FormatHour shows minutes since midnight as "21:00".
+func FormatHour(m int) string {
+	out := strconv.Itoa(m/60) + ":"
+	if m%60 < 10 {
+		out += "0"
+	}
+	return out + strconv.Itoa(m%60)
+}
+
 // Backend is a model.Backend that also sends scheduled messages and AFK
 // replies.
 type Backend struct {
@@ -60,18 +110,23 @@ type Backend struct {
 	now    func() time.Time
 	jobs   []Job // by At
 	away   *Away
+	allow  AFKAllow
+	hours  AFKHours
 	meID   string
 	online bool
 	// ours are the IDs of the messages it sent: they don't end AFK.
 	ours map[string]bool
 	// groups caches which chats are groups (see isGroup).
 	groups map[string]bool
-	out    []model.Event // for the next Poll
-	notify func()
-	timer  *time.Timer
-	seq    int
-	ver    int // bumped as the jobs change
-	ghost  bool
+	// byPhone maps contact digits to chat IDs, for matching typed
+	// numbers against LID-keyed chats; nil until first use.
+	byPhone map[string]string
+	out     []model.Event // for the next Poll
+	notify  func()
+	timer   *time.Timer
+	seq     int
+	ver     int // bumped as the jobs change
+	ghost   bool
 }
 
 // Wrap returns b with scheduled messages and AFK, reading the time from
@@ -87,6 +142,12 @@ func Wrap(b model.Backend, now func() time.Time) *Backend {
 		if json.Unmarshal([]byte(s), &w) == nil {
 			a.away = &w
 		}
+	}
+	if s := b.Pref(prefAllow); s != "" {
+		json.Unmarshal([]byte(s), &a.allow)
+	}
+	if s := b.Pref(prefHours); s != "" {
+		json.Unmarshal([]byte(s), &a.hours)
 	}
 	return a
 }
@@ -294,6 +355,15 @@ func (a *Backend) SetAway(reason string) {
 	a.saveAway()
 }
 
+// SetAwayReason changes the away message, keeping when it started.
+func (a *Backend) SetAwayReason(reason string) {
+	if a.away == nil {
+		return
+	}
+	a.away.Reason = reason
+	a.saveAway()
+}
+
 // Back ends AFK, and returns how many got the reply.
 func (a *Backend) Back() int {
 	if a.away == nil {
@@ -315,6 +385,283 @@ func (a *Backend) saveAway() {
 	}
 }
 
+// Digits keeps the decimal digits of s: what phone numbers and JIDs
+// compare by when their form (LID or phone) differs.
+func Digits(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// ResolvePerson finds who text calls for the AFK list: a group member
+// by exact then unique-prefix name (never you), else a saved contact
+// the same way, else a typed phone number. Numbers take the contact's
+// name when known.
+func ResolvePerson(b model.Backend, members []model.Member, text string) (id, name string, err error) {
+	t := strings.TrimSpace(strings.TrimPrefix(text, "@"))
+	if t == "" {
+		return "", "", errors.New("name someone: @mention, call or type them")
+	}
+	var hits []model.Member
+	for _, m := range members {
+		if m.Me || m.ID == "" {
+			continue
+		}
+		if strings.EqualFold(m.Name, t) {
+			return m.ID, m.Name, nil
+		}
+		if strings.HasPrefix(strings.ToLower(m.Name), strings.ToLower(t)) {
+			hits = append(hits, m)
+		}
+	}
+	if len(hits) == 1 {
+		return hits[0].ID, hits[0].Name, nil
+	}
+	if len(hits) > 1 {
+		ns := make([]string, len(hits))
+		for i, m := range hits {
+			ns[i] = m.Name
+		}
+		return "", "", errors.New(t + " could be " + strings.Join(ns, " or ") + "; be more specific")
+	}
+	if id, name, n := matchContact(b.Contacts(), t); n == 1 {
+		return id, name, nil
+	} else if n > 1 {
+		return "", "", errors.New(t + " could be several contacts; be more specific")
+	}
+	if d, ok := phoneDigits(t); ok {
+		name := t
+		for _, ct := range b.Contacts() {
+			if Digits(ct.Phone) == d {
+				name = ct.Name
+				break
+			}
+		}
+		return d, name, nil
+	}
+	return "", "", errors.New("no contact named " + t + "; type their number with its country code")
+}
+
+// matchContact finds saved contact t calls, by exact then unique-prefix
+// name. It reports how many prefix names fit.
+func matchContact(contacts []*model.Contact, t string) (id, name string, n int) {
+	var hit *model.Contact
+	for _, ct := range contacts {
+		if strings.EqualFold(ct.Name, t) {
+			return ct.ID, ct.Name, 1
+		}
+		if strings.HasPrefix(strings.ToLower(ct.Name), strings.ToLower(t)) {
+			hit, n = ct, n+1
+		}
+	}
+	if n == 1 {
+		return hit.ID, hit.Name, 1
+	}
+	return "", "", n
+}
+
+// phoneDigits is t's digits when it reads as a phone number.
+func phoneDigits(t string) (string, bool) {
+	for _, r := range strings.TrimRight(t, ",") {
+		if !strings.ContainsRune("+0123456789-(). ", r) {
+			return "", false
+		}
+	}
+	if d := Digits(t); len(d) >= 7 {
+		return d, true
+	}
+	return "", false
+}
+
+// AllowList is who the AFK reply may go to.
+func (a *Backend) AllowList() AFKAllow {
+	out := a.allow
+	out.Members = append([]AFKMember(nil), a.allow.Members...)
+	return out
+}
+
+// SetAllowOnly confines the AFK reply to the listed contacts when on.
+func (a *Backend) SetAllowOnly(on bool) {
+	a.allow.Only = on
+	a.saveAllow()
+}
+
+// AllowMember adds id (a JID, or digits for a typed number) to the AFK
+// list under name, and reports whether it wasn't there.
+func (a *Backend) AllowMember(id, name string) bool {
+	if id == "" {
+		return false
+	}
+	if !strings.Contains(id, "@") {
+		// A typed number, kept as digits; anything else stays as is.
+		if d := Digits(id); len(d) >= 7 {
+			id = d
+		}
+	}
+	// The same human in another ID form (a picked contact vs their
+	// typed number) is already there.
+	key := a.AllowKey(id)
+	for _, m := range a.allow.Members {
+		if a.AllowKey(m.ID) == key {
+			return false
+		}
+	}
+	if name == "" {
+		name = id
+	}
+	a.allow.Members = append(a.allow.Members, AFKMember{ID: id, Name: name})
+	a.byPhone = nil
+	a.saveAllow()
+	return true
+}
+
+// AllowKey is the canonical identity of an allowlist ID: the chat ID
+// of the contact with its number, or the ID itself.
+func (a *Backend) AllowKey(id string) string {
+	if d := Digits(id); len(d) >= 7 {
+		if cid, ok := a.contactID(d); ok {
+			return cid
+		}
+	}
+	return id
+}
+
+// UnallowMember drops the listed contacts matching match (digits, JID
+// or name), and reports how many went.
+func (a *Backend) UnallowMember(match string) int {
+	d := Digits(match)
+	kept := a.allow.Members[:0]
+	for _, m := range a.allow.Members {
+		md := Digits(m.ID)
+		if m.ID == match || (len(d) >= 7 && len(md) >= 7 && md == d) ||
+			strings.EqualFold(m.Name, match) {
+			continue
+		}
+		kept = append(kept, m)
+	}
+	n := len(a.allow.Members) - len(kept)
+	if n > 0 {
+		a.allow.Members = append([]AFKMember(nil), kept...)
+		a.byPhone = nil
+		a.saveAllow()
+	}
+	return n
+}
+
+func (a *Backend) saveAllow() {
+	if !a.allow.Only && len(a.allow.Members) == 0 {
+		a.Backend.SetPref(prefAllow, "")
+		return
+	}
+	if b, err := json.Marshal(a.allow); err == nil {
+		a.Backend.SetPref(prefAllow, string(b))
+	}
+}
+
+// Hours is when AFK replies go: all day unless confined.
+func (a *Backend) Hours() AFKHours { return a.hours }
+
+// SetHours confines AFK replies to from..to minutes since midnight
+// (overnight when to is earlier), or lifts the span when off.
+func (a *Backend) SetHours(on bool, from, to int) {
+	a.hours = AFKHours{On: on, From: from, To: to}
+	if !on {
+		a.Backend.SetPref(prefHours, "")
+		return
+	}
+	if b, err := json.Marshal(a.hours); err == nil {
+		a.Backend.SetPref(prefHours, string(b))
+	}
+}
+
+// inWindow reports whether replies go at now: always, unless confined
+// to hours outside it.
+func (a *Backend) inWindow(now time.Time) bool {
+	h := a.hours
+	if !h.On || h.From == h.To {
+		return true
+	}
+	m := now.Hour()*60 + now.Minute()
+	if h.From < h.To {
+		return m >= h.From && m < h.To
+	}
+	return m >= h.From || m < h.To
+}
+
+// allowed reports whether m's sender may get the AFK reply: anyone,
+// unless the reply is confined to the listed contacts.
+func (a *Backend) allowed(m *model.Message) bool {
+	if !a.allow.Only {
+		return true
+	}
+	if len(a.allow.Members) == 0 {
+		return false
+	}
+	for _, id := range []string{m.ChatID, m.SenderID, m.Sender} {
+		if a.allowMatch(id) {
+			return true
+		}
+	}
+	// Contacts may have arrived since the map was built.
+	a.byPhone = nil
+	for _, id := range []string{m.ChatID, m.SenderID, m.Sender} {
+		if a.allowMatch(id) {
+			return true
+		}
+	}
+	return false
+}
+
+// allowMatch reports whether id is a listed contact: the ID itself, its
+// digits, or the chat ID of the contact with its number.
+func (a *Backend) allowMatch(id string) bool {
+	if id == "" {
+		return false
+	}
+	d := Digits(id)
+	for _, m := range a.allow.Members {
+		md := Digits(m.ID)
+		if m.ID == id || (len(d) >= 7 && len(md) >= 7 && md == d) {
+			return true
+		}
+		// The member's number may map to another ID form (a typed
+		// number to a LID-keyed chat): compare through the contacts.
+		if len(md) >= 7 {
+			if cid, ok := a.contactID(md); ok && (cid == id || (len(d) >= 7 && Digits(cid) == d)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// contactID maps contact digits to the contact's chat ID, building the
+// map on first use.
+func (a *Backend) contactID(digits string) (string, bool) {
+	if digits == "" {
+		return "", false
+	}
+	if a.byPhone == nil {
+		a.byPhone = map[string]string{}
+		for _, c := range a.Backend.Contacts() {
+			if d := Digits(c.Phone); len(d) >= 7 {
+				a.byPhone[d] = c.ID
+			}
+			if d := Digits(c.ID); len(d) >= 7 {
+				if _, ok := a.byPhone[d]; !ok {
+					a.byPhone[d] = c.ID
+				}
+			}
+		}
+	}
+	id, ok := a.byPhone[digits]
+	return id, ok
+}
+
 // seen looks at a message coming in or going out.
 func (a *Backend) seen(e model.MessageEvent) {
 	w, m := a.away, e.Msg
@@ -327,7 +674,7 @@ func (a *Backend) seen(e model.MessageEvent) {
 		}
 		return
 	}
-	if !e.New || !a.answers(m) {
+	if !e.New || !a.answers(m) || !a.inWindow(a.now()) {
 		return
 	}
 	who := m.SenderID
@@ -342,7 +689,7 @@ func (a *Backend) seen(e model.MessageEvent) {
 	}
 	w.Told = append(w.Told, key)
 	a.saveAway()
-	if r := a.Backend.Send(m.ChatID, model.Draft{Text: AwayText(w, a.now()), Reply: m}); r != nil {
+	if r := a.Backend.Send(m.ChatID, model.Draft{Text: AwayText(w), Reply: m}); r != nil {
 		a.ours[r.ID] = true
 		a.out = append(a.out, model.MessageEvent{Msg: r})
 	}
@@ -350,16 +697,17 @@ func (a *Backend) seen(e model.MessageEvent) {
 
 // answers reports whether m gets the AFK reply: a message to you, or one
 // in a group that mentions you by name (not @all, nor a reply to you).
-// Channels, status and broadcasts don't.
+// Channels, status and broadcasts don't. When the reply is confined to
+// the listed contacts (confined on the AFK list page), only they do.
 func (a *Backend) answers(m *model.Message) bool {
 	id := m.ChatID
 	switch {
 	case strings.HasSuffix(id, "@newsletter"), strings.HasSuffix(id, "@broadcast"):
 		return false
 	case a.isGroup(id):
-		return mentionsMe(m.Text)
+		return mentionsMe(m.Text) && a.allowed(m)
 	}
-	return true
+	return a.allowed(m)
 }
 
 // mentionsMe reports whether text, as a backend resolved it, mentions you:
@@ -395,31 +743,17 @@ func (a *Backend) isGroup(id string) bool {
 	return g
 }
 
-// AwayText is the AFK reply.
-func AwayText(w *Away, now time.Time) string {
-	title, since := awayLines(w, now)
-	return "💤 *AFK*" + title + "\n_" + since + "_"
+// AwayText is the AFK reply: "💤 AFK: reason".
+func AwayText(w *Away) string {
+	if w.Reason == "" {
+		return "💤 AFK"
+	}
+	return "💤 AFK: " + w.Reason
 }
 
 // AwayPlain is the AFK reply without its formatting, as notes show it.
-func AwayPlain(w *Away, now time.Time) string {
-	title, since := awayLines(w, now)
-	return "💤 AFK" + title + "\n" + since
-}
-
-func awayLines(w *Away, now time.Time) (reason, since string) {
-	if w.Reason != "" {
-		reason = ": " + w.Reason
-	}
-	t := w.Since.In(now.Location())
-	layout := "15:04"
-	switch y, m, d := t.Date(); {
-	case y != now.Year():
-		layout = "2 Jan 2006 15:04"
-	case m != now.Month() || d != now.Day():
-		layout = "Mon 2 Jan 15:04"
-	}
-	return reason, "Away since " + t.Format(layout)
+func AwayPlain(w *Away) string {
+	return AwayText(w)
 }
 
 // cameBack ends AFK because you sent a message, with a notice saying so.

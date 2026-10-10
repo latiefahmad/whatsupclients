@@ -1442,6 +1442,13 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 	switch name {
 	case "snippet", "snippets", "snippetedit", "catch":
 		u.showSnippetPreview(name)
+	case "afklist":
+		u.ShowPage("afklist")
+		if u.auto != nil {
+			u.auto.AllowMember("6281355501942", "Agus Wibowo")
+			u.auto.AllowMember("6285755503310", "Fitri Handayani")
+		}
+		u.settings.stale = true
 	case "privacy", "privacystatus", "privacycommunities":
 		// Privacy mode, on the chats, Status or Communities page.
 		switch name {

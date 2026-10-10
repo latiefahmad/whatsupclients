@@ -114,7 +114,10 @@ func runAFK(c *Context) error {
 	}
 	c.Auto.SetAway(strings.TrimSpace(c.Text("reason")))
 	n := &Note{Title: c.Input, Text: "You're AFK until you send a message. Whoever messages you, or mentions you " +
-		"in a group, gets this reply once:\n" + auto.AwayPlain(c.Auto.Away(), c.Now)}
+		"in a group, gets this reply once:\n" + auto.AwayPlain(c.Auto.Away())}
+	if l := c.Auto.AllowList(); l.Only {
+		n.Text += "\nOnly the " + plural(len(l.Members), "listed contact") + " get it — Settings > AFK list manages them."
+	}
 	n.Buttons = []Button{{Label: "I'm back", Run: func() {
 		n.Buttons = nil
 		if c.Auto.Away() == nil {

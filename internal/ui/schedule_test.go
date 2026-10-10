@@ -125,7 +125,7 @@ func TestSlashAFK(t *testing.T) {
 		t.Fatalf("away %+v", w)
 	}
 	ns := st.u.slash.notes["rina"]
-	if n := ns[len(ns)-1].note; !strings.HasSuffix(n.Text, auto.AwayPlain(w, st.u.now())) {
+	if n := ns[len(ns)-1].note; !strings.HasSuffix(n.Text, auto.AwayPlain(w)) {
 		t.Fatalf("note %q", n.Text)
 	}
 	// Sending a message ends it, with a toast.

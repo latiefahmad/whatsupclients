@@ -9,6 +9,23 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.4.0] - 2026-10-10
+
+### 💤 AFK list
+
+- **Settings > AFK list** — its own page, next to Snippets: the away
+  message (start AFK or update it without restarting the clock), who
+  the reply goes to, and when it goes.
+- **Who gets the reply** — add contacts by @mention, name or number,
+  with suggestions as you type. Confine replies to them with the
+  switch, or leave them for everyone; each sender still gets it once,
+  marked ✓ on who did.
+- **Reply hours** — replies go e.g. 21:00–07:00 (overnight works), or
+  all day when the hours are empty.
+- **Shorter reply** — the AFK reply is now just "💤 AFK: reason".
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.3.0...v1.4.0
+
 ## [v1.3.0] - 2026-10-09
 
 ### 😀 Reactions

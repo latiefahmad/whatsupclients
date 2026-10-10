@@ -14,6 +14,7 @@ import (
 
 type settingsState struct {
 	snippets *snippetSettings
+	afk      *afkListSettings
 	search   widget.Editor
 	list     widget.List
 	items    [len(settingsItems)]widget.Clickable
@@ -57,6 +58,7 @@ var settingsItems = [...]listItem{
 	{ic: icSpeed, title: "Performance", sub: "Animations, media, memory and CPU"},
 	{ic: icExtension, title: "Extra features", sub: "Slash commands and more, not in WhatsApp"},
 	{ic: icDocument, title: "Snippets", sub: "Saved messages and payloads"},
+	{ic: icBedtime, title: "AFK list", sub: "Who the AFK reply goes to"},
 	{ic: icHelp, title: "Help and feedback", sub: "Help centre, contact us, privacy policy"},
 	{ic: icLogout, title: "Log out", danger: true},
 }
@@ -72,6 +74,7 @@ const (
 	settingPerformance // perf.go
 	settingExtras      // this app's own features (extras.go)
 	settingSnippets
+	settingAFKList
 	settingHelp
 	settingLogout
 )

@@ -100,6 +100,7 @@ var settingsViews = map[string]struct {
 	"advanced":      {settingPerformance, "advanced"},
 	"extras":        {settingExtras, ""},
 	"snippets":      {settingSnippets, ""},
+	"afklist":       {settingAFKList, ""},
 	"gray":          {settingExtras, "gray"},
 	"help":          {settingHelp, ""},
 }
@@ -114,6 +115,7 @@ func (u *UI) openSettings(k int) {
 	s.detailList.Position = layout.Position{}
 	s.stale = true
 	s.snippets = nil
+	s.afk = nil
 	if k == settingSnippets {
 		u.loadSnippetSettings()
 	}
@@ -156,6 +158,10 @@ func (u *UI) settingsBack() {
 	default:
 		if s.detail == settingSnippets+1 {
 			s.snippets = nil
+			s.page = nil
+		}
+		if s.detail == settingAFKList+1 {
+			s.afk = nil
 			s.page = nil
 		}
 		s.detail = 0
@@ -262,6 +268,8 @@ func (u *UI) settingsPage() []settingsSection {
 		return u.extrasSettings()
 	case settingSnippets:
 		return u.snippetSettingsRows()
+	case settingAFKList:
+		return u.afkListSettingsRows()
 	case settingHelp:
 		return u.helpSettings()
 	}
@@ -818,6 +826,17 @@ func (u *UI) layoutSettingsDetail(gtx C) D {
 		}
 		if q := s.snippets.search.Text(); q != s.snippets.query {
 			s.snippets.query = q
+			s.stale = true
+		}
+	}
+	if s.detail == settingAFKList+1 && s.afk != nil {
+		for {
+			if _, ok := s.afk.search.Update(gtx); !ok {
+				break
+			}
+		}
+		if q := s.afk.search.Text(); q != s.afk.query {
+			s.afk.query = q
 			s.stale = true
 		}
 	}

@@ -47,7 +47,7 @@ func TestGhost(t *testing.T) {
 	at.f.in = append(at.f.in, incoming("x1", "rina", "rina@lid", "hey", at.now))
 	at.now = base.Add(2 * time.Minute)
 	sent, _ := at.poll()
-	if len(sent) != 2 || sent[0].Text != AwayText(at.a.Away(), at.now) || sent[1].Text != "standup" {
+	if len(sent) != 2 || sent[0].Text != AwayText(at.a.Away()) || sent[1].Text != "standup" {
 		t.Fatalf("sent %d messages for you in ghost mode", len(sent))
 	}
 	at.a.SetPref(model.PrefGhost, "off")

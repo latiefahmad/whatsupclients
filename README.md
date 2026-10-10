@@ -160,7 +160,7 @@ back on asks again.
 | `/calc <sum>` | A calculator: `12 x 4500`, `15k x 3`, `15% x 80000` |
 | `/schedule <when> <message>` | Sends later: `21:00`, `2h`, `tomorrow 08:00`, `fri 18:00` |
 | `/scheduled` | Lists the chat's scheduled messages, to send now or cancel |
-| `/afk <reason>` | Auto-replies while you're away, until you send something |
+| `/afk <reason>` | Auto-replies while you're away, until you send something; confine it to listed contacts in Settings > AFK list |
 | `/ghost` | Goes invisible: no read receipts, shown offline, no sending (an ethically gray feature) |
 | `/snippet send <name>` | Sends a saved message; the picker over the composer offers them as you type |
 | `/snippet save [name or text]` | Saves the message you reply to (a poll, document or photo too) under that name or a generated one; without a reply, saves the text itself |
