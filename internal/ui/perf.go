@@ -55,7 +55,7 @@ var defaultPerf = perfSettings{
 	smoothScroll: true,
 	imageCache:   32 << 20,
 	loadedMsgs:   maxLoaded,
-	gcPercent:    50, // as cmd/wazzap sets it
+	gcPercent:    50, // as cmd/whatsup sets it
 	trimAfter:    idleTrim,
 	gifs:         maxGIFs,
 }
@@ -65,7 +65,7 @@ var defaultPerf = perfSettings{
 // touches it.
 var perf = defaultPerf
 
-// applied is what applyProcess set last: the process starts as cmd/wazzap
+// applied is what applyProcess set last: the process starts as cmd/whatsup
 // leaves it, which is the default.
 var applied = struct{ gc, cpus int }{defaultPerf.gcPercent, 0}
 

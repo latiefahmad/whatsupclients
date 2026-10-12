@@ -12,7 +12,7 @@ It aims to look and feel like the official app while using a small fraction of i
 ![Go](https://img.shields.io/github/go-mod/go-version/latiefahmad/whatsupclients)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-25D366)
 
-<img src="docs/screenshots/status.png?v=1.4.1" alt="WhatsUp Clients showing status updates" width="900">
+<img src="docs/screenshots/all-chat.png?v=1.4.1" alt="WhatsUp Clients showing all chats" width="900">
 
 </div>
 
@@ -56,11 +56,11 @@ whatsmeow. You get the same app, pixel for pixel where it matters, in one small 
   </tr>
   <tr>
     <td><img src="docs/screenshots/msginfo.png?v=1.4.1" alt="Message info"></td>
-    <td><img src="docs/screenshots/status.png?v=1.4.1" alt="Status updates"></td>
+    <td><img src="docs/screenshots/all-chat.png?v=1.4.1" alt="All chats"></td>
   </tr>
   <tr>
     <td><b>Message info:</b> who each of your messages was delivered to and read by, and when.</td>
-    <td>View and post <b>status updates</b>: text, photos and videos.</td>
+    <td><b>All your chats</b> in a single list.</td>
   </tr>
 </table>
 
@@ -92,7 +92,7 @@ WhatsApp already lets every linked device do, and they run from your own account
     <td><b><code>/calc</code></b> works out the answer as you type and picks up the amounts in the message you reply to. Splitting a bill takes one line.</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/afk-list.PNG?v=1.4.1" alt="Scheduled messages and AFK"></td>
+    <td><img src="docs/screenshots/afk-list.png?v=1.4.1" alt="Scheduled messages and AFK"></td>
     <td><img src="docs/screenshots/snippets.PNG?v=1.4.1" alt="Snippets"></td>
   </tr>
   <tr>
