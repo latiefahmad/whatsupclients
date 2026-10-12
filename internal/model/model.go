@@ -66,14 +66,29 @@ const (
 	ButtonReply ButtonKind = iota // sends a quick reply
 	ButtonURL                     // opens a link
 	ButtonCopy                    // copies a code
+	ButtonList                    // opens a list to pick a reply from
 )
 
 // Button is one of the buttons under a business or bot message.
 type Button struct {
-	Kind  ButtonKind
+	Kind ButtonKind
+	// Label is the button's text.
 	Label string
 	// Value is the reply's ID, the link or the code to copy.
 	Value string
+	// Sections are a list button's choices.
+	Sections []ListSection
+}
+
+// ListSection is a titled group of a list button's choices.
+type ListSection struct {
+	Title string
+	Rows  []ListRow
+}
+
+// ListRow is one choice of a list button; picking it answers with its ID.
+type ListRow struct {
+	ID, Title, Description string
 }
 
 // Media identifies attachment types, for preview icons and labels.
@@ -379,6 +394,9 @@ type Chat struct {
 	// General is a community's General chat, which shows a speech bubble
 	// while it has no picture.
 	General bool
+	// Left marks a group you're no longer a member of (you left or were
+	// removed): it can't be sent to, only deleted.
+	Left bool
 	// Unread counts unread messages; -1 means marked as unread.
 	Unread int
 	// Mentioned means one of the unread messages of a group mentions you
@@ -1135,9 +1153,10 @@ type Backend interface {
 	MarkRead(chatIDs []string)
 	// Send queues a text message and returns it in its pending state.
 	Send(chatID string, d Draft) *Message
-	// PressButton answers a message's quick-reply button (Buttons[i]) and
-	// returns the answer in its pending state, or nil.
-	PressButton(m *Message, i int) *Message
+	// PressButton answers a message's quick-reply button (Buttons[i]), or
+	// with the row of its list button whose ID is row, and returns the
+	// answer in its pending state, or nil.
+	PressButton(m *Message, i int, row string) *Message
 	// SendSticker sends a sticker that was received before, again, as a
 	// reply to reply if it isn't nil.
 	SendSticker(chatID string, sticker, reply *Message)

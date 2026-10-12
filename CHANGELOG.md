@@ -9,6 +9,33 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.5.0] - 2026-10-12
+
+### ✅ Message info & groups
+
+- **Group receipts, complete** — Message info in groups now shows every
+  member's delivery and read, not just the few that arrived one by one.
+- **Left groups stay honest** — a group you left or were removed from
+  can't be sent to anymore: the composer says so, and its menu offers
+  Delete group instead of Exit group.
+
+### ✨ Sending
+
+- **Big emojis** — a message of one to three emojis shows them big,
+  without a bubble, like WhatsApp.
+- **Captions keep your text** — attaching files turns the composer's
+  text into the first caption, and closing the send view unsent keeps
+  the shown caption. Slash commands run from captions too.
+- **Bot list buttons** — a bot's list opens its sections and rows, and
+  answering carries the row's ID, so bots in groups see it.
+
+### 🔧 Under the hood
+
+- Protocol library updated (socket, QR and receipt fixes); the README
+  screenshots now render from the demo data with one command.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.4.1...v1.5.0
+
 ## [v1.4.1] - 2026-10-12
 
 ### 📚 Demo and docs

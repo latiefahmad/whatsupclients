@@ -84,11 +84,16 @@ func New() *Backend {
 	b.demoVotes()
 	b.demoReactions()
 	b.seedReactors()
-	sent := b.find(&model.Message{ChatID: "citra", ID: "citra-8"}).Time
-	b.versions = map[string][]model.Version{"citra/citra-8": {
-		{Text: "Let's go there on Saturday", Time: sent},
-		{Text: "Let's go there on Saturday morning", Time: sent.Add(time.Minute)},
-	}}
+	// Citra's edited message says what it said before each edit.
+	for _, m := range b.msgs["citra"] {
+		if !m.Edited.IsZero() {
+			b.versions = map[string][]model.Version{m.ChatID + "/" + m.ID: {
+				{Text: "Let's go there on Saturday", Time: m.Time},
+				{Text: "Let's go there on Saturday morning", Time: m.Time.Add(time.Minute)},
+			}}
+			break
+		}
+	}
 	b.lists = []*model.ChatList{{ID: "l1", Name: "Family", Chats: []string{"fams", "ibuk"}}, {ID: "l2", Name: "Work"}}
 	return b
 }
@@ -387,6 +392,15 @@ func demo(now time.Time) []*demoChat {
 					{Kind: model.ButtonReply, Label: "On my way", Value: "otw"},
 					{Kind: model.ButtonCopy, Label: "Copy code", Value: "KS-4821"},
 					{Kind: model.ButtonURL, Label: "Track order", Value: "https://example.com/track/4821"},
+					{Kind: model.ButtonList, Label: "Order again", Sections: []model.ListSection{
+						{Title: "Coffee", Rows: []model.ListRow{
+							{ID: "latte", Title: "Iced latte", Description: "Same as last time"},
+							{ID: "americano", Title: "Americano", Description: "Hot, no sugar"},
+						}},
+						{Title: "Food", Rows: []model.ListRow{
+							{ID: "croissant", Title: "Croissant"},
+						}},
+					}},
 				}},
 			{Kind: model.KindUnsupported, Time: day(0, 7, 56)},
 			{Text: "Eh, `/setting` isn't a command I know 😅\n\n> Say it in plain words, like \"turn off greetings\"\n> or \"add a rule\".\n\n**Menu** today:\n- Iced latte\n- ~Croissant~ _sold out_\n1. Pick up at the counter\n2. Show code `KS-4821`\n\n【注文】ご来店ありがとうございます！ *太字* 谢谢\n\n```\nQuiz for you - 1/3\n```",

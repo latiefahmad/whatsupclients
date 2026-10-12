@@ -174,6 +174,8 @@ var migrations = []string{
 	`ALTER TABLE wz_chats ADD COLUMN ephemeral INTEGER NOT NULL DEFAULT 0`,
 	// The admin who deleted someone else's message.
 	`ALTER TABLE wz_messages ADD COLUMN revoked_by TEXT NOT NULL DEFAULT ''`,
+	// 1 for a group you left or were removed from (model.Chat.Left).
+	`ALTER TABLE wz_chats ADD COLUMN not_member INTEGER NOT NULL DEFAULT 0`,
 }
 
 func (s *msgStore) init(ctx context.Context) error {
@@ -858,7 +860,7 @@ type rawChat struct {
 // lasts, and whom a text mentions.
 var chatQuery = fmt.Sprintf(`
 	SELECT c.jid, c.name, c.is_group, c.pinned, c.muted_until, c.archived, c.unread, c.last_ts, c.favorite,
-		c.mentioned, c.general, c.ephemeral, m.id, m.sender_jid, m.sender_push, m.from_me, m.ts, m.kind, m.media, m.text, m.receipt,
+		c.mentioned, c.general, c.ephemeral, c.not_member, m.id, m.sender_jid, m.sender_push, m.from_me, m.ts, m.kind, m.media, m.text, m.receipt,
 		CASE WHEN m.media IN (%d, %d, %d, %d) OR instr(m.text, '@') > 0 OR m.kind = %d THEN m.raw_payload END,
 		CASE WHEN instr(m.text, '@') > 0 THEN m.edit_payload END
 	FROM wz_chats c
@@ -870,7 +872,7 @@ func scanChat(sc scanner, now time.Time) (rawChat, error) {
 	var (
 		c                              model.Chat
 		isGroup, archived, unread, fav int
-		mentioned, general             int
+		mentioned, general, notMember  int
 		ephemeral                      int64
 		pinned, mutedUntil, lastTS     int64
 		mID, mSender, mPush, mText     sql.NullString
@@ -879,7 +881,7 @@ func scanChat(sc scanner, now time.Time) (rawChat, error) {
 		mRaw, mEdit                    []byte
 	)
 	err := sc.Scan(&c.ID, &c.Name, &isGroup, &pinned, &mutedUntil, &archived, &unread, &lastTS, &fav,
-		&mentioned, &general, &ephemeral, &mID, &mSender, &mPush, &mFromMe, &mTS, &mKind, &mMedia, &mText, &mReceipt, &mRaw, &mEdit)
+		&mentioned, &general, &ephemeral, &notMember, &mID, &mSender, &mPush, &mFromMe, &mTS, &mKind, &mMedia, &mText, &mReceipt, &mRaw, &mEdit)
 	if err != nil {
 		return rawChat{}, err
 	}
@@ -891,6 +893,7 @@ func scanChat(sc scanner, now time.Time) (rawChat, error) {
 	}
 	c.Favorite = fav != 0
 	c.General = general != 0
+	c.Left = notMember != 0 && c.IsGroup
 	c.Disappearing = uint32(ephemeral)
 	c.Archived = archived != 0
 	c.Unread = unread

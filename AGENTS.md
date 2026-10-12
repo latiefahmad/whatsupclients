@@ -196,6 +196,14 @@ Gotchas already found in the pinned version (v0.10.x):
   does those the same way. hypermeow can't send an event answer (it has no stanza
   type for it), so the app shows answers but doesn't send them. Your own votes are
   stored under `meVoter`, since they come from your phone number or your LID.
+- A group's delivery receipts mostly come grouped: a `<receipt>` without a participant,
+  holding `<participants message_id="…">` with a `<user jid t type="delivery|read|inactive"/>`
+  each. hypermeow reads the ID from a `key` attribute and gives every user the receipt's
+  own type, so Message info missed most of a group. `groupedReceipts`
+  (`internal/wa/receipts.go`), the client's `RawNodeHandler`, reads them itself and passes
+  the node on without its users, which hypermeow still acks. It hands the work to
+  `goWork` (a goroutine `Close` waits for), since the handler runs on hypermeow's
+  dispatch goroutine.
 - WhatsApp sends view once media only to the phone. Linked devices get a stanza with
   `<unavailable type="view_once"/>` and no ciphertext, which hypermeow hands out as an
   `events.UndecryptableMessage`; `onUndecryptable` stores it as a `KindViewOnce`
@@ -206,6 +214,11 @@ Gotchas already found in the pinned version (v0.10.x):
 - Files dropped on the window come through an OLE drop target (`desktop.EnableDrop`).
   OLE wants it registered on the window's own thread, so the window is subclassed and
   the registration posted to it; the callbacks run on that thread and only queue.
+- The server refuses native flow button answers (`InteractiveResponseMessage`) in groups
+  with error 479. `PressButton` falls back to the older answer (`TemplateButtonReplyMessage`
+  or `ListResponseMessage`), which still carries the button's or row's ID that bots read,
+  and only then to a quoted text reply. A `single_select` button, or a `ListMessage`'s,
+  is a `model.ButtonList` whose rows open in a dialog (`internal/ui/listpick.go`).
 - `widget.Clickable.Layout` reads and drops the clicks nobody has asked about yet.
   Check `Clicked` before laying the button out (the title bar's privacy button).
 - Many buttons act on their click while they're laid out, after parts of the window
@@ -292,7 +305,8 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    changes) in infopages.go; the Media panel (the rail's Media button:
                    media, docs and links from every chat, or one chat's) in gallery.go; the list column's
                    draggable edge and hiding it (the open page's rail button, Ctrl+Shift+L) in split.go; a sender's run of stickers, side by side as many to a
-                   line as fit, in stickerrow.go; the New chat panel and the
+                   line as fit, in stickerrow.go; a text of one to three emojis
+                   alone, drawn big without a bubble like a sticker, in jumbo.go; the New chat panel and the
                    New group flow (also "Create a similar group") in newchat.go; the settings
                    pages (profile, account, privacy, chats, shortcuts, help) in
                    settingsdetail.go; the window's zoom (Settings > General > Font size,
@@ -472,6 +486,9 @@ go run ./cmd/whatsup            # run the app (links to WhatsApp via QR code)
 go run ./cmd/whatsup -demo      # run with fake chats, no network
 go run ./cmd/whatsup -background  # start in the tray, without a window
 go run ./cmd/screenshot        # render preview PNGs into ./docs/
+# Every screenshot in README.md (the list is readmeShots in cmd/screenshot/readme.go;
+# snippets.PNG has no scene hook and stays handmade):
+go run ./cmd/screenshot -readme -w 1536 -h 841 -scale 1.25 -out docs/screenshots
 go run ./cmd/memprobe -demo    # memory benchmark (Windows); -data <copy of the data dir>
 # Scroll the chat list for 1200 frames and print frame times, CPU, GCs, the frame
 # rate and late frames; -ballast adds live heap like a long session's, -cpuprofile
@@ -490,12 +507,12 @@ go run ./cmd/screenshot -compare shot.webp -crop 0,0,2000,1250 -scale 1.22 -view
 # A crop of the right edge of a 2560x1600 window, with the info panel scrolled:
 go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -right \
     -scale 1.5616 -view info -infoscroll 7 -infooffset 40
-# Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, ghost (/ghost; open a
+# Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, scheduled, ghost (/ghost; open a
 # group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, reply, replyphoto, linkpreview, invite,
-# delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, votes (a poll's or event's votes: -ochat design or family), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
+# delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
 # privacystatus, privacycommunities); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
-# encryption, addmember, invitelink, and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, with
+# encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with
 # WHATSUP_DEMO_PHOTO=<a photo> to edit) into <out>/overlay-<name>.png:
 go run ./cmd/screenshot -overlay msgmenu -at 700,300 -out /tmp/shots
 # Film an animation into <out>/film-<name>.png: frames -step apart, opening on top and

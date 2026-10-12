@@ -90,6 +90,12 @@ type Backend struct {
 	// serverSkew is how many seconds the server's clock is ahead of ours,
 	// learned from send acks (sendAsyncPrep).
 	serverSkew atomic.Int64
+
+	// work tracks background work the client hands off (grouped
+	// receipts); Close waits for it. closed stops new work.
+	work   sync.WaitGroup
+	workMu sync.Mutex
+	closed bool
 }
 
 func (b *Backend) now() time.Time {
@@ -231,6 +237,21 @@ func (b *Backend) run() {
 	}
 }
 
+// goWork runs f on a goroutine that Close waits for, unless the backend
+// is closing.
+func (b *Backend) goWork(f func()) {
+	b.workMu.Lock()
+	defer b.workMu.Unlock()
+	if b.closed {
+		return
+	}
+	b.work.Add(1)
+	go func() {
+		defer b.work.Done()
+		f()
+	}()
+}
+
 func (b *Backend) useDevice(device *store.Device) {
 	cli := whatsmeow.NewClient(device, b.log.Sub("Client"))
 	cli.EnableAutoReconnect = true
@@ -238,6 +259,7 @@ func (b *Backend) useDevice(device *store.Device) {
 	// full sync must emit them too.
 	cli.EmitAppStateEventsOnFullSync = true
 	cli.AddEventHandler(b.handle)
+	cli.RawNodeHandler = b.groupedReceipts
 	b.cliMu.Lock()
 	b.cli = cli
 	b.cliMu.Unlock()
@@ -387,10 +409,14 @@ func (b *Backend) Logout() {
 }
 
 func (b *Backend) Close() {
+	b.workMu.Lock()
+	b.closed = true
+	b.workMu.Unlock()
 	if cli := b.client(); cli != nil {
 		cli.Disconnect()
 	}
 	b.cancel()
+	b.work.Wait()
 	b.db.Close()
 	b.logf.Close()
 }
@@ -826,8 +852,17 @@ func (b *Backend) handle(evt any) {
 		}
 		for _, j := range e.Leave {
 			if b.isMe(j) {
-				// A group you left isn't one you share with anyone.
+				// A group you left isn't one you share with anyone, nor
+				// one you can send to.
 				b.store.clearMembers(ctx, e.JID.String())
+				b.store.setLeft(ctx, e.JID.String(), true)
+				b.emitChat(e.JID.String())
+			}
+		}
+		for _, j := range e.Join {
+			if b.isMe(j) {
+				b.store.setLeft(ctx, e.JID.String(), false)
+				b.emitChat(e.JID.String())
 			}
 		}
 		if e.Name != nil {
@@ -849,6 +884,7 @@ func (b *Backend) handle(evt any) {
 		// too: without their place in it, both would list as plain groups.
 		_ = b.store.setGroupShape(ctx, &e.GroupInfo)
 		_ = b.store.setMembers(ctx, &e.GroupInfo)
+		b.store.setLeft(ctx, jid, false)
 		if e.IsParent {
 			// A community's parent group isn't a chat.
 			b.emitAllChats()
@@ -1191,10 +1227,16 @@ func (b *Backend) onReceipt(e *events.Receipt) {
 		}
 	}
 	// A group message's ticks wait for every member.
+	b.setTicks(ctx, chat, ids, r, e.IsGroup)
+}
+
+// setTicks moves the ticks of your messages ids on after a receipt that
+// says r. A group message's ticks wait for every member.
+func (b *Backend) setTicks(ctx context.Context, chat string, ids []string, r model.Receipt, group bool) {
 	byReceipt := map[model.Receipt][]string{}
 	for _, id := range ids {
 		rr := r
-		if e.IsGroup {
+		if group {
 			if g, ok := b.groupReceipt(ctx, chat, id); ok {
 				rr = g
 			}
