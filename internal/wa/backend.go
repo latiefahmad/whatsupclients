@@ -71,6 +71,9 @@ type Backend struct {
 	subMu     sync.Mutex
 	subtitles map[string]string // group JID → participant list
 
+	openMu   sync.Mutex
+	openChat string // the chat Open was last called with, for avatar fetching
+
 	infoMu      sync.Mutex
 	infoFetched map[string]bool // info panels refreshed this session
 
@@ -538,6 +541,9 @@ func (b *Backend) resolveMessages(chatID string, raw []rawMsg, err error) []*mod
 
 // Open marks a chat read and subscribes to the contact's presence.
 func (b *Backend) Open(chatID string) {
+	b.openMu.Lock()
+	b.openChat = chatID
+	b.openMu.Unlock()
 	go func() {
 		ctx := b.ctx
 		jid, err := types.ParseJID(chatID)

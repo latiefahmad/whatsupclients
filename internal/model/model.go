@@ -1118,6 +1118,15 @@ const PrefKeepDeleted = "keep_deleted"
 // and screenshots of it aren't blocked.
 const PrefViewOnceReplay = "view_once_replay"
 
+// PrefAvatars is the Pref key of when profile pictures download:
+// AvatarsOpen for the open chat's alone, or anything else (the default)
+// for every picture the window shows.
+const PrefAvatars = "avatars"
+
+// AvatarsOpen is the PrefAvatars value that fetches profile pictures
+// only for the open chat and its members.
+const AvatarsOpen = "open"
+
 // Backend is everything the UI needs from a WhatsApp connection.
 //
 // Methods are called from the UI goroutine and must not block for long.

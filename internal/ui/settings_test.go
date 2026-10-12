@@ -205,3 +205,27 @@ func TestSettingsConfirmButtons(t *testing.T) {
 		u.closeDialog()
 	}
 }
+
+// TestSettingsAvatars checks the Profile pictures choice: open chats
+// only restricts fetching, and Automatic lifts it again.
+func TestSettingsAvatars(t *testing.T) {
+	b := mock.New()
+	u := New(b)
+	u.Start(func() {})
+	u.applyEvents()
+
+	u.ShowPage("chatsettings")
+	settingRowByKey(t, u, "avatars").run()
+	u.settings.stale = true
+	if r := settingRowByKey(t, u, "avatars-"); !r.on {
+		t.Error("Automatic isn't checked by default")
+	}
+	settingRowByKey(t, u, "avatars-open").run()
+	if got := b.Pref(model.PrefAvatars); got != model.AvatarsOpen {
+		t.Errorf("pref is %q after picking Open chats only", got)
+	}
+	u.settings.stale = true
+	if r := settingRowByKey(t, u, "avatars-open"); !r.on {
+		t.Error("Open chats only isn't checked after picking it")
+	}
+}

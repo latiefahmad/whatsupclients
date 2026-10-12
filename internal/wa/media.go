@@ -103,7 +103,7 @@ func (b *Backend) Avatar(id string) []byte {
 	path := b.avatarPath(id)
 	st, err := os.Stat(path)
 	fresh := err == nil && time.Since(st.ModTime()) < avatarTTL
-	if !fresh {
+	if !fresh && b.avatarAllowed(id) {
 		b.avatars.add(id, func() { b.fetchAvatar(id) })
 	}
 	if err != nil || st.Size() == 0 {
@@ -111,6 +111,31 @@ func (b *Backend) Avatar(id string) []byte {
 	}
 	data, _ := os.ReadFile(path)
 	return data
+}
+
+// avatarAllowed reports whether id's picture may download now. With
+// profile pictures restricted to the open chat (model.PrefAvatars), only
+// it, its members and you may; otherwise everything the window shows may.
+func (b *Backend) avatarAllowed(id string) bool {
+	if b.Pref(model.PrefAvatars) != model.AvatarsOpen {
+		return true
+	}
+	if j, err := types.ParseJID(id); err == nil && b.isMe(j) {
+		return true
+	}
+	b.openMu.Lock()
+	open := b.openChat
+	b.openMu.Unlock()
+	if id == open {
+		return true
+	}
+	ctx := b.ctx
+	for _, p := range b.store.members(ctx, open) {
+		if p.JID.String() == id || (!p.PhoneNumber.IsEmpty() && p.PhoneNumber.String() == id) {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *Backend) fetchAvatar(id string) {
@@ -204,7 +229,9 @@ func (b *Backend) onPicture(e *events.Picture) {
 			}
 			continue
 		}
-		b.avatars.add(id, func() { b.fetchAvatar(id) }) // emits AvatarEvent
+		if b.avatarAllowed(id) {
+			b.avatars.add(id, func() { b.fetchAvatar(id) }) // emits AvatarEvent
+		}
 	}
 }
 

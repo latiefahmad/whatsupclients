@@ -186,6 +186,8 @@ func (u *UI) settingsTitle() string {
 		return "Blocked contacts"
 	case "theme":
 		return "Theme"
+	case "avatars":
+		return "Profile pictures"
 	case "gray":
 		return "Ethically gray features"
 	case "advanced":
@@ -221,6 +223,16 @@ func (u *UI) settingsPage() []settingsSection {
 			{key: "light", kind: setRadio, title: "Light", on: t == "light", run: func() { u.setTheme("light") }},
 			{key: "dark", kind: setRadio, title: "Dark", on: t == "dark", run: func() { u.setTheme("dark") }},
 		}}}
+	case "avatars":
+		v := u.backend.Pref(model.PrefAvatars)
+		set := func(value, title, sub string) settingRow {
+			return settingRow{key: "avatars-" + value, kind: setRadio, title: title, sub: sub,
+				on: v == value, run: func() { u.backend.SetPref(model.PrefAvatars, value) }}
+		}
+		return []settingsSection{{title: "Download profile pictures", rows: []settingRow{
+			set("", "Automatic", "For every picture the window shows"),
+			set(model.AvatarsOpen, "Open chats only", "Only for the open chat and its members"),
+		}}}
 	}
 	b := u.backend
 	pref := func(key, title, sub string) settingRow {
@@ -254,6 +266,8 @@ func (u *UI) settingsPage() []settingsSection {
 					trailing: icChevronRight, run: func() { u.openSettingsSub("theme") }},
 				{key: prefDoodles, kind: setToggle, title: "Wallpaper doodles", sub: "Draw doodles on the chat background",
 					on: u.doodles, run: func() { u.doodles = !u.doodles; setPref(b, prefDoodles, u.doodles) }},
+				{key: "avatars", ic: icAccount, title: "Profile pictures", sub: avatarNames[u.backend.Pref(model.PrefAvatars)],
+					trailing: icChevronRight, run: func() { u.openSettingsSub("avatars") }},
 			}},
 			{title: "Chat settings", rows: []settingRow{
 				{key: prefEnterSend, kind: setToggle, title: "Enter is send", sub: "Enter key will send your message",
@@ -700,6 +714,9 @@ func (u *UI) blockedContacts() []settingsSection {
 
 // themeNames names the values of prefTheme.
 var themeNames = map[string]string{"": "System default", "light": "Light", "dark": "Dark"}
+
+// avatarNames names the values of model.PrefAvatars.
+var avatarNames = map[string]string{"": "Automatic", model.AvatarsOpen: "Open chats only"}
 
 // systemDark asks the system for its theme (tests pin it).
 var systemDark = desktop.SystemDark
