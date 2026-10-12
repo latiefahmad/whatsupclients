@@ -12,7 +12,7 @@ It aims to look and feel like the official app while using a small fraction of i
 ![Go](https://img.shields.io/github/go-mod/go-version/latiefahmad/whatsupclients)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-25D366)
 
-<img src="docs/screenshots/status.png" alt="WhatsUp Clients showing status updates" width="900">
+<img src="docs/screenshots/status.png?v=1.4.1" alt="WhatsUp Clients showing status updates" width="900">
 
 </div>
 
@@ -39,24 +39,24 @@ whatsmeow. You get the same app, pixel for pixel where it matters, in one small 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/login.png" alt="Login with a QR code"></td>
-    <td width="50%"><img src="docs/screenshots/reactions.png" alt="Message menu with reactions"></td>
+    <td width="50%"><img src="docs/screenshots/login.png?v=1.4.1" alt="Login with a QR code"></td>
+    <td width="50%"><img src="docs/screenshots/reactions.png?v=1.4.1" alt="Message menu with reactions"></td>
   </tr>
   <tr>
     <td><b>Link with a QR code</b>, like WhatsApp Web, and choose how much history to copy from your phone.</td>
     <td><b>Reactions, replies, forwarding, pinning, starring</b>, select mode and deleting, from a right-click.</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/emoji.png" alt="Emoji picker"></td>
-    <td><img src="docs/screenshots/poll.png" alt="A poll and its votes"></td>
+    <td><img src="docs/screenshots/emoji.png?v=1.4.1" alt="Emoji picker"></td>
+    <td><img src="docs/screenshots/poll.png?v=1.4.1" alt="A poll and its votes"></td>
   </tr>
   <tr>
     <td><b>Emoji and stickers</b>, including animated ones, with search and recents.</td>
     <td><b>Polls</b> you vote in with a click, and who voted for what. Locations, contacts and events show as cards.</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/msginfo.png" alt="Message info"></td>
-    <td><img src="docs/screenshots/status.png" alt="Status updates"></td>
+    <td><img src="docs/screenshots/msginfo.png?v=1.4.1" alt="Message info"></td>
+    <td><img src="docs/screenshots/status.png?v=1.4.1" alt="Status updates"></td>
   </tr>
   <tr>
     <td><b>Message info:</b> who each of your messages was delivered to and read by, and when.</td>
@@ -68,8 +68,8 @@ whatsmeow. You get the same app, pixel for pixel where it matters, in one small 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/channels.png" alt="Channels"></td>
-    <td width="50%"><img src="docs/screenshots/communities.png" alt="Communities"></td>
+    <td width="50%"><img src="docs/screenshots/channels.png?v=1.4.1" alt="Channels"></td>
+    <td width="50%"><img src="docs/screenshots/communities.png?v=1.4.1" alt="Communities"></td>
   </tr>
   <tr>
     <td>Follow and read <b>channels</b>.</td>
@@ -84,23 +84,23 @@ WhatsApp already lets every linked device do, and they run from your own account
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/slash.png" alt="Slash command picker"></td>
-    <td width="50%"><img src="docs/screenshots/calc.png" alt="The /calc command"></td>
+    <td width="50%"><img src="docs/screenshots/slash.png?v=1.4.1" alt="Slash command picker"></td>
+    <td width="50%"><img src="docs/screenshots/calc.png?v=1.4.1" alt="The /calc command"></td>
   </tr>
   <tr>
     <td><b>Slash commands, like Discord.</b> Type <code>/</code> to manage a group you run without opening a single menu.</td>
     <td><b><code>/calc</code></b> works out the answer as you type and picks up the amounts in the message you reply to. Splitting a bill takes one line.</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/afk-list.PNG" alt="Scheduled messages and AFK"></td>
-    <td><img src="docs/screenshots/snippets.PNG" alt="Snippets"></td>
+    <td><img src="docs/screenshots/afk-list.PNG?v=1.4.1" alt="Scheduled messages and AFK"></td>
+    <td><img src="docs/screenshots/snippets.PNG?v=1.4.1" alt="Snippets"></td>
   </tr>
   <tr>
     <td><b><code>/schedule</code></b> sends a message later, even with the window closed. <b><code>/afk</code></b> replies for you while you're away.</td>
     <td><b>Snippets</b> save messages you send often (<i>Settings > Snippets</i>), and <b><code>/snippet</code></b> sends one with its {variables} filled in.</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/privacy.png" alt="Privacy mode"></td>
+    <td><img src="docs/screenshots/privacy.png?v=1.4.1" alt="Privacy mode"></td>
   </tr>
   <tr>
     <td><b>Privacy mode</b> for when others can see your screen: names and messages turn into bars and pictures blur until you point at them. Ctrl+Shift+P or the eye in the title bar. <b>Block screen recording</b> keeps the window out of captures. <b><code>/ghost</code></b> reads chats and statuses invisibly: no read receipts, shown offline, and nothing sent from you until you turn it off.</td>
