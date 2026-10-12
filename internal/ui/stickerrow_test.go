@@ -15,17 +15,17 @@ import (
 func TestStickerRuns(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	at := testNow()
 	st := func(id string, me bool) *model.Message {
-		return &model.Message{ID: id, ChatID: "rina", FromMe: me, Kind: model.KindSticker, Media: model.MediaSticker, Time: at}
+		return &model.Message{ID: id, ChatID: "citra", FromMe: me, Kind: model.KindSticker, Media: model.MediaSticker, Time: at}
 	}
 	reply := st("s4", true)
 	reply.Quote = &model.Quote{Text: "hi"}
 	u.msgs = []*model.Message{
 		st("s1", true), st("s2", true), st("s3", true), reply, st("s5", true),
 		st("r1", false), st("r2", false),
-		{ID: "t1", ChatID: "rina", Kind: model.KindText, Text: "hi", Time: at.Add(time.Second)},
+		{ID: "t1", ChatID: "citra", Kind: model.KindText, Text: "hi", Time: at.Add(time.Second)},
 		st("r3", false),
 	}
 	u.msgsVer++

@@ -34,7 +34,7 @@ type sendHarness struct {
 func newSendHarness(t *testing.T) *sendHarness {
 	h := &sendHarness{t: t, u: New(mock.New()), now: testNow()}
 	h.u.Start(func() {})
-	h.u.SelectID("rina")
+	h.u.SelectID("citra")
 	dir := t.TempDir()
 	img := image.NewNRGBA(image.Rect(0, 0, 400, 300))
 	for y := range 300 {
@@ -251,7 +251,7 @@ func TestSendViewCaptionsAndSend(t *testing.T) {
 func TestSendViewCloseRestoresDraft(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	u.conv.composer.SetText("half a message")
 	dir := t.TempDir()
 	p := filepath.Join(dir, "a.pdf")
@@ -342,7 +342,7 @@ func TestCenteredPicker(t *testing.T) {
 	for _, mode := range []pickMode{pickReaction, pickMedia} {
 		u := New(mock.New())
 		u.Start(func() {})
-		u.SelectID("rina")
+		u.SelectID("citra")
 		var ops op.Ops
 		var r input.Router
 		now := testNow()

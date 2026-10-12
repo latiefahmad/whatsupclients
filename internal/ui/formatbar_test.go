@@ -59,7 +59,7 @@ func TestFormatText(t *testing.T) {
 func TestComposerClicks(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	now := testNow()
 	start := now
 	var ops op.Ops

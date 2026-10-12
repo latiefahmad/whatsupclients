@@ -1,5 +1,5 @@
 // Package command is the slash commands typed in a chat's composer, like
-// Discord's: "/kick @Budi". They run on this computer, as you; WhatsApp
+// Discord's: "/kick @Gusti". They run on this computer, as you; WhatsApp
 // checks that you may do what they ask. The UI offers them as you type,
 // reads their options with Parse and runs them with Execute; everything
 // they need from the UI goes through a Host.
@@ -121,7 +121,7 @@ type Mention struct{ Name, ID string }
 
 // Value is an option's value as typed.
 type Value struct {
-	// Text is the value as typed: "@Budi", "+62 812 5550 1234", "on".
+	// Text is the value as typed: "@Gusti", "+62 812 5550 1234", "on".
 	Text string
 	// ID is the member or contact a value names, or "" for text, a phone
 	// number or a choice.

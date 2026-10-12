@@ -10,9 +10,9 @@ import (
 
 // extraContacts are saved contacts you have no chat with yet.
 var extraContacts = []*model.Contact{
-	{ID: "agus", Name: "Agus Wibowo", Phone: "+62 813-5550-1942"},
-	{ID: "fitri", Name: "Fitri Handayani", Phone: "+62 857-5550-3310"},
-	{ID: "yoga", Name: "Yoga Pratama", Phone: "+62 812-5550-7781"},
+	{ID: "agus", Name: "Gusti Wibowo", Phone: "+62 813-5550-1942"},
+	{ID: "fitri", Name: "Clara Handayani", Phone: "+62 857-5550-3310"},
+	{ID: "yoga", Name: "Kocul Pratama", Phone: "+62 812-5550-7781"},
 }
 
 // Contacts lists the people of the one-to-one demo chats and a few more.

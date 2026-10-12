@@ -29,7 +29,7 @@ func TestParseFormatting(t *testing.T) {
 		// Markers in a mentioned name format nothing, and don't close one outside.
 		{"Hai ⁨@~Adiyat~⁩.", []run{{"Hai ⁨@~Adiyat~⁩.", 0}}},
 		{"~a ⁨@b~⁩ c~", []run{{"a ⁨@b~⁩ c", styleStrike}}},
-		{"*⁨@Vivy⁩*", []run{{"⁨@Vivy⁩", styleBold}}},
+		{"*⁨@Vivian⁩*", []run{{"⁨@Vivian⁩", styleBold}}},
 	}
 	for _, tt := range tests {
 		if got := parseFormatting(tt.in); !reflect.DeepEqual(got, tt.want) {
@@ -54,7 +54,7 @@ func TestParseBlocks(t *testing.T) {
 }
 
 func TestPlainText(t *testing.T) {
-	if got := plainText("hi ⁨@Vivy⁩, *done*"); got != "hi @Vivy, done" {
+	if got := plainText("hi ⁨@Vivian⁩, *done*"); got != "hi @Vivian, done" {
 		t.Errorf("plainText = %q", got)
 	}
 }

@@ -20,7 +20,7 @@ func TestInfoActions(t *testing.T) {
 	b := mock.New()
 	u := New(b)
 	u.Start(func() {})
-	u.SelectID("family")
+	u.SelectID("fams")
 	now := testNow()
 	var ops op.Ops
 	var r input.Router
@@ -36,7 +36,7 @@ func TestInfoActions(t *testing.T) {
 		frame()
 		frame()
 	}
-	u.openInfo("family")
+	u.openInfo("fams")
 	for range 30 {
 		frame()
 	}
@@ -47,7 +47,7 @@ func TestInfoActions(t *testing.T) {
 	frame()
 
 	click("info:fav")
-	if !u.chatByID("family").Favorite {
+	if !u.chatByID("fams").Favorite {
 		t.Error("Add to favourites didn't add the group")
 	}
 
@@ -56,7 +56,7 @@ func TestInfoActions(t *testing.T) {
 		t.Fatalf("Add to list opened menu %v", u.ctx.kind)
 	}
 	click("menu:l2")
-	if !slices.Contains(b.Lists()[1].Chats, "family") {
+	if !slices.Contains(b.Lists()[1].Chats, "fams") {
 		t.Error("ticking Work didn't add the group to it")
 	}
 	if !u.ctx.isOpen() {
@@ -74,12 +74,12 @@ func TestInfoActions(t *testing.T) {
 		t.Fatalf("Notification settings opened menu %v", u.ctx.kind)
 	}
 	click("menu:8h")
-	if c := u.chatByID("family"); !c.Muted || c.MuteUntil.Sub(testNow()) < 7*time.Hour {
+	if c := u.chatByID("fams"); !c.Muted || c.MuteUntil.Sub(testNow()) < 7*time.Hour {
 		t.Errorf("Mute for 8 hours left muted=%v until %v", c.Muted, c.MuteUntil)
 	}
 	now = now.Add(9 * time.Hour)
 	frame()
-	if c := u.chatByID("family"); c.Muted {
+	if c := u.chatByID("fams"); c.Muted {
 		t.Error("the mute outlasted its 8 hours")
 	}
 	for range 30 {

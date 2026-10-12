@@ -49,7 +49,7 @@ func main() {
 	rightAligned := flag.Bool("right", false, "with -win, the screenshot is the window's right edge")
 	overlay := flag.String("overlay", "", "render only this overlay (menu, accounts, loginaccounts, slash, slashkick, slashrun, ghost, chatmenu, mute, lists, msgmenu, stickermenu, emoji, viewer, forward, reply, linkpreview, delete, select, edit, edits, msginfo, reactions (-ochat work), mention, mentioned, attach, poll, contacts, invite, tray, quality, sendedit, sendcrop, sendfilter, senddoc, statusadd, statusmenu, statusprivacy, statustext, privacy, privacystatus, privacycommunities, statussend, draft, afklist, newchat, newnumber, newmembers, newgroup, search, membersearch, listsearch, listchip, newlist) to <out>/overlay-<name>.png")
 	at := flag.String("at", "600,300", "with -overlay, where menus open (x,y px)")
-	overlayChat := flag.String("ochat", "rina", "with -overlay, the demo chat to open")
+	overlayChat := flag.String("ochat", "citra", "with -overlay, the demo chat to open")
 	filmName := flag.String("film", "", "render an animation's frames to <out>/film-<name>.png: an -overlay name, viewer-click (thumbnail at -at), info, message, reorder, hover, scroll (-at over the chat), typing, typists (-ochat work), ghost, privacy, privacyhover or vote (-ochat design)")
 	step := flag.Duration("step", 30*time.Millisecond, "with -film, time between frames")
 	flag.Parse()
@@ -122,12 +122,12 @@ func main() {
 		page  string // "info" opens the chat's info panel
 	}{
 		{"preview-dark.png", true, "test@g.us", false, true, ""},
-		{"preview-light.png", false, "rina", false, false, ""},
-		{"preview-group.png", false, "family", false, false, ""},
+		{"preview-light.png", false, "citra", false, false, ""},
+		{"preview-group.png", false, "fams", false, false, ""},
 		{"preview-empty.png", true, "", false, true, ""},
 		{"preview-login.png", true, "", true, false, ""},
 		{"preview-info.png", true, "test@g.us", false, true, "info"},
-		{"preview-contact.png", false, "rina", false, false, "info"},
+		{"preview-contact.png", false, "citra", false, false, "info"},
 		{"preview-business.png", true, "test@g.us", false, true, "contact:vivy@lid"},
 		{"preview-status.png", true, "", false, true, "status"},
 		{"preview-channels.png", true, "", false, true, "channels"},

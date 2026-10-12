@@ -53,8 +53,8 @@ func TestPostTextStatus(t *testing.T) {
 func TestPostMediaStatus(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
-	u.conv.composer.SetText("draft for Rina")
+	u.SelectID("citra")
+	u.conv.composer.SetText("draft for Citra")
 	u.setPage(pageStatus)
 
 	dir := t.TempDir()
@@ -95,7 +95,7 @@ func TestPostMediaStatus(t *testing.T) {
 	if len(u.msgs) != msgs {
 		t.Error("the status went to the open chat too")
 	}
-	if got := u.conv.composer.Text(); got != "draft for Rina" {
+	if got := u.conv.composer.Text(); got != "draft for Citra" {
 		t.Errorf("the chat's draft is %q after posting", got)
 	}
 }

@@ -32,9 +32,9 @@ func TestChatSearch(t *testing.T) {
 	b := mock.New()
 	u := New(b)
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	u.openChatSearch()
-	if !u.search.open || u.search.chatID != "rina" {
+	if !u.search.open || u.search.chatID != "citra" {
 		t.Fatal("search didn't open for the chat")
 	}
 	u.search.query.SetText("villa")
@@ -44,7 +44,7 @@ func TestChatSearch(t *testing.T) {
 		t.Fatal("no results for a word in the chat")
 	}
 	for i, m := range u.search.results {
-		if m.ChatID != "rina" || len(matchRanges([]rune(m.Text), []rune("villa"))) == 0 {
+		if m.ChatID != "citra" || len(matchRanges([]rune(m.Text), []rune("villa"))) == 0 {
 			t.Errorf("result %q doesn't match", m.Text)
 		}
 		if i > 0 && m.Time.After(u.search.results[i-1].Time) {
@@ -53,14 +53,14 @@ func TestChatSearch(t *testing.T) {
 	}
 	// A new matching message shows up in the open search.
 	n := len(u.search.results)
-	b.Forward(b.Messages("rina", 1), []string{"rina"})
+	b.Forward(b.Messages("citra", 1), []string{"citra"})
 	u.applyEvents()
 	u.runChatSearch()
 	u.applyEvents()
 	if len(u.search.results) != n+1 {
 		t.Errorf("%d results after a matching message came, want %d", len(u.search.results), n+1)
 	}
-	u.openInfo("rina")
+	u.openInfo("citra")
 	if u.search.shown() || !u.info.open {
 		t.Error("the info panel didn't replace the search")
 	}
@@ -75,12 +75,12 @@ func TestChatSearch(t *testing.T) {
 }
 
 func TestFilterMembers(t *testing.T) {
-	ms := []model.Member{{Name: "Andre"}, {Name: "Bima"}, {Name: "*Dani*"}}
+	ms := []model.Member{{Name: "Arman"}, {Name: "Kocul"}, {Name: "*Lintang*"}}
 	var got []string
 	for _, m := range filterMembers(ms, " AN ") {
 		got = append(got, m.Name)
 	}
-	if want := []string{"Andre", "*Dani*"}; !slices.Equal(got, want) {
+	if want := []string{"Arman", "*Lintang*"}; !slices.Equal(got, want) {
 		t.Errorf("filterMembers = %v, want %v", got, want)
 	}
 }

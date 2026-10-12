@@ -21,7 +21,7 @@ func TestClickThroughFade(t *testing.T) {
 	for _, overlay := range []string{"chatmenu", "viewer"} {
 		u := New(mock.New())
 		u.Start(func() {})
-		u.SelectID("rina") // the viewer shows one of its pictures
+		u.SelectID("citra") // the viewer shows one of its pictures
 		now := testNow()
 		var ops op.Ops
 		var r input.Router

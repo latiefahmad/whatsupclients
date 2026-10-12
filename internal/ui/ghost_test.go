@@ -62,17 +62,17 @@ func TestSlashGhost(t *testing.T) {
 		t.Fatalf("note %q", n.Text)
 	}
 	// Opening a chat leaves it unread for the backend: no read receipts.
-	st.u.SelectID("gym")
+	st.u.SelectID("pelatnas")
 	st.frame()
-	if n := st.unread("gym"); n != 27 {
+	if n := st.unread("pelatnas"); n != 27 {
 		t.Fatalf("gym has %d unread in ghost mode, want 27", n)
 	}
 	// Nothing goes from the composer, or from files.
-	before := len(st.b.Messages("gym", 1000))
+	before := len(st.b.Messages("pelatnas", 1000))
 	st.typeText("hello")
 	st.press(key.NameReturn)
-	st.u.addFiles("gym", []*attachFile{{Attachment: model.Attachment{Path: "beach.jpg", Media: model.MediaImage}}})
-	if len(st.b.Messages("gym", 1000)) != before || len(st.u.attach.files) != 0 {
+	st.u.addFiles("pelatnas", []*attachFile{{Attachment: model.Attachment{Path: "beach.jpg", Media: model.MediaImage}}})
+	if len(st.b.Messages("pelatnas", 1000)) != before || len(st.u.attach.files) != 0 {
 		t.Fatal("sent in ghost mode")
 	}
 	// It stays on in a new window.
@@ -86,12 +86,12 @@ func TestSlashGhost(t *testing.T) {
 	if st.u.ghostMode() || st.b.Pref(model.PrefGhost) != "off" {
 		t.Fatal("Turn off didn't turn ghost mode off")
 	}
-	if n := st.unread("gym"); n != 0 {
+	if n := st.unread("pelatnas"); n != 0 {
 		t.Fatalf("gym has %d unread after ghost mode, want 0", n)
 	}
 	st.typeText("hello")
 	st.press(key.NameReturn)
-	if len(st.b.Messages("gym", 1000)) != before+1 {
+	if len(st.b.Messages("pelatnas", 1000)) != before+1 {
 		t.Fatal("can't send after ghost mode")
 	}
 }

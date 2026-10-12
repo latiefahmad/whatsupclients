@@ -37,7 +37,7 @@ type Job struct {
 	Chat string    `json:"chat"`
 	At   time.Time `json:"at"`
 	// Text is the message as sent, with mentions as "@<user>", and Shown
-	// as you typed it ("@Budi"), for listing it.
+	// as you typed it ("@Gusti"), for listing it.
 	Text          string   `json:"text"`
 	Shown         string   `json:"shown,omitempty"`
 	Mentions      []string `json:"mentions,omitempty"`

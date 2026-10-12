@@ -24,13 +24,13 @@ func waitSnippetUI(t *testing.T, st *slashTest, done func() bool) {
 }
 
 func TestSnippetSaveSettingsAndPicker(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	u := st.u
-	original := st.b.Messages("rina", 1)[0]
+	original := st.b.Messages("citra", 1)[0]
 	u.conv.reply = original
 	st.typeText("/snippet save")
 	st.press(key.NameReturn)
-	waitSnippetUI(t, st, func() bool { notes := u.slash.notes["rina"]; return len(notes) == 1 && !notes[0].note.Busy })
+	waitSnippetUI(t, st, func() bool { notes := u.slash.notes["citra"]; return len(notes) == 1 && !notes[0].note.Busy })
 	items, err := st.b.Snippets()
 	if err != nil || len(items) != 1 {
 		t.Fatal(items, err)
@@ -61,7 +61,7 @@ func TestSnippetSaveSettingsAndPicker(t *testing.T) {
 		}
 	}
 	u.setPage(pageChats)
-	u.SelectID("rina")
+	u.SelectID("citra")
 	u.conv.reply = original
 	// /snippet offers send and save, and send the saved snippets.
 	st.typeText("/Snippet ")
@@ -81,28 +81,28 @@ func TestSnippetSaveSettingsAndPicker(t *testing.T) {
 	if st.text() != "/Snippet send Greeting " {
 		t.Fatalf("picked %q", st.text())
 	}
-	before := len(st.b.Messages("rina", 1000))
+	before := len(st.b.Messages("citra", 1000))
 	st.press(key.NameReturn) // sends
-	waitSnippetUI(t, st, func() bool { return len(st.b.Messages("rina", 1000)) > before })
+	waitSnippetUI(t, st, func() bool { return len(st.b.Messages("citra", 1000)) > before })
 	if u.dialog.isOpen() || st.text() != "" {
 		t.Fatal("sending opened a dialog or kept the command")
 	}
-	last := st.b.Messages("rina", 1)[0]
+	last := st.b.Messages("citra", 1)[0]
 	// The picker fills {name} with the open chat's contact.
-	if last.Text != "Hello Rina Kartika\nSecond line" || last.Quote == nil || last.Quote.ID != original.ID {
+	if last.Text != "Hello Citra Scholastika\nSecond line" || last.Quote == nil || last.Quote.ID != original.ID {
 		t.Fatalf("sent snippet: %+v", last)
 	}
 }
 
 func TestCatchLocalOnlyAndMissingReply(t *testing.T) {
-	st := newSlashTest(t, "rina")
-	before := len(st.b.Messages("rina", 1000))
+	st := newSlashTest(t, "citra")
+	before := len(st.b.Messages("citra", 1000))
 	st.typeText("/catch ")
 	st.press(key.NameReturn)
 	if st.u.dialog.kind == dialogPayload {
 		t.Fatal("catch without reply opened payload")
 	}
-	st.u.conv.reply = st.b.Messages("rina", 1)[0]
+	st.u.conv.reply = st.b.Messages("citra", 1)[0]
 	st.typeText("/catch ")
 	st.press(key.NameReturn)
 	waitSnippetUI(t, st, func() bool { return st.u.dialog.snippet != nil && !st.u.dialog.snippet.loading })
@@ -112,18 +112,18 @@ func TestCatchLocalOnlyAndMissingReply(t *testing.T) {
 	}
 	st.u.btn("snip:copy").Click()
 	st.frame()
-	if len(st.b.Messages("rina", 1000)) != before {
+	if len(st.b.Messages("citra", 1000)) != before {
 		t.Fatal("catch sent a message to WhatsApp")
 	}
 }
 
 func TestSnippetSaveNamedAndUnknown(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	u := st.u
-	u.conv.reply = st.b.Messages("rina", 1)[0]
+	u.conv.reply = st.b.Messages("citra", 1)[0]
 	st.typeText("/snippet save Thanks a lot")
 	st.press(key.NameReturn)
-	waitSnippetUI(t, st, func() bool { n := st.lastNote("rina"); return n != nil && !n.Busy })
+	waitSnippetUI(t, st, func() bool { n := st.lastNote("citra"); return n != nil && !n.Busy })
 	if items, _ := st.b.Snippets(); len(items) != 1 || items[0].Name != "Thanks a lot" {
 		t.Fatalf("saved %+v", items)
 	}
@@ -134,20 +134,20 @@ func TestSnippetSaveNamedAndUnknown(t *testing.T) {
 	}
 	st.typeText("/snippet send thanks")
 	waitSnippetUI(t, st, func() bool { sp := u.slashQuery(); return sp != nil && len(sp.vals) == 1 })
-	before := len(st.b.Messages("rina", 1000))
+	before := len(st.b.Messages("citra", 1000))
 	st.typeText("/snippet send nothing like it")
 	st.press(key.NameReturn)
-	waitSnippetUI(t, st, func() bool { n := st.lastNote("rina"); return n != nil && n.Failed })
-	if len(st.b.Messages("rina", 1000)) != before {
+	waitSnippetUI(t, st, func() bool { n := st.lastNote("citra"); return n != nil && n.Failed })
+	if len(st.b.Messages("citra", 1000)) != before {
 		t.Fatal("an unknown snippet sent something")
 	}
 }
 
 func TestSnippetAccountStateAndClosedAsyncDialog(t *testing.T) {
-	st := newSlashTest(t, "rina")
-	st.u.openPayload("rina", st.b.Messages("rina", 1)[0].ID)
+	st := newSlashTest(t, "citra")
+	st.u.openPayload("citra", st.b.Messages("citra", 1)[0].ID)
 	old := st.u.dialog.snippet
-	st.u.openPayload("rina", st.b.Messages("rina", 1)[0].ID)
+	st.u.openPayload("citra", st.b.Messages("citra", 1)[0].ID)
 	waitSnippetUI(t, st, func() bool { return !st.u.dialog.snippet.loading })
 	if st.u.dialog.snippet == old {
 		t.Fatal("old request reopened its dialog")
@@ -162,7 +162,7 @@ func TestSnippetAccountStateAndClosedAsyncDialog(t *testing.T) {
 
 // A poll or a document saves whole, not only its text, and sends whole.
 func TestSnippetSavesWholeMessage(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	u := st.u
 	find := func(ok func(m *model.Message) bool) *model.Message {
 		for _, c := range st.b.Chats() {
@@ -181,14 +181,14 @@ func TestSnippetSavesWholeMessage(t *testing.T) {
 		u.conv.reply = src
 		st.typeText("/snippet save " + name)
 		st.press(key.NameReturn)
-		waitSnippetUI(t, st, func() bool { n := st.lastNote("rina"); return n != nil && !n.Busy })
-		if n := st.lastNote("rina"); n.Failed {
+		waitSnippetUI(t, st, func() bool { n := st.lastNote("citra"); return n != nil && !n.Busy })
+		if n := st.lastNote("citra"); n.Failed {
 			t.Fatal(n.Text)
 		}
 		st.typeText("/snippet send " + name)
 		st.press(key.NameReturn)
-		waitSnippetUI(t, st, func() bool { m := st.b.Messages("rina", 1)[0]; return m.FromMe && m.Media == src.Media })
-		got := st.b.Messages("rina", 1)[0]
+		waitSnippetUI(t, st, func() bool { m := st.b.Messages("citra", 1)[0]; return m.FromMe && m.Media == src.Media })
+		got := st.b.Messages("citra", 1)[0]
 		switch name {
 		case "Poll":
 			if got.Poll == nil || len(got.Poll.Options) != len(src.Poll.Options) || got.Text != src.Text {

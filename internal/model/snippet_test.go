@@ -6,13 +6,13 @@ import (
 )
 
 func TestExpandSnippet(t *testing.T) {
-	vars := SnippetValues("Rina Putri", "Work", "Bagus", "When?", time.Date(2026, 10, 5, 14, 5, 0, 0, time.UTC))
+	vars := SnippetValues("Kocul Pratama", "Work", "Bagus", "When?", time.Date(2026, 10, 5, 14, 5, 0, 0, time.UTC))
 	for in, want := range map[string]string{
-		"Hi {first}, {greeting}!":        "Hi Rina, Good afternoon!",
-		"{NAME} in {chat} from {me}":     "Rina Putri in Work from Bagus",
+		"Hi {first}, {greeting}!":        "Hi Kocul, Good afternoon!",
+		"{NAME} in {chat} from {me}":     "Kocul Pratama in Work from Bagus",
 		"> {quote}\n{day} {date} {time}": "> When?\nMonday 5 October 2026 14:05",
 		`{"a": 1} {unknown} {} {name`:    `{"a": 1} {unknown} {} {name`,
-		`\{name} stays, \x and {name}`:   `{name} stays, \x and Rina Putri`,
+		`\{name} stays, \x and {name}`:   `{name} stays, \x and Kocul Pratama`,
 		"no variables":                   "no variables",
 	} {
 		if got := ExpandSnippet(in, vars); got != want {

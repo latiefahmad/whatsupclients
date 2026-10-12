@@ -16,7 +16,7 @@ type typingBackend struct {
 func (b *typingBackend) ReportTyping(chat string) { b.reports = append(b.reports, chat) }
 
 func TestComposerTypingPresence(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	b := &typingBackend{Backend: st.u.backend}
 	st.u.backend = b
 	check := func(want ...string) {
@@ -39,7 +39,7 @@ func TestComposerTypingPresence(t *testing.T) {
 	check(chat)
 	st.u.SelectID("work")
 	check("")
-	st.u.SelectID("rina")
+	st.u.SelectID("citra")
 	st.frame()
 	check() // draft loaded without announcing typing
 	st.u.reportComposerTyping()

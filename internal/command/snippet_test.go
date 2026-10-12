@@ -35,7 +35,7 @@ func (h *snippetHost) ShowPayload(_, _ string) {}
 
 func TestSnippetSaveText(t *testing.T) {
 	b, h := mock.New(), &snippetHost{}
-	c := &Context{Input: "/snippet save hello there", Backend: b, Chat: &model.Chat{ID: "rina"}, Host: h}
+	c := &Context{Input: "/snippet save hello there", Backend: b, Chat: &model.Chat{ID: "citra"}, Host: h}
 	if err := saveSnippet(c, "hello there"); err != nil {
 		t.Fatalf("saveSnippet: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestSnippetSaveText(t *testing.T) {
 
 func TestSnippetSaveNeedsTextOrReply(t *testing.T) {
 	b, h := mock.New(), &snippetHost{}
-	c := &Context{Input: "/snippet save", Backend: b, Chat: &model.Chat{ID: "rina"}, Host: h}
+	c := &Context{Input: "/snippet save", Backend: b, Chat: &model.Chat{ID: "citra"}, Host: h}
 	err := saveSnippet(c, "")
 	if err == nil || !strings.Contains(err.Error(), "Reply to a message") {
 		t.Fatalf("saveSnippet without reply or text: %v", err)

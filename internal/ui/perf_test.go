@@ -53,7 +53,7 @@ func TestReadPerf(t *testing.T) {
 // the Advanced page and Reset to defaults.
 func TestPerfSettings(t *testing.T) {
 	resetPerf(t)
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	u := st.u
 	click := func(btn string) {
 		t.Helper()
@@ -123,7 +123,7 @@ func TestPerfSettings(t *testing.T) {
 // draws it at once and asks for no more frames.
 func TestNoAnimationsAtRest(t *testing.T) {
 	resetPerf(t)
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	st.b.SetPref(prefAnimations, "off")
 	st.u.applyPerf()
 	st.frame()
@@ -144,7 +144,7 @@ func TestNoAnimationsAtRest(t *testing.T) {
 // wheel notch moves the list in one frame.
 func TestWheelWithoutSmoothScroll(t *testing.T) {
 	resetPerf(t)
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	st.b.SetPref(prefSmoothScroll, "off")
 	st.u.applyPerf()
 	st.frame()

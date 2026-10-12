@@ -42,7 +42,7 @@ func TestGroupStatusTextDestination(t *testing.T) {
 func TestGroupStatusMediaQueueDestination(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	u.conv.composer.SetText("chat draft")
 	u.openGroupStatus("123@g.us")
 	audio := filepath.Join(t.TempDir(), "voice.ogg")

@@ -61,7 +61,7 @@ func TestListChips(t *testing.T) {
 		t.Fatalf("chips %q, want %q", names, want)
 	}
 	click("chip:4") // Family
-	if got := visibleIDs(u); !slices.Equal(got, []string{"family", "mom"}) && !slices.Equal(got, []string{"mom", "family"}) {
+	if got := visibleIDs(u); !slices.Equal(got, []string{"fams", "ibuk"}) && !slices.Equal(got, []string{"ibuk", "fams"}) {
 		t.Errorf("Family shows %v", got)
 	}
 
@@ -69,15 +69,15 @@ func TestListChips(t *testing.T) {
 	if u.dialog.kind != dialogForward || !u.dialog.newList {
 		t.Fatal("the + chip didn't open New list")
 	}
-	u.dialog.listName.SetText("Gym")
-	click("fwd:gym")
+	u.dialog.listName.SetText("Pelatnas")
+	click("fwd:pelatnas")
 	frame()
 	click("fwd:send")
 	for range 30 {
 		frame()
 	}
 	ls := b.Lists()
-	if l := ls[len(ls)-1]; l.Name != "Gym" || !slices.Equal(l.Chats, []string{"gym"}) {
+	if l := ls[len(ls)-1]; l.Name != "Pelatnas" || !slices.Equal(l.Chats, []string{"pelatnas"}) {
 		t.Fatalf("new list %q with %v", l.Name, l.Chats)
 	}
 	if n := len(u.chipItems()); n != 8 {

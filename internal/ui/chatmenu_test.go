@@ -25,14 +25,14 @@ func TestConvMenu(t *testing.T) {
 		}
 		return out
 	}
-	group := labels("family")
+	group := labels("fams")
 	for _, want := range []string{"Add member", "Group info", "Search", "Select messages", "Disappearing messages",
 		"Chat theme", "Add to list", "Export chat", "Close chat", "Clear chat", "Exit group"} {
 		if !slices.Contains(group, want) {
 			t.Errorf("group menu %q lacks %q", group, want)
 		}
 	}
-	contact := labels("rina")
+	contact := labels("citra")
 	for _, want := range []string{"Contact info", "Block", "Report", "Delete chat"} {
 		if !slices.Contains(contact, want) {
 			t.Errorf("contact menu %q lacks %q", contact, want)
@@ -47,7 +47,7 @@ func TestConvMenu(t *testing.T) {
 func TestDisappearingAndTheme(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("family")
+	u.SelectID("fams")
 	var week *menuItem
 	items := u.timerItems(u.selected)
 	for i := range items {
@@ -60,12 +60,12 @@ func TestDisappearingAndTheme(t *testing.T) {
 	}
 	week.run()
 	u.applyEvents()
-	if info := u.backend.Info("family"); info.Disappearing != uint32(7*24*time.Hour/time.Second) {
+	if info := u.backend.Info("fams"); info.Disappearing != uint32(7*24*time.Hour/time.Second) {
 		t.Errorf("timer = %d s, want 7 days", info.Disappearing)
 	}
-	u.setChatTheme("family", 2)
+	u.setChatTheme("fams", 2)
 	u.themes = nil // read back from the prefs
-	if got := u.chatThemeOf("family"); got != 2 {
+	if got := u.chatThemeOf("fams"); got != 2 {
 		t.Errorf("theme = %d, want 2", got)
 	}
 	if u.chatPalette(u.selected).BubbleOut == u.pal.BubbleOut {

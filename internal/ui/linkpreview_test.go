@@ -48,7 +48,7 @@ func TestComposerLink(t *testing.T) {
 		return &linkpreview.Preview{Title: "Example", Description: "A page", Thumb: []byte{1}}, nil
 	}
 	u.Start(func() {})
-	u.SelectID("budi")
+	u.SelectID("arman")
 	now := testNow()
 	var ops op.Ops
 	var r input.Router

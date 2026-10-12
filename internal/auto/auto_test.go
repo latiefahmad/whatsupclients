@@ -57,9 +57,9 @@ func (at *autoTest) poll() (msgs []*model.Message, notices []string) {
 
 func TestSchedule(t *testing.T) {
 	at := newAutoTest(t)
-	j := at.a.Schedule(Job{Chat: "rina", At: base.Add(time.Hour), Text: "later", Reply: "rina-2"})
+	j := at.a.Schedule(Job{Chat: "citra", At: base.Add(time.Hour), Text: "later", Reply: "citra-2"})
 	at.a.Schedule(Job{Chat: "work", At: base.Add(30 * time.Minute), Text: "sooner"})
-	if js := at.a.Jobs(""); len(js) != 2 || js[0].Text != "sooner" || len(at.a.Jobs("rina")) != 1 {
+	if js := at.a.Jobs(""); len(js) != 2 || js[0].Text != "sooner" || len(at.a.Jobs("citra")) != 1 {
 		t.Fatalf("jobs %+v", js)
 	}
 	// They're kept in the prefs.
@@ -92,8 +92,8 @@ func TestSchedule(t *testing.T) {
 
 func TestScheduleTooLate(t *testing.T) {
 	at := newAutoTest(t)
-	at.a.Schedule(Job{Chat: "rina", At: base.Add(time.Hour), Text: "good morning everyone, coffee's on me today", Shown: ""})
-	at.a.Schedule(Job{Chat: "rina", At: base.Add(3 * time.Hour), Text: "later"})
+	at.a.Schedule(Job{Chat: "citra", At: base.Add(time.Hour), Text: "good morning everyone, coffee's on me today", Shown: ""})
+	at.a.Schedule(Job{Chat: "citra", At: base.Add(3 * time.Hour), Text: "later"})
 	// The app was closed: it opens two hours late.
 	at.now = base.Add(3 * time.Hour)
 	ms, ns := at.poll()
@@ -111,8 +111,8 @@ func TestScheduleTooLate(t *testing.T) {
 
 func TestCancelAndSendNow(t *testing.T) {
 	at := newAutoTest(t)
-	a := at.a.Schedule(Job{Chat: "rina", At: base.Add(time.Hour), Text: "a"})
-	b := at.a.Schedule(Job{Chat: "rina", At: base.Add(time.Hour), Text: "b"})
+	a := at.a.Schedule(Job{Chat: "citra", At: base.Add(time.Hour), Text: "a"})
+	b := at.a.Schedule(Job{Chat: "citra", At: base.Add(time.Hour), Text: "b"})
 	if !at.a.Cancel(a.ID) {
 		t.Fatal("couldn't cancel")
 	}
@@ -145,16 +145,16 @@ func TestAway(t *testing.T) {
 	at.a.SetAway("lunch")
 	at.now = base.Add(10 * time.Minute)
 	at.f.in = append(at.f.in,
-		incoming("x1", "rina", "rina@lid", "hey", at.now),
-		incoming("x2", "rina", "rina@lid", "you there?", at.now),    // told already
+		incoming("x1", "citra", "citra@lid", "hey", at.now),
+		incoming("x2", "citra", "citra@lid", "you there?", at.now),  // told already
 		incoming("x3", "work", "budi@lid", "lunch anyone?", at.now), // a group, not to you
 		incoming("x4", "work", "dewi@lid", "ping "+mentioned("You"), at.now),
 		incoming("x6", "work", "andre@lid", mentioned("all")+" standup", at.now), // not @all
 		replyToMe("x7", "work", "clara@lid", at.now),                             // nor a reply in a group
-		incoming("x5", "rina", "rina@lid", "old", base.Add(-time.Hour)),          // from before
+		incoming("x5", "citra", "citra@lid", "old", base.Add(-time.Hour)),        // from before
 	)
 	ms, _ := at.poll()
-	if len(ms) != 2 || ms[0].ChatID != "rina" || ms[1].ChatID != "work" || ms[1].Quote == nil || ms[1].Quote.ID != "x4" {
+	if len(ms) != 2 || ms[0].ChatID != "citra" || ms[1].ChatID != "work" || ms[1].Quote == nil || ms[1].Quote.ID != "x4" {
 		t.Fatalf("replied %+v", ms)
 	}
 	if want := "💤 AFK: lunch"; ms[0].Text != want || ms[0].Quote == nil {
@@ -170,7 +170,7 @@ func TestAway(t *testing.T) {
 		t.Fatal("AFK wasn't saved")
 	}
 	// Sending a message ends it.
-	at.a.Send("rina", model.Draft{Text: "back"})
+	at.a.Send("citra", model.Draft{Text: "back"})
 	if _, ns := at.poll(); len(ns) != 1 || !strings.Contains(ns[0], "2 people") || at.a.Away() != nil {
 		t.Fatalf("notices %q", ns)
 	}
@@ -185,36 +185,36 @@ func TestAFKAllow(t *testing.T) {
 	if l := at.a.AllowList(); l.Only || len(l.Members) != 0 {
 		t.Fatalf("allowlist starts %+v", l)
 	}
-	// Rina by her picked ID, Agus by his typed number.
-	if !at.a.AllowMember("rina@lid", "Rina") || !at.a.AllowMember("6281355501942", "+62 813-5550-1942") {
+	// Gusti by his typed number.
+	if !at.a.AllowMember("citra@lid", "citra") || !at.a.AllowMember("6281355501942", "+62 813-5550-1942") {
 		t.Fatal("adds didn't stick")
 	}
-	if at.a.AllowMember("rina@lid", "Rina") {
+	if at.a.AllowMember("citra@lid", "citra") {
 		t.Fatal("dup added twice")
 	}
 	at.a.SetAllowOnly(true)
 	at.now = base.Add(10 * time.Minute)
 	at.f.in = append(at.f.in,
-		incoming("a1", "rina", "rina@lid", "hey", at.now),
-		incoming("a2", "rina", "rina@lid", "again", at.now),                  // told already
+		incoming("a1", "citra", "citra@lid", "hey", at.now),
+		incoming("a2", "citra", "citra@lid", "again", at.now),                // told already
 		incoming("a3", "agus", "agus", "morning", at.now),                    // typed number, via contacts
 		incoming("a4", "fitri", "fitri", "hi", at.now),                       // not listed
 		incoming("a5", "work", "budi@lid", "ping "+mentioned("You"), at.now), // group, not listed
 	)
 	ms, _ := at.poll()
-	if len(ms) != 2 || ms[0].ChatID != "rina" || ms[1].ChatID != "agus" {
+	if len(ms) != 2 || ms[0].ChatID != "citra" || ms[1].ChatID != "agus" {
 		t.Fatalf("replied %+v", ms)
 	}
-	// Unallowing by digits drops Agus; names work too. The list and the
+	// Unallowing by digits drops Gusti; names work too. The list and the
 	// mode persist.
 	if n := at.a.UnallowMember("6281355501942"); n != 1 {
 		t.Fatalf("unallowed %d", n)
 	}
-	if !at.a.AllowMember("yoga@lid", "Yoga") || at.a.UnallowMember("yoga") != 1 {
-		t.Fatal("unallow by name didn't drop Yoga")
+	if !at.a.AllowMember("yoga@lid", "Kocul") || at.a.UnallowMember("Kocul") != 1 {
+		t.Fatal("unallow by name didn't drop Kocul")
 	}
 	if again := Wrap(at.f, func() time.Time { return at.now }); !again.AllowList().Only ||
-		len(again.AllowList().Members) != 1 || again.AllowList().Members[0].Name != "Rina" {
+		len(again.AllowList().Members) != 1 || again.AllowList().Members[0].Name != "citra" {
 		t.Fatalf("allowlist saved %+v", again.AllowList())
 	}
 	// Off again, everyone gets it.
@@ -228,21 +228,21 @@ func TestAFKAllow(t *testing.T) {
 func TestResolvePerson(t *testing.T) {
 	at := newAutoTest(t)
 	members := []model.Member{
-		{ID: "budi@lid", Name: "Budi Santoso"},
-		{ID: "bima@lid", Name: "Bima Sakti"},
+		{ID: "kocul@lid", Name: "Kocul Pratama"},
+		{ID: "kevin@lid", Name: "Kevin Pratama"},
 		{ID: "me@lid", Name: "Me", Me: true},
 	}
 	for _, c := range []struct {
 		text, id, name, err string
 	}{
-		{"@Budi Santoso", "budi@lid", "Budi Santoso", ""},
-		{"bima", "bima@lid", "Bima Sakti", ""},
-		{"Bu", "budi@lid", "Budi Santoso", ""},
-		{"B", "", "", "could be Budi Santoso or Bima Sakti"},
+		{"@Kocul Pratama", "kocul@lid", "Kocul Pratama", ""},
+		{"kevin", "kevin@lid", "Kevin Pratama", ""},
+		{"Koc", "kocul@lid", "Kocul Pratama", ""},
+		{"K", "", "", "could be Kocul Pratama or Kevin Pratama"},
 		{"Me", "", "", "no contact named"},
-		{"Agus Wibowo", "agus", "Agus Wibowo", ""},
-		{"Fit", "fitri", "Fitri Handayani", ""},
-		{"+62 813-5550-1942", "6281355501942", "Agus Wibowo", ""},
+		{"Gusti Wibowo", "agus", "Gusti Wibowo", ""},
+		{"Cla", "fitri", "Clara Handayani", ""},
+		{"+62 813-5550-1942", "6281355501942", "Gusti Wibowo", ""},
 		{"+62 800 0000", "628000000", "+62 800 0000", ""},
 		{"Nobody Here", "", "", "no contact named"},
 		{"", "", "", "name someone"},
@@ -305,7 +305,7 @@ func TestAFKHours(t *testing.T) {
 	// Off again, and kept in the prefs.
 	at.a.SetHours(false, 0, 0)
 	at.now = base.Add(10 * time.Minute)
-	at.f.in = append(at.f.in, incoming("h-off", "rina", "rina@lid", "hey", at.now))
+	at.f.in = append(at.f.in, incoming("h-off", "citra", "citra@lid", "hey", at.now))
 	if ms, _ := at.poll(); len(ms) != 1 {
 		t.Fatalf("replied %+v", ms)
 	}
@@ -337,7 +337,7 @@ func TestAwayReasonKept(t *testing.T) {
 func TestAwayEndsFromAnotherDevice(t *testing.T) {
 	at := newAutoTest(t)
 	at.a.SetAway("")
-	at.f.in = append(at.f.in, model.MessageEvent{Msg: &model.Message{ID: "p1", ChatID: "rina", FromMe: true,
+	at.f.in = append(at.f.in, model.MessageEvent{Msg: &model.Message{ID: "p1", ChatID: "citra", FromMe: true,
 		Time: base.Add(time.Minute)}})
 	if _, ns := at.poll(); len(ns) != 1 || ns[0] != "Welcome back! You're no longer AFK." {
 		t.Fatalf("notices %q", ns)

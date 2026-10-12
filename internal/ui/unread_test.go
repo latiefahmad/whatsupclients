@@ -17,7 +17,7 @@ import (
 func TestOpenChatStaysRead(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	var ops op.Ops
 	frame := func() {
 		ops.Reset()
@@ -42,7 +42,7 @@ func TestOpenChatStaysRead(t *testing.T) {
 	}
 	u.away = false
 	frame()
-	if c := u.chatByID("rina"); c.Unread != 0 {
+	if c := u.chatByID("citra"); c.Unread != 0 {
 		t.Errorf("back: open chat shows %d unread", c.Unread)
 	}
 }
@@ -108,7 +108,7 @@ func TestUnreadDivider(t *testing.T) {
 		}
 	}
 
-	u.SelectID("budi") // nothing unread
+	u.SelectID("arman") // nothing unread
 	for _, r := range u.rows(u.selected) {
 		if r.kind == rowUnread {
 			t.Error("a divider in a read chat")

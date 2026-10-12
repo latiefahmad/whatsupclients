@@ -23,7 +23,7 @@ import (
 func TestSelectText(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	now := testNow()
 	start := now
 	var ops op.Ops
@@ -78,7 +78,7 @@ func TestSelectText(t *testing.T) {
 	ev(pointer.Press, from, pointer.ButtonPrimary)
 	ev(pointer.Move, to, pointer.ButtonPrimary)
 	ev(pointer.Release, to, 0)
-	const want = "can you send me the villa address? My mom keeps asking"
+	const want = "can you send me the villa address? My ibuk keeps asking"
 	if got := u.textSel.selected(u.textSel.id); got != want {
 		t.Fatalf("the drag selected %q, want %q", got, want)
 	}

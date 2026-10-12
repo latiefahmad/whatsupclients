@@ -54,8 +54,8 @@ func TestSlashPurge(t *testing.T) {
 
 func TestSlashPurgeOthers(t *testing.T) {
 	// In a one-to-one chat only your own messages go.
-	st := newSlashTest(t, "rina")
-	all := st.b.Messages("rina", 1000)
+	st := newSlashTest(t, "citra")
+	all := st.b.Messages("citra", 1000)
 	mine := 0
 	for _, m := range all[len(all)-4:] {
 		if m.FromMe && st.u.now().Sub(m.Time) < 48*60*60*1e9 {
@@ -74,9 +74,9 @@ func TestSlashPurgeOthers(t *testing.T) {
 		t.Errorf("body %q", st.u.dialog.body)
 	}
 	st.runConfirm(st.u.dialog.title)
-	for _, m := range st.b.Messages("rina", 1000) {
+	for _, m := range st.b.Messages("citra", 1000) {
 		if m.Kind == model.KindDeleted && !m.FromMe {
-			t.Errorf("deleted Rina's %q", m.ID)
+			t.Errorf("deleted Citra's %q", m.ID)
 		}
 	}
 }
@@ -166,7 +166,7 @@ func TestCalcPad(t *testing.T) {
 		}
 	}
 	// The amounts of the message replied to type with + between them.
-	st.u.conv.reply = &model.Message{ID: "bill", ChatID: "work", Sender: "Dewi", Text: "Rice 25,000, tea 8K"}
+	st.u.conv.reply = &model.Message{ID: "bill", ChatID: "work", Sender: "Lintang", Text: "Rice 25,000, tea 8K"}
 	if ns := st.u.replyNumbers(); len(ns) != 2 || ns[0] != 25000 {
 		t.Fatalf("numbers %v", ns)
 	}

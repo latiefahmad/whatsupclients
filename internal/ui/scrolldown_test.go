@@ -21,7 +21,7 @@ func TestScrollDown(t *testing.T) {
 	b := mock.New()
 	u := New(b)
 	u.Start(func() {})
-	u.SelectID("rina") // read, so it opens at its newest message
+	u.SelectID("citra") // read, so it opens at its newest message
 	now := testNow()
 	var ops op.Ops
 	var r input.Router
@@ -56,7 +56,7 @@ func TestScrollDown(t *testing.T) {
 		t.Fatalf("the pinned day stayed after scrolling stopped: %v", f.dateAnim.v)
 	}
 
-	b.Receive("rina", "Rina", "Still there?")
+	b.Receive("citra", "citra", "Still there?")
 	frame(time.Second)
 	if f.below != 1 {
 		t.Fatalf("a message came while scrolled up: %d below", f.below)

@@ -105,10 +105,10 @@ func TestEventAnswers(t *testing.T) {
 }
 
 func TestParseVCard(t *testing.T) {
-	card := "BEGIN:VCARD\r\nVERSION:3.0\r\nN:;Budi;;;\r\nFN:Budi\\, the\r\n  courier\r\nitem1.TEL;waid=6281234567890:+62 812-3456-7890\r\n" +
+	card := "BEGIN:VCARD\r\nVERSION:3.0\r\nN:;Gusti;;;\r\nFN:Gusti\\, the\r\n  courier\r\nitem1.TEL;waid=6281234567890:+62 812-3456-7890\r\n" +
 		"item1.X-ABLabel:Mobile\r\nTEL;type=HOME:021 555 1234\r\nEND:VCARD"
 	c := parseVCard(card, "")
-	if c.Name != "Budi, the courier" || len(c.Phones) != 2 || c.WhatsApp() != "6281234567890" ||
+	if c.Name != "Gusti, the courier" || len(c.Phones) != 2 || c.WhatsApp() != "6281234567890" ||
 		c.Phones[0].Number != "+62 812-3456-7890" || c.Phones[1].WAID != "" {
 		t.Errorf("card = %+v", c)
 	}

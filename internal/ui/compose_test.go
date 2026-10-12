@@ -12,7 +12,7 @@ import (
 // TestOpenFocusesComposer checks that opening a chat puts the caret in its
 // composer, ready to type, as WhatsApp does.
 func TestOpenFocusesComposer(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	st.frame()
 	ed := &st.u.conv.composer
 	if !st.r.Source().Focused(ed) {
@@ -80,10 +80,10 @@ func TestMentionKeys(t *testing.T) {
 // the picked "@Name " no longer counts as a query that finds that member.
 func TestEnterAfterMention(t *testing.T) {
 	st := newSlashTest(t, "work")
-	st.typeText("@Bim")
+	st.typeText("@Mas R")
 	st.press(key.NameReturn)
-	if st.text() != "@Bima " {
-		t.Fatalf("picked %q, want @Bima", st.text())
+	if st.text() != "@Mas Rif " {
+		t.Fatalf("picked %q, want @Mas Rif", st.text())
 	}
 	if ms := st.u.mentionQuery(); ms != nil {
 		t.Fatalf("the picker reopened after picking: %+v", ms.members)
@@ -93,14 +93,14 @@ func TestEnterAfterMention(t *testing.T) {
 	if st.text() != "" || len(st.u.msgs) != before+1 {
 		t.Fatalf("Enter after the mention left %q and %d new messages, want it sent", st.text(), len(st.u.msgs)-before)
 	}
-	if m := st.u.msgs[len(st.u.msgs)-1]; !strings.Contains(m.Text, "Bima") {
+	if m := st.u.msgs[len(st.u.msgs)-1]; !strings.Contains(m.Text, "Mas Rif") {
 		t.Errorf("sent %q", m.Text)
 	}
 
 	// Editing the name makes it a query again.
-	st.typeText("@Bima")
-	st.u.conv.mentions = []mentionRef{{name: "Bima", jid: "bima"}}
-	st.u.conv.composer.SetCaret(3, 3) // "@Bi|ma"
+	st.typeText("@Mas Rif")
+	st.u.conv.mentions = []mentionRef{{name: "Mas Rif", jid: "mas rif"}}
+	st.u.conv.composer.SetCaret(4, 4) // "@Mas| Rif"
 	if st.u.mentionQuery() == nil {
 		t.Error("no picker with the caret inside a picked mention")
 	}
@@ -114,8 +114,8 @@ func TestMentionPickerNames(t *testing.T) {
 	u := st.u
 	u.conv.members, u.conv.membersFor = &model.ChatInfo{ID: "work", IsGroup: true, Members: []model.Member{
 		{ID: "me", Name: "You", Me: true},
-		{ID: "hasan@lid", Name: "Hasan", Contact: "Hasan", Phone: "+62 811-0000-1111"},
-		{ID: "budi@lid", Name: "Budi Santoso", Contact: "Budi Santoso", Phone: "+62 812-3456-7890"},
+		{ID: "kocul@lid", Name: "Kocul Pratama", Contact: "Kocul Pratama", Phone: "+62 812-5550-7781"},
+		{ID: "arman@lid", Name: "Arman Maulana", Contact: "Arman Maulana", Phone: "+62 812-3456-7890"},
 		{ID: "naufal@lid", Name: "+62 857-1111-2222", Push: "naufalll", Phone: "+62 857-1111-2222"},
 	}}, "work"
 	u.conv.hitsOK = false
@@ -134,9 +134,9 @@ func TestMentionPickerNames(t *testing.T) {
 	}
 
 	// A word's start beats the same letters inside a name.
-	st.typeText("@san")
-	if ms := u.mentionQuery(); ms == nil || len(ms.members) != 2 || ms.members[0].ID != "budi@lid" {
-		t.Fatalf("@san found %+v, want Budi Santoso, then Hasan", ms)
+	st.typeText("@ma")
+	if ms := u.mentionQuery(); ms == nil || len(ms.members) != 2 || ms.members[0].ID != "arman@lid" {
+		t.Fatalf("@ma found %+v, want Arman Maulana, then Kocul Pratama", ms)
 	}
 
 	// The slash commands' member picker finds and shows them the same way.

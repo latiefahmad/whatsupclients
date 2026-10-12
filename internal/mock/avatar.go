@@ -12,8 +12,8 @@ import (
 // noPicture lists the demo chats and people without a profile picture, so
 // the placeholders show too.
 var noPicture = map[string]bool{
-	"rina": true, "courier": true, "gym": true, "landlord": true, "bola@newsletter": true,
-	"uni": true, "jobs": true, "design": true, // groups in communities, to show the group placeholder there
+	"citra": true, "courier": true, "pelatnas": true, "otter": true, "bola@newsletter": true,
+	"univ": true, "jobs": true, "design": true, // groups in communities, to show the group placeholder there
 }
 
 // Avatar returns a generated profile picture for id: a soft gradient with

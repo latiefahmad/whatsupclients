@@ -15,20 +15,20 @@ func (b *Backend) demoVotes() {
 	for _, m := range b.msgs["design"] {
 		if m.Poll != nil {
 			b.votes[key(m)] = []model.Vote{
-				{ID: "clara", Name: "Clara", Time: ago(20), Options: []int{0}},
-				{ID: "dewi", Name: "Dewi", Time: ago(25), Options: []int{0}},
-				{ID: "andre", Name: "Andre", Time: ago(40), Options: []int{2}},
+				{ID: "ririiiin", Name: "Ririiiin", Time: ago(20), Options: []int{0}},
+				{ID: "lintang", Name: "Lintang", Time: ago(25), Options: []int{0}},
+				{ID: "mas ojik", Name: "Mas Ojik", Time: ago(40), Options: []int{2}},
 			}
 			b.recount(m)
 		}
 	}
-	for _, m := range b.msgs["family"] {
+	for _, m := range b.msgs["fams"] {
 		if m.Event != nil {
 			b.votes[key(m)] = []model.Vote{
-				{ID: "dad", Name: "Dad", Time: ago(10), RSVP: model.RSVPGoing},
-				{ID: "dimas", Name: "Dimas", Time: ago(12), RSVP: model.RSVPGoing},
-				{ID: "sari", Name: "Sari", Time: ago(15), RSVP: model.RSVPMaybe},
-				{ID: "mom", Name: "Mom", Time: ago(30), RSVP: model.RSVPGoing},
+				{ID: "bapak", Name: "Bapak", Time: ago(10), RSVP: model.RSVPGoing},
+				{ID: "ahfa", Name: "Ahfa", Time: ago(12), RSVP: model.RSVPGoing},
+				{ID: "syaaa", Name: "Syaaa", Time: ago(15), RSVP: model.RSVPMaybe},
+				{ID: "ibuk", Name: "Ibuk", Time: ago(30), RSVP: model.RSVPGoing},
 			}
 			b.recount(m)
 		}

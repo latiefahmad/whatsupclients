@@ -103,12 +103,12 @@ func TestMentionClick(t *testing.T) {
 	u.applyEvents()
 	var m *model.Message
 	for _, x := range b.Messages("work", 100) {
-		if strings.Contains(x.Text, "@Bima") {
+		if strings.Contains(x.Text, "@Mas Rif") {
 			m = x
 		}
 	}
 	if m == nil {
-		t.Fatal("no demo message mentions Bima")
+		t.Fatal("no demo message mentions Mas Rif")
 	}
 	spans, deco := u.richSpans(m.Text, 15, u.pal.Text, false, pillMe)
 	got := ""
@@ -117,12 +117,12 @@ func TestMentionClick(t *testing.T) {
 			got += s.Content
 		}
 	}
-	if got != "@Bima" {
-		t.Fatalf("clickable mentions %q, want only @Bima", got)
+	if got != "@Mas Rif" {
+		t.Fatalf("clickable mentions %q, want only @Mas Rif", got)
 	}
 	u.openChatByID("work")
-	u.openMention(m, "@Bima")
-	if !u.info.open || u.info.chatID != "bima" || u.selected.ID != "work" {
-		t.Fatalf("clicking @Bima showed info %q (open %v) in chat %q, want bima's in work", u.info.chatID, u.info.open, u.selected.ID)
+	u.openMention(m, "@Mas Rif")
+	if !u.info.open || u.info.chatID != "mas rif" || u.selected.ID != "work" {
+		t.Fatalf("clicking @Mas Rif showed info %q (open %v) in chat %q, want mas rif's in work", u.info.chatID, u.info.open, u.selected.ID)
 	}
 }

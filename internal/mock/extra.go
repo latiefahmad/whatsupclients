@@ -228,11 +228,11 @@ func demoExtras(at func(daysAgo, h, m int) time.Time) extras {
 	return extras{
 		statuses: []*model.StatusThread{
 			{ID: "me", Mine: true, Updates: []*model.StatusUpdate{status("s-me", at(0, 7, 12), false, 0x2c3e50, 0x4ca1af)}},
-			{ID: "rina", Name: "Rina Kartika", Updates: []*model.StatusUpdate{
+			{ID: "citra", Name: "Citra Scholastika", Updates: []*model.StatusUpdate{
 				status("s-r1", at(0, 9, 2), false, 0xee9ca7, 0xffdde1), status("s-r2", at(0, 9, 5), false, 0x3a7bd5, 0x00d2ff)}},
-			{ID: "budi", Name: "Budi Santoso", Updates: []*model.StatusUpdate{
+			{ID: "arman", Name: "Arman Maulana", Updates: []*model.StatusUpdate{
 				textStatus("s-b1", at(0, 6, 40), false, "Futsal tonight? ⚽", 0xff8a8c54)}},
-			{ID: "dewi", Name: "Dewi Lestari", Updates: []*model.StatusUpdate{
+			{ID: "lintang", Name: "Lintang Kawuryan", Updates: []*model.StatusUpdate{
 				status("s-d1", at(1, 21, 15), true, 0x134e5e, 0x71b280)}},
 		},
 		channels: []*model.Channel{
@@ -247,7 +247,7 @@ func demoExtras(at func(daysAgo, h, m int) time.Time) extras {
 			{ID: "gempa@newsletter", Name: "Earthquake Alerts", Verified: true, Followers: 3100000},
 		},
 		communities: []*model.Community{
-			{ID: "alumni-hub@g.us", Name: "CS Alumni Hub", Announcements: "alumni-ann", Groups: []string{"uni", "jobs"}},
+			{ID: "alumni-hub@g.us", Name: "CS Alumni Hub", Announcements: "alumni-ann", Groups: []string{"univ", "jobs"}},
 			{ID: "product-hub@g.us", Name: "Product HQ", Announcements: "work-ann", Groups: []string{"work", "design"}},
 		},
 		summaries: map[string]model.MediaSummaryEvent{
@@ -270,7 +270,7 @@ func demoExtras(at func(daysAgo, h, m int) time.Time) extras {
 				ID: "work-ann", Name: "Product HQ", IsGroup: true, Announce: true, Locked: true,
 				Members: []model.Member{
 					{ID: "me@lid", Name: "You", Admin: true, Me: true},
-					{ID: "andre", Name: "Andre", Contact: "Andre", Phone: "+62 812-5550-0222", Admin: true},
+					{ID: "mas ojik", Name: "Mas Ojik", Contact: "Mas Ojik", Phone: "+62 812-5550-0222", Admin: true},
 				},
 			},
 			"shop": {
@@ -365,7 +365,7 @@ func referenceExtras(at func(daysAgo, h, m int) time.Time) extras {
 				ID: "wa-ann@g.us", Name: "WazzapAgents", IsGroup: true, Announce: true, Locked: true,
 				Members: []model.Member{
 					{ID: "me@lid", Name: "You", Admin: true, Me: true},
-					{ID: "vivy@lid", Name: "Vivy", Admin: true},
+					{ID: "vivy@lid", Name: "Vivian", Admin: true},
 				},
 			},
 			"test@g.us": {
@@ -373,17 +373,17 @@ func referenceExtras(at func(daysAgo, h, m int) time.Time) extras {
 				About: "This group is dedicated for testing WhatsApp bot, specifically WazzapAgents",
 				Members: []model.Member{
 					{ID: "me@lid", Name: "You", Admin: true, Me: true},
-					{ID: "agus@lid", Name: "Agus Kebab", Admin: true},
-					{ID: "vivy@lid", Name: "Vivy", Admin: true},
+					{ID: "agus@lid", Name: "Gusti Kebab", Admin: true},
+					{ID: "vivy@lid", Name: "Vivian", Admin: true},
 				},
 				Created: time.Date(2024, 8, 2, 8, 28, 0, 0, time.Local), CreatedBy: "you",
 			},
 			"vivy@lid": {
-				ID: "vivy@lid", Name: "Vivy", Phone: "+62 881-0261-81996",
+				ID: "vivy@lid", Name: "Vivian", Phone: "+62 881-0261-81996",
 				Business: &model.Business{
-					Name: "Vivy", Category: "Other business",
+					Name: "Vivian", Category: "Other business",
 					Description: "This bot is 100% free, feel free to use it however you like. Join the community below for information and updates.\n\nAlso for some reason, I decided to ignore all private chats incoming.",
-					Email:       "vivy@example.com",
+					Email:       "vivian@example.com",
 					Websites:    []string{"https://chat.whatsapp.com/ExampleInviteCode"},
 					Hours: []model.BusinessHours{
 						{Day: time.Sunday, Mode: "open_24h"}, {Day: time.Monday, Mode: "open_24h"},
@@ -393,11 +393,11 @@ func referenceExtras(at func(daysAgo, h, m int) time.Time) extras {
 					},
 				},
 				Common: []model.CommonGroup{
-					{ID: "puja@g.us", Name: "Puja Qiqi Ajaib", Members: "Agus, Andrian, inilidya°~~, Mei, Radofa, Satria, Vivy, You"},
-					{ID: "chitchat@g.us", Name: "ChitChat", Community: "WazzapAgents", CommunityID: "wa@g.us", Members: "Andrian, Athar, Beolite, Fajri, Feet, Jantan, Kamil, Vivy, You"},
-					{ID: "pam@g.us", Name: "PAM : Chat Bot Only", Community: "Forum Penghitaman Anime Massal", CommunityID: "fpam@g.us", Members: "Vivy, +62 877-5228-7085, +62 831-2861-8005, You"},
-					{ID: "lab@g.us", Name: "Grup 5 Lab Komputer", Members: "Vivy, Wiliam, Yazid, +62 859-2103-5371, You"},
-					{ID: "test@g.us", Name: "test", Members: "Agus, Vivy, You"},
+					{ID: "puja@g.us", Name: "Puja Qiqi Ajaib", Members: "Gusti, Andrian, inilidya°~~, Mei, Radofa, Satria, Vivian, You"},
+					{ID: "chitchat@g.us", Name: "ChitChat", Community: "WazzapAgents", CommunityID: "wa@g.us", Members: "Andrian, Athar, Beolite, Fajri, Feet, Jantan, Kamil, Vivian, You"},
+					{ID: "pam@g.us", Name: "PAM : Chat Bot Only", Community: "Forum Penghitaman Anime Massal", CommunityID: "fpam@g.us", Members: "Vivian, +62 877-5228-7085, +62 831-2861-8005, You"},
+					{ID: "lab@g.us", Name: "Grup 5 Lab Komputer", Members: "Vivian, Wiliam, Yazid, +62 859-2103-5371, You"},
+					{ID: "test@g.us", Name: "test", Members: "Gusti, Vivian, You"},
 				},
 			},
 		},

@@ -9,7 +9,7 @@ import (
 
 var testMembers = []model.Member{
 	{ID: "me@lid", Name: "You", Admin: true, Me: true},
-	{ID: "budi@lid", Name: "Budi Santoso"},
+	{ID: "arman@lid", Name: "Arman Maulana"},
 	{ID: "siti@lid", Name: "Siti", Admin: true},
 	{ID: "sigit@lid", Name: "Sigit"},
 }
@@ -37,14 +37,14 @@ func TestParseNaming(t *testing.T) {
 }
 
 func TestParseMembers(t *testing.T) {
-	mentions := []Mention{{Name: "Budi Santoso", ID: "budi@lid"}}
-	s := "/kick @Budi Santoso @si"
+	mentions := []Mention{{Name: "Arman Maulana", ID: "arman@lid"}}
+	s := "/kick @Arman Maulana @si"
 	in, ok := Parse(s, len([]rune(s)), mentions, testMembers)
 	if !ok || in.Cmd.Name != "kick" || in.Naming {
 		t.Fatalf("not parsed: %+v", in)
 	}
 	vs := in.Values[0]
-	if len(vs) != 2 || vs[0].ID != "budi@lid" || vs[0].Text != "@Budi Santoso" {
+	if len(vs) != 2 || vs[0].ID != "arman@lid" || vs[0].Text != "@Arman Maulana" {
 		t.Fatalf("values = %+v", vs)
 	}
 	// "@si" could be Siti or Sigit.
@@ -204,8 +204,8 @@ func TestParseNumber(t *testing.T) {
 
 func TestRaffleText(t *testing.T) {
 	text, ids := raffleText("Lady Luck smiles on", testMembers[1:3], 3)
-	want := "🎲 *Raffle*\nLady Luck smiles on:\n1. @budi\n2. @siti\n_Drawn at random from 3 members._"
-	if text != want || len(ids) != 2 || ids[0] != "budi@lid" {
+	want := "🎲 *Raffle*\nLady Luck smiles on:\n1. @arman\n2. @siti\n_Drawn at random from 3 members._"
+	if text != want || len(ids) != 2 || ids[0] != "arman@lid" {
 		t.Fatalf("raffleText = %q, %v", text, ids)
 	}
 }

@@ -11,7 +11,7 @@ import (
 // Finding people as you type, in the @mention picker and the slash
 // commands' member and contact pickers. A name matches from its start, from
 // a word's start, anywhere, by the starts of its words in order ("bsan"
-// finds Budi Santoso), or with one typo. A phone number matches in any
+// finds Gusti Wibowo), or with one typo. A phone number matches in any
 // format, from its country code or from its national number with or
 // without the trunk 0 ("0812" finds +62 812-…), or by three or more of its
 // digits anywhere.

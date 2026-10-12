@@ -17,21 +17,21 @@ func TestGhost(t *testing.T) {
 	if !at.a.Ghost() || !Wrap(at.f, time.Now).Ghost() {
 		t.Fatal("ghost mode isn't on, or doesn't last")
 	}
-	before := len(at.f.Messages("rina", 1000))
-	last := at.f.Messages("rina", 1)[0]
-	if m := at.a.Send("rina", model.Draft{Text: "hi"}); m != nil {
+	before := len(at.f.Messages("citra", 1000))
+	last := at.f.Messages("citra", 1)[0]
+	if m := at.a.Send("citra", model.Draft{Text: "hi"}); m != nil {
 		t.Fatal("sent in ghost mode")
 	}
 	at.a.React(last, "👍")
 	at.a.Delete(last, true)
 	at.a.Forward([]*model.Message{last}, []string{"work"})
-	if at.a.NewAlbum("rina", 2, 0) != "" {
+	if at.a.NewAlbum("citra", 2, 0) != "" {
 		t.Error("opened an album in ghost mode")
 	}
 	if _, notices := at.poll(); len(notices) != 4 || notices[0] != GhostText {
 		t.Errorf("notices %q", notices)
 	}
-	if now := at.f.Messages("rina", 1000); len(now) != before || len(now[len(now)-1].Reactions) != 0 ||
+	if now := at.f.Messages("citra", 1000); len(now) != before || len(now[len(now)-1].Reactions) != 0 ||
 		now[len(now)-1].Kind == model.KindDeleted {
 		t.Error("something went through in ghost mode")
 	}
@@ -44,14 +44,14 @@ func TestGhost(t *testing.T) {
 		t.Errorf("deleting for you was refused: %q", notices)
 	}
 	// What it sends for you still goes.
-	at.f.in = append(at.f.in, incoming("x1", "rina", "rina@lid", "hey", at.now))
+	at.f.in = append(at.f.in, incoming("x1", "citra", "citra@lid", "hey", at.now))
 	at.now = base.Add(2 * time.Minute)
 	sent, _ := at.poll()
 	if len(sent) != 2 || sent[0].Text != AwayText(at.a.Away()) || sent[1].Text != "standup" {
 		t.Fatalf("sent %d messages for you in ghost mode", len(sent))
 	}
 	at.a.SetPref(model.PrefGhost, "off")
-	if m := at.a.Send("rina", model.Draft{Text: "back"}); m == nil {
+	if m := at.a.Send("citra", model.Draft{Text: "back"}); m == nil {
 		t.Fatal("ghost mode off still refuses")
 	}
 }

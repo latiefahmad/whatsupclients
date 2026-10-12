@@ -109,7 +109,7 @@ func TestIdleAtRest(t *testing.T) {
 	b := mock.New()
 	u := New(b)
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	now := testNow()
 	var ops op.Ops
 	var r input.Router
@@ -149,8 +149,8 @@ func TestIdleAtRest(t *testing.T) {
 		{"close search", u.Escape},
 		{"status page", func() { u.ShowPage("status") }},
 		{"chats page", func() { u.ShowPage("chats") }},
-		{"chat moves up", func() { b.Forward(b.Messages("rina", 1), []string{"gym"}) }},
-		{"new message", func() { b.Forward(b.Messages("rina", 1), []string{"rina"}) }},
+		{"chat moves up", func() { b.Forward(b.Messages("citra", 1), []string{"pelatnas"}) }},
+		{"new message", func() { b.Forward(b.Messages("citra", 1), []string{"citra"}) }},
 		{"ghost mode", func() { u.SetGhost(true) }},
 		{"ghost mode off", func() { u.SetGhost(false) }},
 	}
@@ -175,7 +175,7 @@ func TestIdleAtRest(t *testing.T) {
 func TestWheelScroll(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	now := testNow()
 	var ops op.Ops
 	var r input.Router

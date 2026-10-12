@@ -70,7 +70,7 @@ type Host interface {
 // Context is everything a running command may use.
 type Context struct {
 	Cmd *Command
-	// Input is the command as typed, e.g. "/kick @Budi".
+	// Input is the command as typed, e.g. "/kick @Gusti".
 	Input string
 	// Values holds the values of each of Cmd's options.
 	Values [][]Value

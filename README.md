@@ -12,7 +12,7 @@ It aims to look and feel like the official app while using a small fraction of i
 ![Go](https://img.shields.io/github/go-mod/go-version/latiefahmad/whatsupclients)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-25D366)
 
-<img src="docs/screenshots/hero.png" alt="WhatsUp Clients in its light and dark themes" width="900">
+<img src="docs/screenshots/status.png" alt="WhatsUp Clients showing status updates" width="900">
 
 </div>
 
@@ -40,63 +40,40 @@ whatsmeow. You get the same app, pixel for pixel where it matters, in one small 
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/login.png" alt="Login with a QR code"></td>
-    <td width="50%"><img src="docs/screenshots/group-info.png" alt="Group info panel"></td>
+    <td width="50%"><img src="docs/screenshots/reactions.png" alt="Message menu with reactions"></td>
   </tr>
   <tr>
     <td><b>Link with a QR code</b>, like WhatsApp Web, and choose how much history to copy from your phone.</td>
-    <td><b>Groups and their info panel:</b> pinned messages, documents, voice notes, typing indicators, members and settings.</td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/reactions.png" alt="Message menu with reactions"></td>
-    <td><img src="docs/screenshots/search.png" alt="Searching a chat"></td>
-  </tr>
-  <tr>
     <td><b>Reactions, replies, forwarding, pinning, starring</b>, select mode and deleting, from a right-click.</td>
-    <td><b>Search inside a chat</b>, with matches highlighted. Clicking one jumps to it, even far back.</td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/emoji.png" alt="Emoji picker"></td>
-    <td><img src="docs/screenshots/gallery.png" alt="Media panel"></td>
+    <td><img src="docs/screenshots/poll.png" alt="A poll and its votes"></td>
   </tr>
   <tr>
     <td><b>Emoji and stickers</b>, including animated ones, with search and recents.</td>
-    <td><b>The Media panel:</b> photos, videos, docs and links from every chat, or from just one.</td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/poll.png" alt="A poll and its votes"></td>
-    <td><img src="docs/screenshots/msginfo.png" alt="Message info"></td>
-  </tr>
-  <tr>
     <td><b>Polls</b> you vote in with a click, and who voted for what. Locations, contacts and events show as cards.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/msginfo.png" alt="Message info"></td>
+    <td><img src="docs/screenshots/status.png" alt="Status updates"></td>
+  </tr>
+  <tr>
     <td><b>Message info:</b> who each of your messages was delivered to and read by, and when.</td>
+    <td>View and post <b>status updates</b>: text, photos and videos.</td>
   </tr>
 </table>
 
-### Status, channels and communities
+### Channels and communities
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/screenshots/status.png" alt="Status updates"></td>
-    <td width="33%"><img src="docs/screenshots/channels.png" alt="Channels"></td>
-    <td width="33%"><img src="docs/screenshots/communities.png" alt="Communities"></td>
+    <td width="50%"><img src="docs/screenshots/channels.png" alt="Channels"></td>
+    <td width="50%"><img src="docs/screenshots/communities.png" alt="Communities"></td>
   </tr>
   <tr>
-    <td>View and post <b>status updates</b>: text, photos and videos.</td>
     <td>Follow and read <b>channels</b>.</td>
     <td><b>Communities</b> with their announcements and groups.</td>
-  </tr>
-</table>
-
-### A photo editor before you send
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/editor.png" alt="Drawing, text and emoji on a photo"></td>
-    <td width="50%"><img src="docs/screenshots/filter.png" alt="Photo filters"></td>
-  </tr>
-  <tr>
-    <td>Crop, rotate, draw, add text, shapes, emoji and stickers, or blur part of the picture.</td>
-    <td>Filters, and a choice of Standard or HD quality. Pick files, paste them or drop them on the window.</td>
   </tr>
 </table>
 
@@ -115,20 +92,18 @@ WhatsApp already lets every linked device do, and they run from your own account
     <td><b><code>/calc</code></b> works out the answer as you type and picks up the amounts in the message you reply to. Splitting a bill takes one line.</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/scheduled.png" alt="Scheduled messages and AFK"></td>
-    <td><img src="docs/screenshots/edits.png" alt="Edit history"></td>
+    <td><img src="docs/screenshots/afk-list.PNG" alt="Scheduled messages and AFK"></td>
+    <td><img src="docs/screenshots/snippets.PNG" alt="Snippets"></td>
   </tr>
   <tr>
     <td><b><code>/schedule</code></b> sends a message later, even with the window closed. <b><code>/afk</code></b> replies for you while you're away.</td>
-    <td><b>Edit history</b> shows what an edited message said before each edit.</td>
+    <td><b>Snippets</b> save messages you send often (<i>Settings > Snippets</i>), and <b><code>/snippet</code></b> sends one with its {variables} filled in.</td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/privacy.png" alt="Privacy mode"></td>
-    <td><img src="docs/screenshots/ghost.png" alt="Ghost mode"></td>
   </tr>
   <tr>
-    <td><b>Privacy mode</b> for when others can see your screen: names and messages turn into bars and pictures blur until you point at them. Ctrl+Shift+P or the eye in the title bar. <b>Block screen recording</b> keeps the window out of captures.</td>
-    <td><b><code>/ghost</code></b> reads chats and statuses invisibly: no read receipts, shown offline, and nothing sent from you until you turn it off.</td>
+    <td><b>Privacy mode</b> for when others can see your screen: names and messages turn into bars and pictures blur until you point at them. Ctrl+Shift+P or the eye in the title bar. <b>Block screen recording</b> keeps the window out of captures. <b><code>/ghost</code></b> reads chats and statuses invisibly: no read receipts, shown offline, and nothing sent from you until you turn it off.</td>
   </tr>
 </table>
 
@@ -137,7 +112,7 @@ meant you to see. Each has its own switch:
 
 - 🗑️ **Keep deleted messages** keeps messages and statuses deleted for everyone, marked Deleted.
 - 👁️ **Replay view once** opens view once messages as often as you like, screenshots allowed.
-- 👻 **`/ghost`** and ✏️ **Edit history**, above.
+- 👻 **`/ghost`**, above.
 
 Turning one on opens a warning about privacy expectations. You must check the acknowledgment
 and choose **Enable feature** before it is activated. Turning it off is immediate; turning it

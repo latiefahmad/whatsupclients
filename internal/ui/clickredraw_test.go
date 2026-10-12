@@ -34,7 +34,7 @@ func TestClickRedraws(t *testing.T) {
 	b := mock.New()
 	u := New(b)
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	now := testNow()
 	var ops op.Ops
 	var r input.Router

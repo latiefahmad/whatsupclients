@@ -72,7 +72,7 @@ func TestCtrlEnterSends(t *testing.T) {
 	b := mock.New()
 	u := New(b)
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	u.setEnterSend(false)
 	if b.Pref(prefEnterSend) != "off" || u.conv.composer.Submit {
 		t.Fatal("Enter is send didn't turn off")

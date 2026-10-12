@@ -1445,8 +1445,8 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 	case "afklist":
 		u.ShowPage("afklist")
 		if u.auto != nil {
-			u.auto.AllowMember("6281355501942", "Agus Wibowo")
-			u.auto.AllowMember("6285755503310", "Fitri Handayani")
+			u.auto.AllowMember("6281355501942", "Gusti Wibowo")
+			u.auto.AllowMember("6285755503310", "Clara Handayani")
 		}
 		u.settings.stale = true
 	case "privacy", "privacystatus", "privacycommunities":
@@ -1598,7 +1598,7 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 	case "listchip":
 		u.pickChip(u.chipItems()[len(filterNames)]) // the first custom list
 	case "newlist":
-		u.openNewList([]string{"gym"})
+		u.openNewList([]string{"pelatnas"})
 		u.dialog.listName.SetText("Friends")
 		u.dialog.anim.snap(true)
 		u.dialog.bar.snap(true)
@@ -1646,11 +1646,11 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		u.newChat.snap()
 	case "draft":
 		// Drafts left in two chats: the open one's text, and a photo
-		// waiting in Budi's send view.
+		// waiting in Arman's send view.
 		u.conv.composer.SetText("I'll bring the snacks, see you at 7")
-		u.SelectID("budi")
-		u.addFiles("budi", []*attachFile{{Attachment: model.Attachment{Path: "beach.jpg", Media: model.MediaImage}}})
-		u.SelectID("dewi")
+		u.SelectID("arman")
+		u.addFiles("arman", []*attachFile{{Attachment: model.Attachment{Path: "beach.jpg", Media: model.MediaImage}}})
+		u.SelectID("lintang")
 	case "tray", "quality", "sendedit", "senddoc", "sendcrop", "sendfilter":
 		// $WHATSUP_DEMO_PHOTO is a real photo to show.
 		photo := os.Getenv("WHATSUP_DEMO_PHOTO")
@@ -1679,7 +1679,7 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		id, title := u.selected.ID, u.selected.Name
 		u.openGroupStatus(id)
 		t := &model.StatusThread{ID: id, Name: title, Group: true, Updates: []*model.StatusUpdate{
-			{ID: "group-story-preview", Sender: "Rina", SenderID: "rina", Text: "See you all this weekend!", Background: 0xff6e257e, Time: u.now()},
+			{ID: "group-story-preview", Sender: "Citra", SenderID: "citra", Text: "See you all this weekend!", Background: 0xff6e257e, Time: u.now()},
 		}}
 		u.statuses = []*model.StatusThread{t}
 		if name == "groupstatustext" {

@@ -18,10 +18,10 @@ func (b *Backend) invitePreview(code string) *model.GroupPreview {
 			Description: "*CS 2019 GRAND REUNION*\n\nWhere the reunion committee coordinates: venue, catering, photos and " +
 				"invitations. Online meeting every Thursday at 8 pm, minutes are shared here. If you haven't " +
 				"filled in the availability form yet, please do that before joining.",
-			Created: now.AddDate(0, -2, -3), Size: 24, Faces: []string{"budi", "clara", "dewi", "sari"}, Approval: true}
+			Created: now.AddDate(0, -2, -3), Size: 24, Faces: []string{"arman", "ririiiin", "lintang", "syaaa"}, Approval: true}
 	case inviteFutsal:
 		return &model.GroupPreview{ID: "futsal@g.us", Name: "Thursday Night Futsal", Created: now.AddDate(-1, 0, 0),
-			Size: 9, Faces: []string{"budi", "andre"}, Member: b.chat("futsal@g.us") != nil}
+			Size: 9, Faces: []string{"arman", "mas ojik"}, Member: b.chat("futsal@g.us") != nil}
 	}
 	return nil
 }

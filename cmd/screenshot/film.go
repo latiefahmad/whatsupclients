@@ -128,15 +128,15 @@ func film(name, chat string, x, y, w, h int, scale float32, step time.Duration) 
 	case "reorder":
 		// A chat far down the list gets a message and moves up.
 		if ms := b.Messages(chat, 1); len(ms) > 0 {
-			b.Forward(ms, []string{"gym"})
+			b.Forward(ms, []string{"pelatnas"})
 		}
 	case "typing":
-		b.SetTyping(chat, "Clara", true)
+		b.SetTyping(chat, "Citra", true)
 	case "typists":
-		// In a group, Bima starts typing too.
-		b.SetTyping(chat, "Clara", true)
+		// In a group, Mas Rif starts typing too.
+		b.SetTyping(chat, "Lintang", true)
 		settle()
-		b.SetTyping(chat, "Bima", true)
+		b.SetTyping(chat, "Mas Rif", true)
 	case "ghost":
 		u.SetGhost(true)
 	default:
@@ -157,15 +157,15 @@ func film(name, chat string, x, y, w, h int, scale float32, step time.Duration) 
 		case "privacy":
 			u.SetPrivacy(false)
 		case "scroll":
-			b.Receive(chat, "Clara", "Anyone there?")
+			b.Receive(chat, "Citra", "Anyone there?")
 		case "typing":
 			// They stop typing and their message comes right after,
 			// taking the bubble's place.
 			b.SetTyping(chat, "", false)
-			b.Receive(chat, "Clara", "Sure, sending it now")
+			b.Receive(chat, "Citra", "Sure, sending it now")
 		case "typists":
-			// Clara stops, and Bima's avatar slides over into her place.
-			b.SetTyping(chat, "Clara", false)
+			// Lintang stops, and Mas Rif's avatar slides over into their place.
+			b.SetTyping(chat, "Lintang", false)
 		case "ghost":
 			u.SetGhost(false)
 		default:

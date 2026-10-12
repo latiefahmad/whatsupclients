@@ -57,7 +57,7 @@ func (b *longChat) index(id string) int {
 // more than maxLoaded messages stay loaded.
 func TestMessagePaging(t *testing.T) {
 	const n = 1000
-	b := &longChat{Backend: mock.New(), id: "rina"}
+	b := &longChat{Backend: mock.New(), id: "citra"}
 	start := testNow().Add(-48 * time.Hour)
 	for i := range n {
 		b.msgs = append(b.msgs, &model.Message{

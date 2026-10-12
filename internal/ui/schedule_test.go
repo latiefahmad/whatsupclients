@@ -98,7 +98,7 @@ func TestSlashSchedule(t *testing.T) {
 }
 
 func TestSlashScheduleProblems(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	st.typeText("/schedule tomorrow")
 	if sp := st.u.slashQuery(); sp.preview != "" || sp.in.Problem() == "" {
 		t.Fatalf("preview %q, problem %q", sp.preview, sp.in.Problem())
@@ -110,21 +110,21 @@ func TestSlashScheduleProblems(t *testing.T) {
 	}
 	st.typeText("/schedule 1/1/2020 10:00 old")
 	st.press(key.NameReturn)
-	ns := st.u.slash.notes["rina"]
+	ns := st.u.slash.notes["citra"]
 	if len(ns) == 0 || !ns[len(ns)-1].note.Failed || ns[len(ns)-1].note.Text != "That time has passed." {
 		t.Fatal("scheduled in the past")
 	}
 }
 
 func TestSlashAFK(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	st.typeText("/afk at the gym")
 	st.press(key.NameReturn)
 	w := st.u.auto.Away()
 	if w == nil || w.Reason != "at the gym" {
 		t.Fatalf("away %+v", w)
 	}
-	ns := st.u.slash.notes["rina"]
+	ns := st.u.slash.notes["citra"]
 	if n := ns[len(ns)-1].note; !strings.HasSuffix(n.Text, auto.AwayPlain(w)) {
 		t.Fatalf("note %q", n.Text)
 	}
@@ -203,7 +203,7 @@ func TestScheduledBubbles(t *testing.T) {
 }
 
 func TestAwayBar(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	st.typeText("/afk ")
 	st.press(key.NameReturn)
 	if st.u.auto.Away() == nil {

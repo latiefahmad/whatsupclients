@@ -16,7 +16,7 @@ import (
 func TestViewOnceAnimationOrigin(t *testing.T) {
 	for _, media := range []model.Media{model.MediaImage, model.MediaVideo} {
 		for _, replay := range []bool{false, true} {
-			st := newSlashTest(t, "rina")
+			st := newSlashTest(t, "citra")
 			m := st.viewOnceMsg()
 			m.Media, m.Opened = media, replay
 			st.u.viewOnceReplay = replay
@@ -91,7 +91,7 @@ func (st *slashTest) viewOnceMsg() *model.Message {
 // TestViewOnceOnce checks that a view once photo opens once, with
 // screenshots blocked, and as often as you like with Replay view once on.
 func TestViewOnceOnce(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	m := st.viewOnceMsg()
 	if !st.u.canOpenViewOnce(m) {
 		t.Fatal("an unopened view once photo doesn't open")
@@ -130,7 +130,7 @@ func TestViewOnceOnce(t *testing.T) {
 // TestViewOnceOnPhone checks that a view once message whose media only
 // the phone got doesn't open.
 func TestViewOnceOnPhone(t *testing.T) {
-	st := newSlashTest(t, "family")
+	st := newSlashTest(t, "fams")
 	st.b.SetPref(model.PrefViewOnceReplay, "on")
 	st.u.loadExtras()
 	m := st.viewOnceMsg()

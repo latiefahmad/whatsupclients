@@ -133,7 +133,7 @@ func TestSlashSendsText(t *testing.T) {
 		t.Error("unknown command wasn't sent as text")
 	}
 	// A group command in a one-to-one chat is just text too.
-	st.u.SelectID("rina")
+	st.u.SelectID("citra")
 	st.frame()
 	st.typeText("/link ")
 	if st.u.slashQuery() != nil {
@@ -268,7 +268,7 @@ func TestExtrasOffByDefault(t *testing.T) {
 // TestSlashStickerHint checks the composer's hint for /sticker's two
 // texts, which # separates.
 func TestSlashStickerHint(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	for _, c := range []struct{ text, hint string }{
 		{"/sticker ", "[top] #[bottom]"},
 		{"/sticker when it works", "#[bottom]"},
@@ -317,12 +317,12 @@ func TestNoteBeforeMessages(t *testing.T) {
 // "//" sends a command's text as a message, with one slash.
 func TestSlashDoubleSlash(t *testing.T) {
 	st := newSlashTest(t, "work")
-	st.typeText("//kick @Budi")
+	st.typeText("//kick @Gusti")
 	if sp := st.u.slashQuery(); sp != nil {
 		t.Fatalf("//kick reads as a command: %+v", sp)
 	}
 	st.press(key.NameReturn)
-	if last := st.b.Messages("work", 1)[0]; last.Text != "/kick @Budi" || !last.FromMe {
-		t.Fatalf("sent %q, want /kick @Budi", last.Text)
+	if last := st.b.Messages("work", 1)[0]; last.Text != "/kick @Gusti" || !last.FromMe {
+		t.Fatalf("sent %q, want /kick @Gusti", last.Text)
 	}
 }

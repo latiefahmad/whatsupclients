@@ -11,20 +11,20 @@ func TestNameScore(t *testing.T) {
 		name, q string
 		want    int
 	}{
-		{"Budi Santoso", "budi santoso", matchExact},
-		{"Budi Santoso", "BU", matchStart},
+		{"Gusti Wibowo", "gusti wibowo", matchExact},
+		{"Gusti Wibowo", "GU", matchStart},
 		{"~naufalll", "nauf", matchStart},
-		{"Budi Santoso", "san", matchWord},
-		{"Budi Santoso", "santoso bu", matchWords},
-		{"Budi Santoso", "anto", matchInside},
-		{"Budi Santoso", "bsan", matchLetters}, // starts of words, in order
-		{"Budi Santoso", "bs", matchLetters},   // initials
+		{"Gusti Wibowo", "wib", matchWord},
+		{"Gusti Wibowo", "wibowo gu", matchWords},
+		{"Gusti Wibowo", "ibo", matchInside},
+		{"Gusti Wibowo", "gwib", matchLetters}, // starts of words, in order
+		{"Gusti Wibowo", "gw", matchLetters},   // initials
 		{"Muhammad Salim", "msal", matchLetters},
-		{"Budi Santoso", "budy", matchTypo},
+		{"Gusti Wibowo", "gustu", matchTypo},
 		{"Muhammad", "muhamad", matchTypo},
 		{"Rizki", "rziki", matchTypo}, // swapped letters
-		{"Budi Santoso", "ad", 0},     // not at a word's start
-		{"Budi Santoso", "xyz", 0},
+		{"Gusti Wibowo", "ad", 0},     // not at a word's start
+		{"Gusti Wibowo", "xyz", 0},
 		{"Andi", "bob", 0},
 	} {
 		if got := nameScore(c.name, foldRunes(c.q)); got != c.want {
@@ -49,7 +49,7 @@ func TestPhoneScore(t *testing.T) {
 		{"1112", matchInside},
 		{"22", 0}, // too few digits to look inside
 		{"0899", 0},
-		{"budi", 0},
+		{"gusti", 0},
 		{"857a", 0},
 	} {
 		if got := phoneScore(phone, c.q); got != c.want {
@@ -66,7 +66,7 @@ func TestMemberTitle(t *testing.T) {
 		m          model.Member
 		title, sub string
 	}{
-		{model.Member{Name: "Budi", Contact: "Budi", Push: "budz", Phone: "+62 812-3456-7890"}, "Budi", ""},
+		{model.Member{Name: "Gusti", Contact: "Gusti", Push: "gus", Phone: "+62 813-5550-1942"}, "Gusti", ""},
 		{model.Member{Name: "+62 857-1111-2222", Push: "naufalll", Phone: "+62 857-1111-2222"}, "~naufalll", "+62 857-1111-2222"},
 		{model.Member{Name: "+62 857-1111-2222", Phone: "+62 857-1111-2222"}, "+62 857-1111-2222", ""},
 		{model.Member{Name: "~Hidden", Push: "Hidden"}, "~Hidden", ""},

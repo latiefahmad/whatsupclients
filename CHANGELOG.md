@@ -9,6 +9,20 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.4.1] - 2026-10-12
+
+### 📚 Demo and docs
+
+- **Fresh demo names** — the demo chats (`-demo`) use a new set of
+  people, names and pictures, end to end: chats, senders, contacts,
+  votes, mentions and the screenshot tool.
+- **New tour screenshots** — the README tour and the landing page show
+  the current UI, including the AFK list and Snippets pages.
+- **No app changes** — chats, messages and settings work exactly as in
+  v1.4.0; update only if you want the new demo and docs.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.4.0...v1.4.1
+
 ## [v1.4.0] - 2026-10-10
 
 ### 💤 AFK list

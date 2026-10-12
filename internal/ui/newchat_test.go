@@ -20,8 +20,8 @@ func TestPhoneDigits(t *testing.T) {
 		"(021) 555 0199":    "0215550199",
 		"6281234":           "6281234",
 		"12345":             "", // too short
-		"Rina":              "", // a name
-		"62 812 Rina":       "", // mixed
+		"citra":             "", // a name
+		"62 812 Citra":      "", // mixed
 		"1+2345678":         "", // + only first
 		"1234567890123456":  "", // too long
 	} {
@@ -85,7 +85,7 @@ func TestSimilarGroupBack(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
 	u.SelectID("work")
-	u.openNewGroup([]model.Contact{{ID: "bima", Name: "Bima"}})
+	u.openNewGroup([]model.Contact{{ID: "yoga", Name: "Kocul Pratama"}})
 	if u.newChat.step != ncMembers || len(u.newChat.picked) != 1 {
 		t.Fatalf("step %v with %d picked", u.newChat.step, len(u.newChat.picked))
 	}
@@ -122,7 +122,7 @@ func TestPhoneLookupStale(t *testing.T) {
 	u.openNewChat()
 	u.newChat.search.SetText("6281255500199")
 	u.lookupPhone("6281255500199")
-	u.newChat.search.SetText("Rina")
+	u.newChat.search.SetText("citra")
 	u.applyEvents()
 	if !u.newChat.open() || u.selected != nil {
 		t.Fatalf("panel open %v, chat %+v", u.newChat.open(), u.selected)

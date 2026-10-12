@@ -19,7 +19,7 @@ func afkItemRows(u *UI) []settingRow {
 }
 
 func TestAFKListSettings(t *testing.T) {
-	st := newSlashTest(t, "rina")
+	st := newSlashTest(t, "citra")
 	u := st.u
 	u.ShowPage("afklist")
 	st.frame()
@@ -34,20 +34,20 @@ func TestAFKListSettings(t *testing.T) {
 	// numbers are refused.
 	s.number.SetText("+62 813-5550-1942")
 	u.addAFKNumber()
-	if l := u.auto.AllowList(); len(l.Members) != 1 || l.Members[0].Name != "Agus Wibowo" {
+	if l := u.auto.AllowList(); len(l.Members) != 1 || l.Members[0].Name != "Gusti Wibowo" {
 		t.Fatalf("listed %+v", l.Members)
 	}
 	// The + button adds too: its click is read before its layout.
 	s.number.SetText("+62 857-5550-3310")
 	s.add.Click()
 	st.frame()
-	if l := u.auto.AllowList(); len(l.Members) != 2 || l.Members[1].Name != "Fitri Handayani" {
+	if l := u.auto.AllowList(); len(l.Members) != 2 || l.Members[1].Name != "Clara Handayani" {
 		t.Fatalf("button listed %+v", l.Members)
 	}
 	// A name calls the contact.
-	s.number.SetText("Yoga")
+	s.number.SetText("Kocul")
 	u.addAFKNumber()
-	if l := u.auto.AllowList(); len(l.Members) != 3 || l.Members[2].Name != "Yoga Pratama" {
+	if l := u.auto.AllowList(); len(l.Members) != 3 || l.Members[2].Name != "Kocul Pratama" {
 		t.Fatalf("name listed %+v", l.Members)
 	}
 	s.number.SetText("Nobody Here")
@@ -59,19 +59,19 @@ func TestAFKListSettings(t *testing.T) {
 	s.number.SetText("")
 	u.auto.UnallowMember("6281355501942")
 	u.auto.UnallowMember("6285755503310")
-	u.auto.UnallowMember("Yoga Pratama")
+	u.auto.UnallowMember("Kocul Pratama")
 	u.settings.stale = true
 	st.frame()
-	s.number.SetText("agu")
+	s.number.SetText("gus")
 	st.frame()
 	matched := false
 	for _, ct := range u.afkPickMatches() {
-		if ct.Name == "Agus Wibowo" {
+		if ct.Name == "Gusti Wibowo" {
 			matched = true
 		}
 	}
 	if !matched {
-		t.Fatal("agu matches nothing")
+		t.Fatal("gus matches nothing")
 	}
 	u.btn("settings:afk:pick:agus").Click()
 	st.frame()
@@ -160,7 +160,7 @@ func TestAFKListSettings(t *testing.T) {
 	rows := afkItemRows(u)
 	var agus settingRow
 	for _, row := range rows {
-		if strings.Contains(row.title, "Agus") {
+		if strings.Contains(row.title, "Gusti") {
 			agus = row
 		}
 	}
@@ -173,7 +173,7 @@ func TestAFKListSettings(t *testing.T) {
 	}
 	u.dialog.buttons[0].run()
 	for _, m := range u.auto.AllowList().Members {
-		if strings.Contains(m.Name, "Agus") {
+		if strings.Contains(m.Name, "Gusti") {
 			t.Fatalf("remove left %+v", u.auto.AllowList().Members)
 		}
 	}

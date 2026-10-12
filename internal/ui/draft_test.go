@@ -14,42 +14,42 @@ import (
 func TestDraftKeptAcrossChats(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
-	reply := &model.Message{ID: "r1", ChatID: "rina", Text: "hi"}
+	u.SelectID("citra")
+	reply := &model.Message{ID: "r1", ChatID: "citra", Text: "hi"}
 	u.conv.composer.SetText("half a thought")
 	u.conv.reply = reply
-	u.conv.mentions = []mentionRef{{name: "Rina", jid: "rina"}}
+	u.conv.mentions = []mentionRef{{name: "citra", jid: "citra"}}
 
-	u.SelectID("budi")
+	u.SelectID("arman")
 	if got := u.conv.composer.Text(); got != "" {
 		t.Fatalf("another chat's composer has %q", got)
 	}
 	if u.conv.reply != nil || u.conv.mentions != nil {
 		t.Fatal("another chat kept the reply or mentions")
 	}
-	if d := u.drafts["rina"]; d == nil || d.text != "half a thought" {
-		t.Fatalf("rina's draft is %+v", d)
+	if d := u.drafts["citra"]; d == nil || d.text != "half a thought" {
+		t.Fatalf("citra's draft is %+v", d)
 	}
-	if _, txt := draftPreview(u.drafts["rina"]); txt != "half a thought" {
+	if _, txt := draftPreview(u.drafts["citra"]); txt != "half a thought" {
 		t.Fatalf("the row previews %q", txt)
 	}
 
-	u.SelectID("rina")
+	u.SelectID("citra")
 	if got := u.conv.composer.Text(); got != "half a thought" {
 		t.Fatalf("the draft came back as %q", got)
 	}
 	if u.conv.reply != reply || len(u.conv.mentions) != 1 {
 		t.Fatal("the reply or mention didn't come back")
 	}
-	if u.drafts["rina"] != nil {
+	if u.drafts["citra"] != nil {
 		t.Fatal("the open chat still has a draft")
 	}
 
 	// An emptied composer leaves no draft.
 	u.conv.composer.SetText("  ")
 	u.conv.reply, u.conv.mentions = nil, nil
-	u.SelectID("budi")
-	if u.drafts["rina"] != nil {
+	u.SelectID("arman")
+	if u.drafts["citra"] != nil {
 		t.Fatal("an empty composer left a draft")
 	}
 }
@@ -59,12 +59,12 @@ func TestDraftKeptAcrossChats(t *testing.T) {
 func TestDraftEditing(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	u.conv.composer.SetText("before")
 	u.conv.edit = msgEdit{msg: &model.Message{ID: "m"}, draft: "before"}
 	u.conv.composer.SetText("edited text")
-	u.SelectID("budi")
-	u.SelectID("rina")
+	u.SelectID("arman")
+	u.SelectID("citra")
 	if got := u.conv.composer.Text(); got != "before" || u.conv.edit.msg != nil {
 		t.Fatalf("composer %q, editing %v", got, u.conv.edit.msg != nil)
 	}
@@ -75,14 +75,14 @@ func TestDraftEditing(t *testing.T) {
 func TestDraftAttachments(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	dir := t.TempDir()
 	doc := filepath.Join(dir, "notes.txt")
 	tmp := filepath.Join(dir, "pasted.png")
 	os.WriteFile(doc, []byte("hello"), 0o600)
 	os.WriteFile(tmp, []byte("png"), 0o600)
 	u.conv.composer.SetText("under")
-	u.addFiles("rina", []*attachFile{
+	u.addFiles("citra", []*attachFile{
 		{Attachment: model.Attachment{Path: doc, Media: model.MediaDocument}},
 		{Attachment: model.Attachment{Path: tmp, Media: model.MediaImage}, temp: true},
 	})
@@ -91,20 +91,20 @@ func TestDraftAttachments(t *testing.T) {
 	u.conv.composer.SetText("second caption")
 	u.attach.quality = model.QualityHD
 
-	u.SelectID("budi")
+	u.SelectID("arman")
 	if len(u.attach.files) != 0 || u.conv.composer.Text() != "" {
 		t.Fatal("the send view followed to another chat")
 	}
 	if _, err := os.Stat(tmp); err != nil {
 		t.Fatal("the switch removed a pasted picture:", err)
 	}
-	if _, txt := draftPreview(u.drafts["rina"]); txt != "first caption" {
+	if _, txt := draftPreview(u.drafts["citra"]); txt != "first caption" {
 		t.Fatalf("the row previews %q", txt)
 	}
 
-	u.SelectID("rina")
+	u.SelectID("citra")
 	a := &u.attach
-	if len(a.files) != 2 || a.cur != 1 || a.chatID != "rina" || a.quality != model.QualityHD {
+	if len(a.files) != 2 || a.cur != 1 || a.chatID != "citra" || a.quality != model.QualityHD {
 		t.Fatalf("send view came back with %d files, cur %d, chat %q, quality %v", len(a.files), a.cur, a.chatID, a.quality)
 	}
 	if got := u.conv.composer.Text(); got != "second caption" {
@@ -128,16 +128,16 @@ func TestDraftAttachments(t *testing.T) {
 func TestDraftPickedElsewhere(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("budi")
+	u.SelectID("arman")
 	doc := filepath.Join(t.TempDir(), "notes.txt")
 	os.WriteFile(doc, []byte("hello"), 0o600)
-	u.addFiles("rina", []*attachFile{{Attachment: model.Attachment{Path: doc, Media: model.MediaDocument}}})
+	u.addFiles("citra", []*attachFile{{Attachment: model.Attachment{Path: doc, Media: model.MediaDocument}}})
 	if len(u.attach.files) != 0 {
 		t.Fatal("the files opened in the wrong chat")
 	}
-	u.SelectID("rina")
+	u.SelectID("citra")
 	if len(u.attach.files) != 1 {
-		t.Fatalf("rina's send view has %d files", len(u.attach.files))
+		t.Fatalf("citra's send view has %d files", len(u.attach.files))
 	}
 }
 
@@ -145,13 +145,13 @@ func TestDraftPickedElsewhere(t *testing.T) {
 func TestDraftDeletedChat(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	tmp := filepath.Join(t.TempDir(), "pasted.png")
 	os.WriteFile(tmp, []byte("png"), 0o600)
-	u.addFiles("rina", []*attachFile{{Attachment: model.Attachment{Path: tmp, Media: model.MediaImage}, temp: true}})
-	u.SelectID("budi")
-	u.dropDraft("rina")
-	if u.drafts["rina"] != nil {
+	u.addFiles("citra", []*attachFile{{Attachment: model.Attachment{Path: tmp, Media: model.MediaImage}, temp: true}})
+	u.SelectID("arman")
+	u.dropDraft("citra")
+	if u.drafts["citra"] != nil {
 		t.Fatal("the draft is still there")
 	}
 	if _, err := os.Stat(tmp); !os.IsNotExist(err) {

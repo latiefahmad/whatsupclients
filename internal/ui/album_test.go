@@ -19,10 +19,10 @@ import (
 func TestAlbumRows(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	at := testNow()
 	pic := func(id, album string) *model.Message {
-		return &model.Message{ID: id, ChatID: "rina", Kind: model.KindImage, Media: model.MediaImage, Time: at, Album: album}
+		return &model.Message{ID: id, ChatID: "citra", Kind: model.KindImage, Media: model.MediaImage, Time: at, Album: album}
 	}
 	captioned := pic("a4", "A")
 	captioned.Text = "look"
@@ -90,7 +90,7 @@ func TestAlbumTiles(t *testing.T) {
 func TestSendAlbum(t *testing.T) {
 	u := New(mock.New())
 	u.Start(func() {})
-	u.SelectID("rina")
+	u.SelectID("citra")
 	dir := t.TempDir()
 	var paths []string
 	for _, name := range []string{"a.png", "b.png"} {
