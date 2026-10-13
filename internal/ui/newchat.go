@@ -194,7 +194,10 @@ func (u *UI) updateNewChat(gtx C) {
 			break
 		}
 		if _, ok := ev.(widget.SubmitEvent); ok && nc.step == ncChat {
-			if d := phoneDigits(nc.search.Text()); d != "" {
+			// A pasted chat link opens the chat with its text.
+			if phone, text, ok := ParseChatLink(nc.search.Text()); ok {
+				u.openChatLink(phone, text)
+			} else if d := phoneDigits(nc.search.Text()); d != "" {
 				u.lookupPhone(d)
 			} else if cs := u.matchContacts(nc.search.Text(), false); len(cs) > 0 {
 				u.startChat(cs[0].ID, cs[0].Name)

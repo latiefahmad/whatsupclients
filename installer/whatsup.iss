@@ -72,6 +72,12 @@ Type: files; Name: "{app}\WhatsUpClients.exe.new"
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\WhatsUpClients.Desktop"; ValueType: none; Flags: uninsdeletekey dontcreatekey
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{EC56F81C-5D4A-4D8C-8044-761DDA20EDC8}"; ValueType: none; Flags: uninsdeletekey dontcreatekey
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "WhatsUpClients"; ValueType: none; Flags: uninsdeletevalue dontcreatekey
+; Chat links (whatsup://), mirrored from desktop.EnsureProtocol so the
+; handler exists before the first run. Removed on uninstall only.
+Root: HKCU; Subkey: "Software\Classes\whatsup"; ValueType: string; ValueName: ""; ValueData: "URL:WhatsUp Clients Chat Link"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\whatsup"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\whatsup\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\WhatsUpClients.exe,0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\whatsup\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\WhatsUpClients.exe"" ""%1"""; Flags: uninsdeletekey
 
 [Code]
 // Chats and the linked account stay unless the user says otherwise, so

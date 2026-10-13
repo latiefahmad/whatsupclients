@@ -63,11 +63,29 @@ func main() {
 	if *demo {
 		lockDir = demoDir
 	}
+	// A chat link (whatsup://, wa.me) on the command line opens its chat:
+	// left in a file for the running instance, which drains it whenever a
+	// window shows. Written before Lock, so the show it triggers finds it.
+	linkFile := filepath.Join(lockDir, "pending-link")
+	for _, a := range flag.Args() {
+		if _, _, ok := ui.ParseChatLink(a); ok {
+			_ = os.MkdirAll(lockDir, 0o700)
+			f, err := os.OpenFile(linkFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+			if err == nil {
+				_, _ = f.WriteString(a + "\n")
+				f.Close()
+			}
+			break
+		}
+	}
 	if *waitPID != 0 {
 		desktop.WaitExit(*waitPID, 15*time.Second)
 	}
 	if !desktop.Lock(lockDir) {
 		return
+	}
+	if desktop.EnsureProtocol() {
+		log.Println("registered whatsup:// chat links")
 	}
 	if exe, err := os.Executable(); err == nil && version != "" {
 		update.Cleanup(exe)
@@ -92,6 +110,7 @@ func main() {
 		},
 		Hidden:    *background || *embedding,
 		NotifyDir: filepath.Join(*dataDir, "notifications"),
+		LinkFile:  linkFile,
 		Accounts:  list,
 		Open:      open,
 		Version:   version,

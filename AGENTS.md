@@ -214,6 +214,14 @@ Gotchas already found in the pinned version (v0.10.x):
 - Files dropped on the window come through an OLE drop target (`desktop.EnableDrop`).
   OLE wants it registered on the window's own thread, so the window is subclassed and
   the registration posted to it; the callbacks run on that thread and only queue.
+- Chat links (`whatsup://`, `wa.me`) open the number's chat without saving
+  the contact (`internal/ui/chatlink.go`). Windows registers the scheme
+  per user on startup (`desktop.EnsureProtocol`, mirrored in the
+  installer's Registry section); Linux uses `installer/whatsup.desktop`.
+  A launch with a link appends it to `<data dir>/pending-link` before
+  `desktop.Lock`, so the running instance finds it; the host drains the
+  file whenever a window shows (an offline lookup toasts instead of
+  waiting). `whatsup://` always opens the default data directory's instance.
 - The server refuses native flow button answers (`InteractiveResponseMessage`) in groups
   with error 479. `PressButton` falls back to the older answer (`TemplateButtonReplyMessage`
   or `ListResponseMessage`), which still carries the button's or row's ID that bots read,

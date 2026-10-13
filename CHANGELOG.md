@@ -9,6 +9,20 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.6.0] - 2026-10-13
+
+### 🔗 Chat links
+
+- **Open chats from links** — `whatsup://` links open the number's
+  chat directly, even when the app is already running. The scheme
+  registers itself per user, no admin rights needed.
+- **Paste wa.me links** — paste a `wa.me` or `api.whatsapp.com` link
+  into New chat and hit Enter: the chat opens with its text filled in.
+- **Nothing saved** — chatting from a link never adds the number to
+  your contacts.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.5.0...v1.6.0
+
 ## [v1.5.0] - 2026-10-12
 
 ### ✅ Message info & groups

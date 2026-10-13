@@ -10,6 +10,10 @@ import (
 // Lock always succeeds: other systems don't stop a second instance yet.
 func Lock(dir string) bool { return true }
 
+// EnsureProtocol does nothing: registering the chat-link scheme on other
+// systems is documented in AGENTS.md.
+func EnsureProtocol() bool { return false }
+
 // TrayStart fails: there is no tray icon on other systems yet.
 func TrayStart(t Tray) error { return ErrUnsupported }
 

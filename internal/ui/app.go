@@ -134,6 +134,9 @@ type UI struct {
 	// cardPhone is the number of a shared contact whose chat opens once
 	// the backend has looked it up, and cardPhoneName their name.
 	cardPhone, cardPhoneName string
+	// linkPhone is the number of a chat link (wa.me, whatsup://) whose
+	// chat opens once looked up, and linkText the message it prefills.
+	linkPhone, linkText string
 
 	files  fileState   // documents and audio on disk
 	voice  voiceState  // the audio message playing
@@ -1188,7 +1191,7 @@ func (u *UI) applyEvents() {
 		case model.NoticeEvent:
 			u.toast(e.Text)
 		case model.PhoneEvent:
-			if !u.cardPhoneEvent(e) {
+			if !u.cardPhoneEvent(e) && !u.linkPhoneEvent(e) {
 				u.phoneEvent(e)
 			}
 		case model.GroupCreatedEvent:

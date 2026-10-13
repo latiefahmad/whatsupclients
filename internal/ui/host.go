@@ -45,6 +45,9 @@ type Options struct {
 	Relaunch []string
 	// NotifyDir keeps the pictures notifications show.
 	NotifyDir string
+	// LinkFile holds chat links (wa.me, whatsup://) left by second
+	// launches, one per line; the UI drains it when a window shows.
+	LinkFile string
 	// Accounts lists the accounts linked on this computer, and Open opens
 	// the backend of one's data directory; the backend given to Run is
 	// the open one's. With nil Accounts there is only that backend.
@@ -360,6 +363,7 @@ func (h *host) show() {
 		h.u.openFromNotification(h.openChat)
 		h.openChat = ""
 	}
+	h.openLinks()
 	h.win.Invalidate()
 }
 
@@ -420,6 +424,24 @@ func (h *host) newUI() {
 	if h.openChat != "" {
 		u.openFromNotification(h.openChat)
 		h.openChat = ""
+	}
+	h.openLinks()
+}
+
+// openLinks opens the chats of chat links left by second launches.
+func (h *host) openLinks() {
+	if h.u == nil || h.o.LinkFile == "" {
+		return
+	}
+	data, err := os.ReadFile(h.o.LinkFile)
+	if err != nil || len(data) == 0 {
+		return
+	}
+	os.WriteFile(h.o.LinkFile, nil, 0o600)
+	for _, line := range strings.Split(string(data), "\n") {
+		if phone, text, ok := ParseChatLink(line); ok {
+			h.u.openChatLink(phone, text)
+		}
 	}
 }
 

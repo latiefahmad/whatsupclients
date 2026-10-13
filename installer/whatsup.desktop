@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=WhatsUp Clients
+Comment=Native WhatsApp desktop client
+# Point Exec at the installed executable.
+Exec=/usr/local/bin/WhatsUpClients %u
+Icon=whatsupclients
+Terminal=false
+Categories=Chat;InstantMessaging;Network;
+MimeType=x-scheme-handler/whatsup;

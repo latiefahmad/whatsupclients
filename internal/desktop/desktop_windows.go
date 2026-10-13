@@ -450,6 +450,59 @@ func createIcon(img *image.RGBA) uintptr {
 	return icon
 }
 
+// protocolScheme is the chat-link scheme this app opens: whatsup:// and,
+// pasted anywhere, wa.me links.
+const protocolScheme = "whatsup"
+
+// protocolKey is the per-user protocol registration, so opening a chat
+// link needs no admin rights.
+const protocolKey = `Software\Classes\` + protocolScheme
+
+// EnsureProtocol makes chat links open this app, reporting whether it
+// changed anything. It only writes when the registration is missing or
+// points elsewhere, and never fails startup: errors mean "not done".
+func EnsureProtocol() bool {
+	exe, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	cmd := syscall.EscapeArg(exe) + ` "%1"`
+	k, err := registry.OpenKey(registry.CURRENT_USER, protocolKey+`\shell\open\command`, registry.QUERY_VALUE)
+	if err == nil {
+		cur, _, _ := k.GetStringValue("")
+		k.Close()
+		if cur == cmd {
+			return false
+		}
+	}
+	k, _, err = registry.CreateKey(registry.CURRENT_USER, protocolKey, registry.SET_VALUE)
+	if err != nil {
+		return false
+	}
+	defer k.Close()
+	if err := k.SetStringValue("", "URL:WhatsUp Clients Chat Link"); err != nil {
+		return false
+	}
+	if err := k.SetStringValue("URL Protocol", ""); err != nil {
+		return false
+	}
+	sub := func(name, value string) error {
+		sk, _, err := registry.CreateKey(k, name, registry.SET_VALUE)
+		if err != nil {
+			return err
+		}
+		defer sk.Close()
+		return sk.SetStringValue("", value)
+	}
+	if err := sub(`DefaultIcon`, exe+`,0`); err != nil {
+		return false
+	}
+	if err := sub(`shell\open\command`, cmd); err != nil {
+		return false
+	}
+	return true
+}
+
 const runKey = `Software\Microsoft\Windows\CurrentVersion\Run`
 
 // legacyRunValue is the previous release's entry, which points at the
