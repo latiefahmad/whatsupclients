@@ -217,6 +217,11 @@ func (u *UI) layoutPrivacyButton(gtx C, w, h int) {
 		drawIcon(gtx, icVisibilityOff, 18, col)
 		t.Pop()
 	})
+	tip := "Turn privacy mode on"
+	if ps.on {
+		tip = "Turn privacy mode off"
+	}
+	u.tipBelow(gtx, "title:privacy", tip, w, h+gtx.Dp(4), ps.btn.Hovered())
 }
 
 // privacyExtras is the Privacy section of the Extra features page.

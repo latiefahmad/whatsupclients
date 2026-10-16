@@ -59,6 +59,8 @@ var (
 	icEdit          = icon.Edit
 	icCallLine      = icon.Call
 	icVideoLine     = icon.Videocam
+	icVolume        = icon.VolumeUp
+	icStorage       = icon.DataUsage
 	icPersonAdd     = icon.PersonAdd
 	icPersonAddFill = icon.PersonAddFill
 	icPermMedia     = icon.PermMedia
@@ -99,12 +101,14 @@ var (
 	icOpenInNew     = icon.OpenInNew
 	icUnsupported   = icon.DisabledByDefaultFill
 	icForward       = icon.Forward
+	icForwardOne    = icon.Reply.Mirrored() // "Forwarded"; the double arrow says "many times"
 	icNext          = icon.ArrowBack.Mirrored()
 	icCheckBox      = icon.CheckBox
 	icCheckBoxEmpty = icon.CheckBoxOutlineBlank
 	icStarFill      = icon.StarFill
 	icPinFill       = icon.KeepFill
 	icAddReaction   = icon.AddReaction
+	icReact         = icon.Mood // a hovered message's React button
 	icDownload      = icon.Download
 	icZoomIn        = icon.ZoomIn
 	icZoomOut       = icon.ZoomOut

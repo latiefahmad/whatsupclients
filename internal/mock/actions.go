@@ -84,6 +84,7 @@ func (b *Backend) copyTo(src *model.Message, chatID string, forwarded bool, quot
 	m.ChatID, m.FromMe, m.Time, m.Receipt = chatID, true, b.now(), model.Sent
 	m.Sender, m.SenderID, m.Quote, m.Reactions, m.MyReaction, m.Starred, m.Pinned = "", "", quote, nil, "", false, false
 	m.Forwarded = forwarded
+	m.ForwardedMany = forwarded && src.ForwardedMany
 	b.add(&m)
 	cp := m
 	b.emit(model.MessageEvent{Msg: &cp})
@@ -195,7 +196,12 @@ func (b *Backend) MediaFile(m *model.Message) string {
 	return ""
 }
 
-func (b *Backend) HasMediaFile(m *model.Message) bool { return b.demoFile(m) != "" }
+func (b *Backend) HasMediaFile(m *model.Message) bool {
+	if m.Media == model.MediaImage || m.Media == model.MediaSticker {
+		return b.MediaData(m.ChatID, m.ID) != nil
+	}
+	return b.demoFile(m) != ""
+}
 
 func (b *Backend) demoFile(m *model.Message) string {
 	switch m.Media {

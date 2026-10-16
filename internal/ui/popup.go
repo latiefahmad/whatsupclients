@@ -39,6 +39,7 @@ func (u *UI) updateMouse(gtx C) {
 		if e, ok := ev.(pointer.Event); ok {
 			if e.Kind != pointer.Cancel {
 				u.mouse = e.Position.Round()
+				u.touchLock()
 			}
 			if e.Kind == pointer.Press || e.Kind == pointer.Release {
 				// Many buttons act on their click while they're laid out,
@@ -139,6 +140,8 @@ const (
 	ctxGallerySort // the Media panel's sort order
 	ctxScheduled   // a scheduled message's (scheduled.go)
 	ctxZoom        // the Font size choices (scale.go)
+	ctxPickMute    // mute durations for the chats picked (selectchats.go)
+	ctxReact       // a message's reaction bar alone, from its React button (sidebuttons.go)
 )
 
 // ctxMenu is the open context menu: a chat's (right-click in the chat
@@ -217,11 +220,12 @@ func (u *UI) chatMenuItems(c *model.Chat) []menuItem {
 	} else {
 		add(menuItem{key: "fav", ic: icHeart, label: "Add to favourites", run: func() { b.SetFavorite(id, true) }})
 	}
-	if u.selected != nil && u.selected.ID == id {
-		add(menuItem{key: "close", ic: icCancel, label: "Close chat", run: func() { u.closeChat() }})
-	}
 	add(menuItem{key: "lists", ic: icAddToList, label: "Add to list", arrow: true})
 	add(menuItem{divider: true})
+	if !c.IsGroup && !c.Self && !isChannelID(id) {
+		name := c.Name
+		add(menuItem{key: "block", ic: icBlock, label: "Block", run: func() { u.confirmBlock(id, name) }})
+	}
 	add(menuItem{key: "clear", ic: icClear, label: "Clear chat", run: func() { u.confirmClearChat(id) }})
 	if c.IsGroup && c.Left {
 		name := c.Name
@@ -235,17 +239,27 @@ func (u *UI) chatMenuItems(c *model.Chat) []menuItem {
 	return items
 }
 
-// messageMenuItems mirrors WhatsApp's message menu. "Ask Meta AI" and
-// "Report" are left out: neither works without Meta's services.
+// messageMenuItems mirrors WhatsApp's message menu. "Ask Meta AI" is left
+// out (it needs Meta's services), and Report only asks (confirmReport).
 func (u *UI) messageMenuItems(c *model.Chat, m *model.Message) []menuItem {
 	b := u.backend
 	var items []menuItem
 	add := func(it menuItem) { items = append(items, it) }
+	if m.Kind == model.KindWaiting {
+		// Nothing came to act on yet.
+		add(menuItem{key: "select", ic: icCheckBox, label: "Select", run: func() { u.startSelect(m) }})
+		add(menuItem{divider: true})
+		add(menuItem{key: "delete", ic: icDelete, label: "Delete", run: func() { u.confirmDelete([]*model.Message{m}) }})
+		return items
+	}
 	deleted := m.Kind == model.KindDeleted
 	// A message kept after its sender deleted it is gone for everyone else.
 	revoked := !m.Revoked.IsZero()
 	if m.FromMe && !deleted && !isChannelID(c.ID) && m.Receipt != model.Pending && m.Receipt != model.Failed {
 		add(menuItem{key: "info", ic: icInfo, label: "Message info", run: func() { u.openMsgInfo(m) }})
+	}
+	if m.CanEdit(u.now()) && !isChannelID(c.ID) && u.sendBlocked(c) == "" {
+		add(menuItem{key: "edit", ic: icEdit, label: "Edit", run: func() { u.startEdit(m) }})
 	}
 	if !deleted && !revoked && !isChannelID(c.ID) && u.sendBlocked(c) == "" {
 		add(menuItem{key: "reply", ic: icReply, label: "Reply", run: func() { u.startReply(m) }})
@@ -260,13 +274,18 @@ func (u *UI) messageMenuItems(c *model.Chat, m *model.Message) []menuItem {
 		}
 		add(menuItem{key: "copy", ic: icCopy, label: "Copy", run: func() { u.copyText(stripIsolates(txt)) }})
 	}
-	if m.CanEdit(u.now()) && !isChannelID(c.ID) && u.sendBlocked(c) == "" {
-		add(menuItem{key: "edit", ic: icEdit, label: "Edit", run: func() { u.startEdit(m) }})
+	if canReact(c.ID, m) && !revoked {
+		add(menuItem{key: "react", ic: icAddReaction, label: "React", run: func() { u.openPicker(pickReaction, m) }})
 	}
 	if u.editHistory && !m.Edited.IsZero() && !deleted {
 		add(menuItem{key: "edits", ic: icEditNote, label: "Edit history", run: func() { u.openEditHistory(m) }})
 	}
 	if canSave(m) {
+		// A file that isn't on this computer yet can be downloaded first,
+		// as its card's button does.
+		if downloadable(m) && !u.fileReady(m) && !u.files.busy[fileKey(m)] {
+			add(menuItem{key: "download", ic: icDownload, label: "Download", run: func() { u.downloadDocument(m) }})
+		}
 		add(menuItem{key: "save", ic: icDownload, label: "Save as…", run: func() { b.SaveMedia(m) }})
 	}
 	if !deleted {
@@ -297,7 +316,25 @@ func (u *UI) messageMenuItems(c *model.Chat, m *model.Message) []menuItem {
 	add(menuItem{key: "select", ic: icCheckBox, label: "Select", run: func() { u.startSelect(m) }})
 	add(menuItem{divider: true})
 	add(menuItem{key: "delete", ic: icDelete, label: "Delete", run: func() { u.confirmDelete([]*model.Message{m}) }})
+	if !m.FromMe && !deleted && !isChannelID(c.ID) {
+		add(menuItem{key: "report", ic: icThumbDown, label: "Report", run: func() { u.confirmReport(c, m) }})
+	}
 	return items
+}
+
+// canReact reports whether m, in chat chatID, takes reactions.
+func canReact(chatID string, m *model.Message) bool {
+	return m.Kind != model.KindDeleted && m.Kind != model.KindWaiting && !isChannelID(chatID)
+}
+
+// downloadable reports whether m's media is a file the bubble downloads
+// on demand (a picture downloads to show).
+func downloadable(m *model.Message) bool {
+	switch m.Media {
+	case model.MediaDocument, model.MediaAudio, model.MediaVoice, model.MediaVideo:
+		return true
+	}
+	return false
 }
 
 func canSave(m *model.Message) bool {
@@ -326,6 +363,10 @@ func (u *UI) copyText(s string) {
 func (u *UI) layoutCtxMenu(gtx C) {
 	m := &u.ctx
 	if m.kind == ctxNone {
+		return
+	}
+	if m.kind == ctxReact {
+		u.layoutReactMenu(gtx)
 		return
 	}
 	if m.isOpen() {
@@ -398,6 +439,10 @@ func (u *UI) layoutCtxMenu(gtx C) {
 			items = u.statusMenuItems()
 		case ctxZoom:
 			items = u.zoomMenuItems()
+		case ctxPickMute:
+			if u.sidebar.pick.on {
+				items = u.pickMuteItems()
+			}
 		}
 		if items == nil {
 			u.ctx = ctxMenu{} // its chat went away
@@ -450,7 +495,7 @@ func (u *UI) layoutCtxMenu(gtx C) {
 
 	menu := record(gtx, func(gtx C) D { return u.menuPanel(gtx, "menu:", items) })
 	reactH := 0
-	if m.kind == ctxMessage && m.msg.Kind != model.KindDeleted && !isChannelID(m.chatID) {
+	if m.kind == ctxMessage && canReact(m.chatID, m.msg) {
 		reactH = gtx.Dp(43 + 7)
 	}
 	// Open below and to the right of the click, flipping to stay on screen.

@@ -94,7 +94,9 @@ var settingsViews = map[string]struct {
 	"lastseen":      {settingPrivacy, "lastseen"},
 	"blocked":       {settingPrivacy, "blocked"},
 	"chatsettings":  {settingChats, ""},
+	"media":         {settingMedia, ""},
 	"notifications": {settingNotifications, ""},
+	"storage":       {settingStorage, ""},
 	"shortcuts":     {settingShortcuts, ""},
 	"performance":   {settingPerformance, ""},
 	"advanced":      {settingPerformance, "advanced"},
@@ -188,6 +190,12 @@ func (u *UI) settingsTitle() string {
 		return "Theme"
 	case "avatars":
 		return "Profile pictures"
+	case "camera":
+		return "Camera"
+	case "mic":
+		return "Microphone"
+	case "speaker":
+		return "Speakers"
 	case "gray":
 		return "Ethically gray features"
 	case "advanced":
@@ -233,13 +241,24 @@ func (u *UI) settingsPage() []settingsSection {
 			set("", "Automatic", "For every picture the window shows"),
 			set(model.AvatarsOpen, "Open chats only", "Only for the open chat and its members"),
 		}}}
+	case "camera", "mic", "speaker":
+		return u.deviceChoices(s.sub)
 	}
+	return u.categoryPage(s.detail - 1)
+}
+
+// categoryPage is the rows of settings category k.
+func (u *UI) categoryPage(k int) []settingsSection {
 	b := u.backend
 	pref := func(key, title, sub string) settingRow {
 		on := prefOn(b, key)
 		return settingRow{key: key, kind: setToggle, title: title, sub: sub, on: on, run: func() { setPref(b, key, !on) }}
 	}
-	switch s.detail - 1 {
+	switch k {
+	case settingMedia:
+		return u.mediaSettings()
+	case settingStorage:
+		return u.storageSettings()
 	case settingNotifications:
 		return []settingsSection{
 			{title: "Messages", rows: []settingRow{

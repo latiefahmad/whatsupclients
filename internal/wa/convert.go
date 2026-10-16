@@ -361,6 +361,14 @@ func (b *Backend) parse(ctx context.Context, evt *events.Message) (p parsed, ok 
 			p.target = ""
 			p.msg, ok = timerSystem(evt, chat, pm)
 			return p, ok
+		case waE2E.ProtocolMessage_LIMIT_SHARING:
+			ls := pm.GetLimitSharing()
+			ts := ls.GetLimitSharingSettingTimestamp()
+			if ts == 0 {
+				ts = evt.Info.Timestamp.Unix()
+			}
+			b.setLimitSharing(ctx, chat.String(), ls.GetSharingLimited(), ts)
+			return p, false
 		default:
 			return p, false
 		}
@@ -436,6 +444,7 @@ func (b *Backend) parse(ctx context.Context, evt *events.Message) (p parsed, ok 
 	c.extra.apply(msg)
 	c.buttons.apply(msg)
 	msg.Forwarded = c.ctx.GetIsForwarded()
+	msg.ForwardedMany = forwardedMany(c.ctx)
 	msg.Receipt = model.Sent
 	if evt.SourceWebMsg != nil && msg.FromMe {
 		msg.Receipt = webReceipt(evt.SourceWebMsg)

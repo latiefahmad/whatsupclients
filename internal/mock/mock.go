@@ -329,6 +329,8 @@ func demo(now time.Time) []*demoChat {
 			grp("Ibuk", day(0, 6, 2), "Good morning everyone 🌞"),
 			grp("Bapak", day(0, 6, 15), "Morning. Don't forget lunch at home on Sunday"),
 			grp("Ahfa", day(0, 7, 1), "Got it, Bapak 👍"),
+			{Sender: "Bapak", Forwarded: true, ForwardedMany: true, Time: day(0, 7, 5),
+				Text: "Good morning! Have a blessed day 🌞"},
 			// A view once photo whose media only the phone got.
 			{Sender: "Ahfa", Kind: model.KindViewOnce, Media: model.MediaImage, OnPhone: true, Time: day(0, 7, 2)},
 			grp("Syaaa", day(0, 7, 3), "I'll bring the cake from that shop we went to yesterday"),

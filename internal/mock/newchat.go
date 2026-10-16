@@ -15,6 +15,23 @@ var extraContacts = []*model.Contact{
 	{ID: "yoga", Name: "Kocul Pratama", Phone: "+62 812-5550-7781"},
 }
 
+// demoAbouts are some demo people's about texts; the others have the
+// default one, and Clara none.
+var demoAbouts = map[string]string{
+	"citra": "Counting down to Bali 🌴",
+	"arman": "Busy",
+	"agus":  "Available",
+	"fitri": "",
+	"yoga":  "At the gym",
+}
+
+func demoAbout(id string) string {
+	if a, ok := demoAbouts[id]; ok {
+		return a
+	}
+	return "Hey there! I am using WhatsApp."
+}
+
 // Contacts lists the people of the one-to-one demo chats and a few more.
 func (b *Backend) Contacts() []*model.Contact {
 	var out []*model.Contact
@@ -22,10 +39,11 @@ func (b *Backend) Contacts() []*model.Contact {
 		if c.IsGroup || c.Self || strings.HasPrefix(c.Name, "+") || c.ID == "shop" {
 			continue
 		}
-		out = append(out, &model.Contact{ID: c.ID, Name: c.Name, Phone: "+62 812-5550-" + itoa4(len(c.Name)*37)})
+		out = append(out, &model.Contact{ID: c.ID, Name: c.Name, Phone: "+62 812-5550-" + itoa4(len(c.Name)*37), About: demoAbout(c.ID)})
 	}
 	for _, c := range extraContacts {
 		cp := *c
+		cp.About = demoAbout(c.ID)
 		out = append(out, &cp)
 	}
 	sort.Slice(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })

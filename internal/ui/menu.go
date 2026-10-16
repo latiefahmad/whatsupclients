@@ -11,8 +11,8 @@ import (
 	"github.com/latiefahmad/whatsupclients/internal/ui/icon"
 )
 
-// menuState is the chat list's ⋮ drop-down, WhatsApp Desktop's minus
-// Select chats and App lock, plus Switch account.
+// menuState is the chat list's ⋮ drop-down, WhatsApp Desktop's plus Switch
+// account.
 type menuState struct {
 	open       bool
 	anim       tween
@@ -20,6 +20,9 @@ type menuState struct {
 	scrim      widget.Clickable
 	newGroup   widget.Clickable
 	starred    widget.Clickable
+	selChats   widget.Clickable
+	appLock    widget.Clickable
+	lockNow    widget.Clickable
 	readAll    widget.Clickable
 	switchAcct widget.Clickable // opens the account switcher beside the menu
 	logout     widget.Clickable
@@ -34,6 +37,17 @@ func (u *UI) updateMenu(gtx C) {
 	if m.starred.Clicked(gtx) {
 		u.openStarred()
 		m.open = false
+	}
+	if m.selChats.Clicked(gtx) {
+		u.startChatSelect()
+		m.open = false
+	}
+	if m.appLock.Clicked(gtx) {
+		u.openAppLock()
+		m.open = false
+	}
+	if m.lockNow.Clicked(gtx) && u.lockSet() {
+		u.lockNow()
 	}
 	if m.readAll.Clicked(gtx) {
 		u.markAllRead()
@@ -99,9 +113,14 @@ func (u *UI) layoutMenu(gtx C) {
 	items := []menuEntry{
 		{click: &m.newGroup, label: "New group", ic: icGroupAdd},
 		{click: &m.starred, label: "Starred messages", ic: icStar},
+		{click: &m.selChats, label: "Select chats", ic: icCheckBox},
 		{click: &m.readAll, label: "Mark all as read", ic: icChats},
-		{divider: true},
+		{click: &m.appLock, label: "App lock", ic: icLockOutline},
 	}
+	if u.lockSet() {
+		items = append(items, menuEntry{click: &m.lockNow, label: "Lock now", ic: icLock})
+	}
+	items = append(items, menuEntry{divider: true})
 	switchY := -1 // the Switch account row's top, below the menu's padding
 	if len(u.accounts) > 0 {
 		switchY = (len(items)-1)*gtx.Dp(menuRowH) + gtx.Dp(menuDividerH)

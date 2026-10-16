@@ -76,6 +76,7 @@ type Backend struct {
 
 	infoMu      sync.Mutex
 	infoFetched map[string]bool // info panels refreshed this session
+	abouts      aboutCache      // contacts' about texts (about.go)
 
 	statusPriv   statusPrivacy
 	searchMu     sync.Mutex
@@ -1017,24 +1018,58 @@ func (b *Backend) onMessage(e *events.Message) {
 	}
 	b.noteTimer(ctx, e)
 	p, ok := b.parse(ctx, e)
+	if !ok || p.target != "" {
+		// What came after "Waiting for this message" may show nothing.
+		b.dropWaiting(b.canonical(ctx, e.Info.Chat).String(), e.Info.ID)
+	}
 	if !ok {
 		return
 	}
 	b.apply(&e.Info, p)
 }
 
-// onUndecryptable stores a view once message: WhatsApp sends those only to
-// the phone, and linked devices get a message with nothing in it. It shows
-// as a view once message that opens on the phone, until a reply to it
-// brings its media along (fillViewOnce).
+// dropWaiting removes the "Waiting for this message" placeholder of a
+// message that came as something with nothing to show of its own.
+func (b *Backend) dropWaiting(chat, id string) {
+	r, err := b.db.ExecContext(b.ctx, `DELETE FROM wz_messages WHERE chat = ? AND id = ? AND kind = ?`,
+		chat, id, int(model.KindWaiting))
+	if err != nil {
+		return
+	}
+	if n, _ := r.RowsAffected(); n > 0 {
+		b.emit(model.DeletedEvent{ChatID: chat, IDs: []string{id}})
+		b.emitChat(chat)
+	}
+}
+
+// onUndecryptable stores a message that came without anything this device
+// can read. A view once message is one: WhatsApp sends those only to the
+// phone, and linked devices get a message with nothing in it. It shows as a
+// view once message that opens on the phone, until a reply to it brings its
+// media along (fillViewOnce). Any other is "Waiting for this message"
+// (model.KindWaiting): hypermeow asks its sender's phone to send it again,
+// and the message that comes then replaces the placeholder (putMessage).
+// Its sender marks what isn't worth a placeholder (reactions, edits and
+// the like) decrypt-fail="hide".
 func (b *Backend) onUndecryptable(e *events.UndecryptableMessage) {
-	if !e.IsUnavailable || e.UnavailableType != events.UnavailableTypeViewOnce || isStatus(e.Info.Chat) {
+	viewOnce := e.IsUnavailable && e.UnavailableType == events.UnavailableTypeViewOnce
+	if isStatus(e.Info.Chat) || isChannel(e.Info.Chat) || e.Info.Edit != types.EditAttributeEmpty ||
+		!viewOnce && e.DecryptFailMode == events.DecryptFailHide {
 		return
 	}
 	ctx := b.ctx
 	chat := b.canonical(ctx, e.Info.Chat)
 	if _, ok := b.store.message(ctx, chat.String(), e.Info.ID); ok || skipChat(chat) {
-		return // again: it may have its media by now
+		return // again: it may have its media, or have come, by now
+	}
+	if !viewOnce {
+		var p parsed
+		p.msg.Message = &model.Message{ID: e.Info.ID, ChatID: chat.String(), Kind: model.KindWaiting,
+			FromMe: e.Info.IsFromMe, Time: e.Info.Timestamp, Receipt: model.Sent}
+		p.msg.senderJID = e.Info.Sender.ToNonAD().String()
+		p.msg.senderPush = e.Info.PushName
+		b.apply(&e.Info, p)
+		return
 	}
 	media := model.MediaNone
 	switch e.Info.MediaType {
@@ -1101,7 +1136,11 @@ func (b *Backend) apply(info *types.MessageInfo, p parsed) {
 		}
 		_, exists := b.store.chat(ctx, chat)
 		// A message can come again (a retry); it counts and notifies once.
-		_, seen := b.store.message(ctx, chat, p.msg.ID)
+		// One that waited (KindWaiting) counts when it comes, not before.
+		old, seen := b.store.message(ctx, chat, p.msg.ID)
+		if seen && old.Kind == model.KindWaiting {
+			seen = false
+		}
 		if err := b.store.ensureChat(ctx, b.db, chat, info.IsGroup, name); err != nil {
 			b.log.Errorf("store chat %s: %v", chat, err)
 			return
@@ -1111,7 +1150,7 @@ func (b *Backend) apply(info *types.MessageInfo, p parsed) {
 			return
 		}
 		if !p.msg.FromMe {
-			isNew = !seen // counted once resolved, below
+			isNew = !seen && p.msg.Kind != model.KindWaiting // counted once resolved, below
 		} else if p.msg.Media == model.MediaSticker {
 			if _, blob := rawMedia(p.msg.rawPayload); blob != nil {
 				b.recentSticker(blob, p.msg.Time, "", "") // sent from another device
@@ -1133,6 +1172,9 @@ func (b *Backend) apply(info *types.MessageInfo, p parsed) {
 		}
 		b.emit(model.MessageEvent{Msg: m, New: isNew})
 		b.emitChat(chat)
+		if isNew {
+			b.autoDownload(m)
+		}
 	} else if isNew {
 		_ = b.store.addUnread(ctx, chat, false)
 	}
@@ -1310,6 +1352,9 @@ func (b *Backend) onHistory(e *events.HistorySync) {
 			continue
 		}
 		cd := convData{jid: jid, isGroup: jid.Server == types.GroupServer}
+		if conv.LimitSharing != nil {
+			b.setLimitSharing(ctx, jid.String(), conv.GetLimitSharing(), conv.GetLimitSharingSettingTimestamp())
+		}
 		if cd.isGroup || isChannel(jid) {
 			cd.name = first(conv.GetName(), conv.GetDisplayName())
 		} else {

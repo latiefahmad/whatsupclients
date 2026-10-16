@@ -28,6 +28,7 @@ func (u *UI) layoutSidebar(gtx C) D {
 		menuID = u.ctx.chatID
 	}
 	u.sidebar.menuSel.step(gtx, menuID, durSwitch)
+	u.sidebar.pick.anim.step(gtx, u.sidebar.pick.on, durGrow)
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(u.layoutSidebarHeader),
 		layout.Rigid(u.layoutSearch),
@@ -42,6 +43,9 @@ func (u *UI) layoutSidebar(gtx C) D {
 func (u *UI) layoutSidebarHeader(gtx C) D {
 	p := u.pal
 	h := gtx.Dp(68)
+	if u.sidebar.pick.on {
+		return u.layoutPickBar(gtx)
+	}
 	if u.sidebar.showArchived {
 		return vcenter(gtx, h, func(gtx C) D {
 			return layout.Inset{Left: 10, Right: 16}.Layout(gtx, func(gtx C) D {
@@ -387,7 +391,25 @@ func (u *UI) layoutChatRow(gtx C, c *model.Chat) D {
 			o.community = cm
 		}
 	}
+	// Select mode moves the avatar over for a checkbox.
+	pick := &u.sidebar.pick
+	selV := easeOut(pick.anim.v)
+	if selV > 0 {
+		o.avatarW = unit.Dp(12 + 36*selV)
+	}
+	if pick.on {
+		o.sel = 0
+		if pick.picked[c.ID] {
+			o.sel = 1
+		}
+	}
 	dims := u.chatRow(gtx, shown, o)
+	if selV > 0 {
+		u.pickBox(gtx, c.ID, dims.Size.Y, selV)
+	}
+	if pick.on {
+		return dims
+	}
 	if u.rightClick(gtx, "chat:"+c.ID, dims.Size) {
 		u.openChatMenu(c)
 	}
@@ -706,8 +728,13 @@ func (u *UI) previewParts(c *model.Chat, last *model.Message) []layout.FlexChild
 	case last == nil:
 		children = append(children, layout.Flexed(1, layout.Spacer{}.Layout))
 	default:
+		// An unread chat's preview is in the text's color, like WhatsApp's.
+		fg := p.TextSecondary
+		if c.Unread != 0 {
+			fg = p.Text
+		}
 		if c.IsGroup && !last.FromMe && last.Sender != "" && last.Kind != model.KindSystem {
-			children = append(children, layout.Rigid(u.label(size, shortName(last.Sender)+": ", p.TextSecondary).Layout))
+			children = append(children, layout.Rigid(u.label(size, shortName(last.Sender)+": ", fg).Layout))
 		}
 		if last.FromMe && last.Kind != model.KindDeleted && last.Kind != model.KindSystem {
 			ic, col := receiptIcon(last.Receipt, p, false)
@@ -725,6 +752,9 @@ func (u *UI) previewParts(c *model.Chat, last *model.Message) []layout.FlexChild
 		case last.Kind == model.KindUnsupported:
 			children = append(children, small(icUnsupported, p.TextSecondary, 17, 4))
 			txt, italic = "This message couldn't load", true
+		case last.Kind == model.KindWaiting:
+			children = append(children, small(icClock, p.TextSecondary, 17, 4))
+			txt, italic = "Waiting for this message. This may take a while.", true
 		case last.Kind == model.KindSystem && last.Notice == model.NoticeMissedCall:
 			children = append(children, small(icCall, p.Danger, 18, 4))
 		case last.Kind == model.KindViewOnce:
@@ -739,7 +769,7 @@ func (u *UI) previewParts(c *model.Chat, last *model.Message) []layout.FlexChild
 			children = append(children, small(mediaIcon(last.Media), col, 18, 4))
 			txt = mediaLabel(last)
 		}
-		children = append(children, layout.Flexed(1, u.label(size, previewText(txt), p.TextSecondary, labelOpts{maxLines: 1, italic: italic}).Layout))
+		children = append(children, layout.Flexed(1, u.label(size, previewText(txt), fg, labelOpts{maxLines: 1, italic: italic}).Layout))
 	}
 	return children
 }

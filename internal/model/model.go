@@ -38,6 +38,10 @@ const (
 	// KindViewOnce is a view once photo, video or voice message: a pill
 	// that opens it (see Message.Opened and Message.OnPhone).
 	KindViewOnce
+	// KindWaiting is a message that came but couldn't be decrypted yet:
+	// "Waiting for this message", until its sender's phone sends it again
+	// and the message takes its place.
+	KindWaiting
 	// KindSystem is a note about the chat rather than a message: "Alice
 	// added Bob", "Bob changed the group name", a missed call. It is drawn
 	// as a grey chip in the middle (Text, with Notice saying how).
@@ -141,6 +145,9 @@ type Message struct {
 	// Starred and Pinned mirror the message menu's Star and Pin.
 	Starred, Pinned bool
 	Forwarded       bool
+	// ForwardedMany marks a message forwarded five times or more
+	// ("Forwarded many times").
+	ForwardedMany bool
 	// Footer is the small print under a business message's text, and
 	// Buttons its buttons.
 	Footer  string
@@ -353,7 +360,7 @@ func (m *Message) DeletedNote() string {
 // CanEdit reports whether you can still edit m at now: one of your own
 // sent text messages, photos or videos.
 func (m *Message) CanEdit(now time.Time) bool {
-	if !m.FromMe || m.Kind == KindDeleted || m.Kind == KindUnsupported || m.Forwarded ||
+	if !m.FromMe || m.Kind == KindDeleted || m.Kind == KindUnsupported || m.Kind == KindWaiting || m.Forwarded ||
 		m.Receipt == Pending || m.Receipt == Failed || now.Sub(m.Time) > EditWindow {
 		return false
 	}
@@ -556,6 +563,8 @@ type ChatInfo struct {
 	IsGroup bool
 	// About is a contact's "about" text or a group's description.
 	About string
+	// AboutSet is when a contact set their about text (zero when unknown).
+	AboutSet time.Time
 	// Phone is a contact's formatted phone number.
 	Phone string
 	// Members lists group participants: you first, then admins, then the rest.
@@ -570,6 +579,11 @@ type ChatInfo struct {
 	// members, and Approval that they approve who joins.
 	Announce, Locked    bool
 	AdminsAdd, Approval bool
+	// LimitSharing is WhatsApp's Advanced chat privacy: nobody in the chat
+	// may export it or have its media saved to their phone automatically.
+	// LimitSharingSet is when it last changed (zero when never seen).
+	LimitSharing    bool
+	LimitSharingSet time.Time
 
 	// The rest describes contacts only.
 
@@ -609,6 +623,7 @@ type Contact struct {
 	ID    string // the one-to-one chat ID
 	Name  string
 	Phone string // formatted, when known
+	About string // their about text, when known
 }
 
 // NewGroup is a group to create.
@@ -1118,6 +1133,33 @@ const PrefKeepDeleted = "keep_deleted"
 // and screenshots of it aren't blocked.
 const PrefViewOnceReplay = "view_once_replay"
 
+// Pref keys of Settings > Storage's automatic downloads: whether media of
+// a kind downloads by itself.
+const (
+	PrefAutoPhotos    = "autodl_photos"    // on unless "off"; pictures download as they show
+	PrefAutoAudio     = "autodl_audio"     // on when "on"; as messages arrive
+	PrefAutoVideos    = "autodl_videos"    // on when "on"; as messages arrive
+	PrefAutoDocuments = "autodl_documents" // on when "on"; as messages arrive
+)
+
+// AutoDownload reports whether media of kind m downloads by itself, as
+// pref (Backend.Pref) says. Voice messages always do, as in WhatsApp.
+func AutoDownload(pref func(string) string, m Media) bool {
+	switch m {
+	case MediaImage:
+		return pref(PrefAutoPhotos) != "off"
+	case MediaVoice:
+		return true
+	case MediaAudio:
+		return pref(PrefAutoAudio) == "on"
+	case MediaVideo:
+		return pref(PrefAutoVideos) == "on"
+	case MediaDocument:
+		return pref(PrefAutoDocuments) == "on"
+	}
+	return false
+}
+
 // PrefAvatars is the Pref key of when profile pictures download:
 // AvatarsOpen for the open chat's alone, or anything else (the default)
 // for every picture the window shows.
@@ -1215,7 +1257,8 @@ type Backend interface {
 	// audio file or document, or "" while it downloads in the background;
 	// a MediaEvent announces the end.
 	MediaFile(m *Message) string
-	// HasMediaFile reports whether MediaFile has the file already.
+	// HasMediaFile reports whether MediaFile has the file already (or
+	// MediaData, for a picture or sticker).
 	HasMediaFile(m *Message) bool
 	// SendFile sends a file, with the draft's text as its caption (and its
 	// reply and mentions), and returns it in its pending state. The upload

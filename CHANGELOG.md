@@ -9,6 +9,60 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.7.0] - 2026-10-16
+
+### 💬 Chats
+
+- **React and Forward buttons** — hovering a message shows round buttons
+  beside it: React opens the reaction bar, Forward forwards media,
+  links, documents and stickers.
+- **"Forwarded many times"** — messages forwarded around a lot say so,
+  with a double arrow.
+- **Waiting for this message** — a message that couldn't decrypt yet
+  shows as that, and swaps in when it arrives. Its menu can Edit, React,
+  Download and Report.
+- **Select chats** — tick chats in the list to archive, mute, pin, mark
+  read or unread, or delete them at once.
+- **Report** — the message menu's Report asks first, and offers to block
+  the sender.
+
+### ⚙️ Settings
+
+- **App lock** — lock the app behind a password: it asks when the app
+  starts and after a chosen time without use. "Lock now" locks it at
+  once; the password is kept only as a salted hash.
+- **Search settings** — the Settings home is like WhatsApp's, with your
+  profile on top and a search that finds the setting you name and jumps
+  to it.
+- **Video & voice** — pick the camera, microphone and speakers calls
+  would use.
+- **Storage** — choose which media downloads by itself. Photos can wait
+  for the viewer, showing their thumbnail with a download button.
+- **Profile pictures** — download every picture the window shows (as
+  before), or only the open chat's and its members'.
+
+### ✨ Emoji & links
+
+- **Skin tones** — the emoji panel has a tone button, and a right click
+  on an emoji offers it in every tone.
+- **Chat links** — `whatsup://` links open the number's chat directly,
+  and a `wa.me` link pasted into New chat opens it with its text filled
+  in, without saving the contact.
+- **Big emojis** — a message of one to three emojis shows them big,
+  without a bubble.
+- **Hover labels** — the icon-only buttons show what they do on a short
+  hover.
+
+### 🔧 Under the hood
+
+- Contacts' abouts (with when they were set) show in the forward picker
+  and contact info; Advanced chat privacy says whether it's on and stops
+  Export chat; groups you left can only be deleted; the forward picker
+  lists contacts under their own heading; the libra protocol was
+  updated.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.6.0...v1.7.0
+
 ## [v1.6.0] - 2026-10-13
 
 ### 🔗 Chat links

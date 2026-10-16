@@ -491,7 +491,7 @@ func (u *UI) layoutMessages(gtx C, c *model.Chat) D {
 				case r.kind == rowEncryption:
 					return layout.N.Layout(gtx, func(gtx C) D { return u.encryptionNotice(gtx, maxBubble) })
 				case r.kind == rowUnread:
-					return layout.N.Layout(gtx, func(gtx C) D { return u.unreadChip(gtx, u.conv.unread.n) })
+					return u.unreadChip(gtx, u.conv.unread.n)
 				case r.kind == rowSystem:
 					return layout.N.Layout(gtx, func(gtx C) D { return u.layoutSystem(gtx, c, r.msg, maxBubble) })
 				case r.kind == rowTyping:
@@ -544,8 +544,11 @@ func (u *UI) layoutMessages(gtx C, c *model.Chat) D {
 func convInset(rows []convRow, i, msgRows int) layout.Inset {
 	var in layout.Inset
 	switch r := rows[i]; {
-	case r.kind == rowDate, r.kind == rowEncryption, r.kind == rowUnread, r.kind == rowSystem:
+	case r.kind == rowDate, r.kind == rowEncryption, r.kind == rowSystem:
 		in.Top, in.Bottom = 10, 6
+	case r.kind == rowUnread:
+		// Its band goes across the whole conversation.
+		in.Left, in.Right, in.Top, in.Bottom = 0, 0, 4, 0
 	case r.kind == rowTyping:
 		// The newest message keeps its bottom space, so the gap above
 		// the bubble doesn't jump as it grows in.
@@ -664,7 +667,9 @@ func (u *UI) layoutMessageRow(gtx C, c *model.Chat, r convRow, maxW, margin int)
 	unhide()
 	if !sel {
 		t := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
-		hovered := u.hoverArea(gtx, m.ID, bubble.size)
+		// Round buttons beside the bubble (sidebuttons.go); announcements
+		// have their Forward instead.
+		hovered, side := u.sideHover(gtx, c, m, bubble.size, x, w, margin, !ann)
 		// A double click beside the bubble replies too, as in WhatsApp; a
 		// right click only on it opens its menu.
 		right, at, double := u.pressArea(gtx, m.ID, image.Rect(-margin-x, 0, w+margin-x, h))
@@ -700,14 +705,15 @@ func (u *UI) layoutMessageRow(gtx C, c *model.Chat, r convRow, maxW, margin int)
 			fx.Pop()
 			ct.Pop()
 		}
-		if ann && m.Kind != model.KindDeleted && m.Kind != model.KindUnsupported && m.Kind != model.KindSticker {
+		if ann && m.Kind != model.KindDeleted && m.Kind != model.KindUnsupported && m.Kind != model.KindWaiting && m.Kind != model.KindSticker {
 			// Announcements offer a forward button beside them, when there's room.
-			if bx := bubble.size.X + gtx.Dp(6); x+bx+gtx.Dp(34) <= w+margin {
+			if bx := bubble.size.X + gtx.Dp(sideBtnGap); x+bx+gtx.Dp(sideBtn) <= w+margin {
 				ft := op.Offset(image.Pt(bx, 0)).Push(gtx.Ops)
-				u.annForwardButton(gtx, m, cardH)
+				u.forwardButton(gtx, m, cardH)
 				ft.Pop()
 			}
 		}
+		u.layoutSideButtons(gtx, m, side, bubble.size, hovered)
 		t.Pop()
 	}
 	if sel {
@@ -922,7 +928,7 @@ func (u *UI) layoutBubble(gtx C, c *model.Chat, m *model.Message, tail bool, max
 	voCard := m.Kind == model.KindViewOnce && !m.Opened
 	framed := isImg || voCard
 	footerText, buttons := m.Footer, m.Buttons
-	if m.Kind == model.KindDeleted || m.Kind == model.KindUnsupported {
+	if m.Kind == model.KindDeleted || m.Kind == model.KindUnsupported || m.Kind == model.KindWaiting {
 		footerText, buttons = "", nil
 	}
 	if cb := cardButtons(m); len(cb) > 0 {
@@ -1021,6 +1027,9 @@ func (u *UI) layoutBubble(gtx C, c *model.Chat, m *model.Message, tail bool, max
 	case m.Kind == model.KindUnsupported:
 		text, textCol, italic = "This message couldn't load. Open the message on your phone to view it.", secondary, true
 		lead = iconW(icUnsupported, 19, secondary)
+	case m.Kind == model.KindWaiting:
+		text, textCol, italic = "Waiting for this message. This may take a while.", secondary, true
+		lead = iconW(icClock, 19, secondary)
 	case voCard:
 		text, textInset = "", gtx.Dp(6)
 		voc = record(cgtx, func(gtx C) D { return u.layoutViewOnceCard(gtx, m, 0, meta.size, bg, secondary) })
@@ -1139,11 +1148,7 @@ func (u *UI) layoutBubble(gtx C, c *model.Chat, m *model.Message, tail bool, max
 	var fwd part
 	if m.Forwarded && m.Kind != model.KindDeleted {
 		fwd = record(cgtx, func(gtx C) D {
-			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-				layout.Rigid(iconW(icForward, 16, secondary)),
-				layout.Rigid(layout.Spacer{Width: 4}.Layout),
-				layout.Rigid(u.label(13, "Forwarded", secondary, labelOpts{italic: true, maxLines: 1}).Layout),
-			)
+			return u.forwardedLabel(gtx, m, secondary)
 		})
 		contentW = max(contentW, fwd.size.X+2*textInset)
 	}
@@ -1257,6 +1262,7 @@ func (u *UI) layoutBubble(gtx C, c *model.Chat, m *model.Message, tail bool, max
 	}
 	if isImg {
 		u.layoutImage(gtx, image.Rect(0, y, imgW, y+imgH), m, u.gifImage(m, img, max(imgW, imgH)))
+		u.photoBadge(gtx, image.Rect(0, y, imgW, y+imgH), m)
 		func() {
 			t := op.Offset(image.Pt(0, y)).Push(gtx.Ops)
 			defer t.Pop()
@@ -1423,6 +1429,20 @@ func (u *UI) paintBubble(gtx C, w, h int, bg color.NRGBA, out, tail bool) {
 	paint.FillShape(gtx.Ops, bg, clip.Outline{Path: path.End()}.Op())
 }
 
+// forwardedLabel draws "Forwarded" above a forwarded message's content,
+// or "Forwarded many times" with a double arrow, like WhatsApp.
+func (u *UI) forwardedLabel(gtx C, m *model.Message, secondary color.NRGBA) D {
+	ic, txt := icForwardOne, "Forwarded"
+	if m.ForwardedMany {
+		ic, txt = icForward, "Forwarded many times"
+	}
+	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+		layout.Rigid(iconW(ic, 16, secondary)),
+		layout.Rigid(layout.Spacer{Width: 4}.Layout),
+		layout.Rigid(u.label(13, txt, secondary, labelOpts{italic: true, maxLines: 1}).Layout),
+	)
+}
+
 // layoutQuote draws a quoted message: a colored bar, the author and a
 // snippet, plus the quoted picture's thumbnail when it's loaded (qm).
 func (u *UI) layoutQuote(gtx C, q *model.Quote, bg, secondary color.NRGBA, width int, qm *model.Message) D {
@@ -1489,7 +1509,7 @@ func (u *UI) messageImage(m *model.Message, maxPx int) *imgEntry {
 	if u.blurred() {
 		return u.blurredImage(m)
 	}
-	if m.Media == model.MediaImage || m.Media == model.MediaSticker || wideLink(m) {
+	if (m.Media == model.MediaImage && u.photoWanted(m)) || m.Media == model.MediaSticker || wideLink(m) {
 		full := u.images.get("m:"+m.ChatID+"/"+m.ID, maxPx, func() []byte { return b.MediaData(m.ChatID, m.ID) })
 		if full.state == imgReady {
 			return full
@@ -1500,6 +1520,13 @@ func (u *UI) messageImage(m *model.Message, maxPx int) *imgEntry {
 		return u.images.get("t:"+m.ChatID+"/"+m.ID, maxPx, func() []byte { return thumb })
 	}
 	return nil
+}
+
+// photoWanted reports whether a picture's bubble shows the picture itself,
+// downloading it if needed: always unless Settings > Storage turned photos
+// off, and then once it was downloaded (by opening it in the viewer).
+func (u *UI) photoWanted(m *model.Message) bool {
+	return u.autoPhotos || m.FromMe || u.fileReady(m)
 }
 
 // blurredImage is messageImage in privacy mode: the thumbnail, or the
@@ -1550,6 +1577,20 @@ func (u *UI) layoutImage(gtx C, r image.Rectangle, m *model.Message, img *imgEnt
 		d := record(gtx, u.label(11.5, fmt.Sprintf("%d:%02d", m.Duration/60, m.Duration%60), rgb(0xffffff)).Layout)
 		d.at(gtx, r.Min.X+gtx.Dp(8), r.Max.Y-d.size.Y-gtx.Dp(6))
 	}
+}
+
+// photoBadge marks a picture that isn't downloaded (Settings > Storage
+// turned photos off) with a download button; opening it downloads it.
+func (u *UI) photoBadge(gtx C, r image.Rectangle, m *model.Message) {
+	if m.Media != model.MediaImage || u.photoWanted(m) {
+		return
+	}
+	c := r.Min.Add(r.Size().Div(2))
+	fillCircle(gtx, c, gtx.Dp(26), argb(0x000000, 0x80))
+	isz := gtx.Dp(26)
+	t := op.Offset(c.Sub(image.Pt(isz/2, isz/2))).Push(gtx.Ops)
+	drawIcon(gtx, icDownload, 26, rgb(0xffffff))
+	t.Pop()
 }
 
 // playButton draws a round play button centered on c.

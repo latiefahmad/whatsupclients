@@ -48,6 +48,9 @@ type UI struct {
 	dark bool
 	// doodles draws the wallpaper's doodles behind conversations.
 	doodles bool
+	// autoPhotos downloads pictures as they show (Settings > Storage);
+	// otherwise their thumbnails show until they're opened.
+	autoPhotos bool
 	// zoom scales the whole window (scale.go).
 	zoom zoomState
 	// voiceRate is the speed voice messages play at (files.go).
@@ -146,6 +149,11 @@ type UI struct {
 	filterMenu filterMenuState
 	split      splitState // the list column's width, or hidden (split.go)
 
+	// lock is App lock (applock.go), shared with the host's other UIs,
+	// and lockDlg its dialog.
+	lock    *appLock
+	lockDlg lockDialog
+
 	// Overlays: context menu, modal dialog, emoji picker, media viewer, toast.
 	ctx                     ctxMenu
 	reacts                  reactionsPopup // who reacted to a message (reactions.go)
@@ -155,6 +163,9 @@ type UI struct {
 	toastMsg                toastState
 	mouse                   image.Point // last pointer position, in content coordinates
 	mousePress              image.Point // primary press, for locating a clicked thumbnail
+	tipKey                  string      // hover tooltip showing (tip.go), or ""
+	tipText                 string
+	tipSince                time.Time
 	mediaChat, mediaGallery viewerViewport
 	mouseTag                struct{}
 	mouseDown               bool            // the primary button is down
@@ -220,6 +231,7 @@ type UI struct {
 		openSel, menuSel switcher[string]
 		chipSel          switcher[int]
 		order            chatOrder // rows sliding to new places
+		pick             chatPick  // select mode's picked chats (selectchats.go)
 	}
 
 	conv struct {
@@ -331,13 +343,16 @@ func New(b model.Backend) *UI {
 	u := &UI{th: newTheme(), now: timeNow, backend: b, auto: a, syncPct: -1, fetchLink: linkpreview.Fetch}
 	u.SetDark(true)
 	u.doodles = true
+	u.autoPhotos = true
 	u.zoom.pct = 100
 	u.voiceRate = 1
 	u.volume = 1
 	u.split.anim.snap(true)
+	u.lock = newAppLock(b)
 	if b != nil { // nil in some tests
 		u.applyTheme()
 		u.doodles = prefOn(b, prefDoodles)
+		u.autoPhotos = model.AutoDownload(b.Pref, model.MediaImage)
 		u.loadZoom()
 		u.loadVoiceRate()
 		u.loadVolume()
@@ -693,6 +708,17 @@ func (u *UI) layoutWindow(gtx C) D {
 		u.layoutToast(gtx)
 		return D{Size: sz}
 	}
+	u.autoLock(gtx)
+	if l := u.lock; l.locked && !u.lockSet() {
+		l.locked = false // turned off, or logged out from the lock screen
+	} else if l.locked {
+		u.applyFocus(gtx)
+		u.layoutLockScreen(gtx)
+		u.layoutDialog(gtx)
+		u.layoutToast(gtx)
+		u.trackMouse(gtx)
+		return D{Size: sz}
+	}
 	u.applyFocus(gtx)
 	u.expireMutes(gtx)
 	u.flushClipboard(gtx)
@@ -980,11 +1006,14 @@ func (u *UI) update(gtx C) {
 	}
 	for id, click := range u.sidebar.rows {
 		if click.Clicked(gtx) {
-			if c := u.chatByID(id); c != nil {
+			if u.sidebar.pick.on {
+				u.pickRow(id)
+			} else if c := u.chatByID(id); c != nil {
 				u.open(c)
 			}
 		}
 	}
+	u.pickActions(gtx)
 	if ms := u.mentionQuery(); ms == nil {
 		u.conv.mentionDismissed = ""
 	}
@@ -1013,6 +1042,7 @@ func (u *UI) update(gtx C) {
 		}
 		switch ev.(type) {
 		case widget.ChangeEvent:
+			u.touchLock()
 			if u.conv.composer.Text() != before {
 				u.reportComposerTyping()
 			}
@@ -1103,6 +1133,8 @@ func (u *UI) escape() {
 		u.msgInfo.open = false
 	case u.newChat.open():
 		u.newChatBack()
+	case u.sidebar.pick.on && u.page == pageChats:
+		u.endChatSelect()
 	case u.conv.selecting:
 		u.endSelect()
 	case u.conv.edit.msg != nil:
@@ -1177,6 +1209,7 @@ func (u *UI) applyEvents() {
 			if s := &u.settings; s.detail != 0 {
 				s.account, s.stale = a, true
 			}
+			u.autoPhotos = model.AutoDownload(u.backend.Pref, model.MediaImage)
 		case model.MediaEvent:
 			u.images.forget("m:" + e.ChatID + "/" + e.MsgID)
 			if e.ChatID == statusChatID {
@@ -1407,7 +1440,7 @@ func (u *UI) applyReceipt(e model.ReceiptEvent) {
 }
 
 // ShowOverlay opens a menu, picker or dialog for screenshots: "chatmenu",
-// "mute", "lists", "msgmenu", "stickermenu" (a received sticker's), "emoji", "sticker", "viewer", "forward", "reply", "replyphoto" (a reply to a photo), "linkpreview" (a link's preview
+// "mute", "lists", "msgmenu", "reactbar" (a hovered message's React button's), "stickermenu" (a received sticker's), "report" (Report's question for the last message received), "emoji", "sticker", "viewer", "forward", "reply", "replyphoto" (a reply to a photo), "linkpreview" (a link's preview
 // over the composer), "delete", "select", "edit" (your last message in the composer to edit), "edits" (an edited message's Edit history), "listpick" (a bot's list of choices: -ochat shop), "msginfo" (your last message's Message info), "votes" (the
 // first poll's or event's votes), "reactions" (who reacted to the first message with reactions), "attach", "poll", "contacts", "invite" (a demo group's invite link), "tray", "search" (the search panel, with
 // $WHATSUP_DEMO_SEARCH typed in), "membersearch"; the chat list's search "listsearch" (also
@@ -1420,7 +1453,8 @@ func (u *UI) applyReceipt(e model.ReceiptEvent) {
 // picker "slash", /kick's options "slashkick", /calc's answer as you type "slashcalc", a mention
 // in /schedule's message "slashschedule", the notes of commands run "slashrun", a scheduled
 // message and the AFK bar without their notes "scheduled", or ghost mode
-// turned on with /ghost "ghost".
+// turned on with /ghost "ghost". The chat list's Select chats "selectchats"; App lock's
+// dialog "applock" (setting it up) or "applockon", and its lock screen "lockscreen".
 // "graywarning" opens the acknowledgment for Keep deleted messages.
 // Menus open at (x, y) px in content coordinates.
 func (u *UI) ShowOverlay(name string, x, y int) {
@@ -1482,6 +1516,25 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 			u.menu.open = true
 		}
 		u.acctMenu.open = name != "menu"
+	case "selectchats":
+		// Select chats, with the second and third chats picked.
+		u.startChatSelect()
+		u.sidebar.pick.anim.snap(true)
+		for _, c := range u.chats[1:min(3, len(u.chats))] {
+			u.pickRow(c.ID)
+		}
+	case "applock", "applockon", "lockscreen":
+		// App lock's dialog, setting it up or once it's on, and the lock
+		// screen.
+		if name != "applock" {
+			u.backend.SetPref(prefAppLock, hashPassword("demo-password"))
+		}
+		if name == "lockscreen" {
+			u.lockNow()
+			u.lock.anim.snap(true)
+		} else {
+			u.openAppLock()
+		}
 	case "chatmenu":
 		if len(u.chats) > 1 {
 			u.openChatMenu(u.chats[1])
@@ -1500,6 +1553,14 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		if lastIn != nil {
 			u.openMessageMenu(lastIn)
 		}
+	case "reactbar":
+		if lastIn != nil {
+			u.openReactBar(lastIn)
+		}
+	case "report":
+		if lastIn != nil && u.selected != nil {
+			u.confirmReport(u.selected, lastIn)
+		}
 	case "stickermenu":
 		if sticker != nil {
 			u.openMessageMenu(sticker)
@@ -1513,9 +1574,14 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		if img != nil {
 			u.openViewer(img)
 		}
-	case "forward":
+	case "forward", "forwardpick":
 		if lastIn != nil {
 			u.openForward([]*model.Message{lastIn})
+		}
+		if name == "forwardpick" && len(u.chats) > 2 {
+			// Two chats picked, and the send bar up.
+			u.dialog.picked = []string{u.chats[0].ID, u.chats[2].ID}
+			u.dialog.bar.v = 1
 		}
 	case "reply":
 		if lastIn != nil {

@@ -211,6 +211,10 @@ Gotchas already found in the pinned version (v0.10.x):
   `fillViewOnce` gives the placeholder that media. While one is shown the window is kept
   out of screenshots (`desktop.BlockCapture`, `SetWindowDisplayAffinity` posted to the
   window's thread through the drop target's subclass).
+- Any other `events.UndecryptableMessage` (unless its sender marked it `decrypt-fail="hide"`)
+  is stored as a `KindWaiting` placeholder, "Waiting for this message". hypermeow sends a
+  retry receipt, and the decrypted copy that comes back under the same ID replaces it in
+  `putMessage` (and counts as new then); one that shows nothing drops it (`dropWaiting`).
 - Files dropped on the window come through an OLE drop target (`desktop.EnableDrop`).
   OLE wants it registered on the window's own thread, so the window is subclassed and
   the registration posted to it; the callbacks run on that thread and only queue.
@@ -259,7 +263,8 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    album.go), contact/group info panel (a person's
                    or business's sections in contactinfo.go), and the
                    overlays: context menus (popup.go), dialogs and toasts (dialog.go), emoji
-                   picker (emoji.go, data in the generated emojidata.go), media viewer
+                   picker (emoji.go, data in the generated emojidata.go, skin tones
+                   in skintone.go from the generated emojitones.go table), media viewer
                    (viewer.go) and the volume slider of videos, statuses and voice
                    messages (volume.go, an app preference); the send view for picked, pasted and dropped files
                    (sendview.go), its photo editor (mediaedit.go) and the rendering of
@@ -316,8 +321,9 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    line as fit, in stickerrow.go; a text of one to three emojis
                    alone, drawn big without a bubble like a sticker, in jumbo.go; the New chat panel and the
                    New group flow (also "Create a similar group") in newchat.go; the settings
-                   pages (profile, account, privacy, chats, shortcuts, help) in
-                   settingsdetail.go; the window's zoom (Settings > General > Font size,
+                   pages (profile, account, privacy, chats, media, storage, shortcuts, help) in
+                   settingsdetail.go (their search in settings.go; media rows and storage
+                   toggles in settingsmedia.go, devices listed through winmm); the window's zoom (Settings > General > Font size,
                    Ctrl with +, - and 0, and the bubble that shows it) in scale.go; privacy
                    mode (names and messages drawn as bars, pictures blurred, shown under
                    the pointer; the title bar's eye and Ctrl+Shift+P, once the Privacy mode
@@ -345,6 +351,9 @@ internal/wa/       hypermeow backend: pairing, events, SQLite message store, nam
                    payload and worded when read, in system.go;
                    each person's receipts of your messages (wz_receipts, for Message info;
                    a group message's ticks wait for every member) in receipts.go;
+                   contacts' abouts (cached in wz_meta for the forward picker, with when
+                   each was set from a raw usync) and a chat's Advanced chat privacy
+                   (LIMIT_SHARING, kept with its info; it can't be set) in about.go;
                    a chat's disappearing-messages timer (wz_chats.ephemeral, for the
                    avatars' timer badge) in timer.go;
                    snippets (wz_snippets, their media copied to snippet-media/) in snippets.go
@@ -516,8 +525,8 @@ go run ./cmd/screenshot -compare shot.webp -crop 0,0,2000,1250 -scale 1.22 -view
 go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -right \
     -scale 1.5616 -view info -infoscroll 7 -infooffset 40
 # Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, scheduled, ghost (/ghost; open a
-# group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, reply, replyphoto, linkpreview, invite,
-# delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
+# group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, forwardpick, reply, replyphoto, linkpreview, invite,
+# delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
 # privacystatus, privacycommunities); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with
