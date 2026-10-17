@@ -9,6 +9,33 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.8.0] - 2026-10-17
+
+### 🚀 Updates
+
+- **Smaller downloads** — updating from one of the last five releases
+  now downloads only what changed: a patch of a few percent of the exe,
+  verified with checksums and its signature, then rebuilt from your
+  running exe. Anything unexpected falls back to the full download.
+- **Automatic updates** — with the toggle in Settings > Help on, the
+  app checks a minute after it starts, then every few hours. A new
+  version downloads and installs itself in the background, and the app
+  restarts when no window is open (tray only); with a window open it
+  offers to restart now, once. The toggle is on by default, so updates
+  just happen; turn it off in Settings > Help.
+- **Restart to update** — an automatic update doesn't interrupt: the
+  installed version runs the next time the app starts, and the Help
+  page's row restarts into it whenever you want.
+
+### 🔧 Under the hood
+
+- Update downloads are patch-aware end to end: patches are made from
+  the last five releases' executables at release time, signed together
+  with the checksums, and applied with a bspatch of the app's own. A
+  release without a usable patch still updates through the full exe.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.7.0...v1.8.0
+
 ## [v1.7.0] - 2026-10-16
 
 ### 💬 Chats

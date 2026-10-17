@@ -13,7 +13,8 @@ Versi Go mengikuti `go.mod`. Kedua target menerapkan patch go-text
 | `WhatsUpClients-Setup.exe` | Installer Windows (Inno Setup, `installer/whatsup.iss`) |
 | `WhatsUpClients-windows-amd64.exe` | Aplikasi Windows portable, tanpa jendela console; juga file yang diunduh oleh tombol update |
 | `WhatsUpClients-linux-amd64` | Executable Linux |
-| `SHA256SUMS`, `SHA256SUMS.sig` | Checksum semua file di atas, dan tanda tangan ed25519-nya (hanya di release) |
+| `SHA256SUMS`, `SHA256SUMS.sig` | Checksum semua file di atas dan patch update rilis ini, dan tanda tangan ed25519-nya (hanya di release) |
+| `LICENSE` | Lisensi aplikasi (MIT) (hanya di release) |
 
 Unduh hasil dari bagian **Artifacts** pada run yang berhasil. Artefak disimpan
 selama 14 hari; aset yang sudah dilampirkan ke GitHub Release tetap tersimpan.
@@ -28,27 +29,30 @@ code signing Windows belum disediakan oleh workflow ini.
 
 Installer memasang aplikasi untuk user yang sedang login saja, ke
 `%LocalAppData%\Programs\WhatsUpClients`, tanpa meminta hak admin. Installer membuat
-shortcut di Start Menu (opsional di Desktop) dan mendaftarkan uninstaller di
+shortcut di Start Menu (opsional di Desktop), dan mendaftarkan uninstaller di
 **Settings > Apps**. Uninstaller menutup aplikasi, menghapus entri registry yang
 dibuat aplikasi sendiri (notifikasi dan start at login), lalu menanyakan apakah
 chat dan sesi WhatsApp (`%AppData%\WhatsUpClients`) ikut dihapus. Defaultnya tidak.
 
 Untuk membangunnya secara lokal, pasang [Inno Setup 6](https://jrsoftware.org/isinfo.php),
 build exe ke `bin/dist/WhatsUpClients-windows-amd64.exe`, lalu jalankan
-`iscc /DAppVersion=1.0.0 installer\whatsup.iss`.
+`iscc /DAppVersion=0.10.0 installer\\whatsup.iss`.
 
 ## Update dari dalam aplikasi
 
 **Settings > Help** menampilkan versi aplikasi dan tombol **Check for updates**.
-Aplikasi juga memeriksa sendiri dengan diam-diam: sekali sesaat setelah
-dijalankan, lalu sehari sekali. Pemeriksaan hanya mengambil metadata rilis
-GitHub (tanpa data pengguna); unduhan hanya terjadi kalau pengguna memilih
-**Update now**. Kalau ada versi yang lebih baru, aplikasi menawarkan dialog
-**Update now** atau **Later**. **Later** melewatkan versi itu sampai pengguna
-memeriksa sendiri dari Settings > Help, sedangkan tombol Help itu sendiri
-mengunduh exe untuk sistem ini, mencocokkannya dengan `SHA256SUMS`, memeriksa
-tanda tangan `SHA256SUMS.sig` dengan kunci publik di `internal/update`,
-menukar exe yang sedang berjalan, lalu me-restart aplikasi.
+Kalau ada versi yang lebih baru, tombol yang sama mengunduh exe untuk sistem ini,
+mencocokkannya dengan `SHA256SUMS`, memeriksa tanda tangan `SHA256SUMS.sig` dengan
+kunci publik di `internal/update`, menukar exe yang sedang berjalan, lalu
+me-restart aplikasi.
+
+Di bawahnya ada toggle **Automatic updates** (default menyala). Selama menyala,
+aplikasi mengecek sendiri satu menit setelah mulai, lalu setiap 4 jam. Rilis baru
+diunduh dan dipasang dengan cara yang sama, tapi aplikasi tidak langsung
+me-restart: versi baru jalan saat aplikasi dibuka lagi, baris di Settings > Help
+menawarkan restart sekarang, dan kalau tidak ada jendela yang terbuka (aplikasi
+hanya di tray), aplikasi me-restart sendiri di background. Cek otomatis yang gagal
+(misalnya offline) tidak menampilkan apa-apa.
 
 - Hanya build dari tag (`-X main.version=v1.2.3`) yang bisa update. Build lain,
   dan prerelease seperti `v1.2.3-rc1`, adalah development build.
@@ -57,19 +61,43 @@ menukar exe yang sedang berjalan, lalu me-restart aplikasi.
 - Update butuh folder exe yang bisa ditulis. Installer memasang ke folder seperti
   itu; untuk versi portable, letakkan exe di folder milik user.
 
+### Patch update
+
+Supaya update tidak mengunduh seluruh exe (~42 MB), job release membuat patch
+bsdiff dari exe lima rilis terakhir yang sudah dipublikasikan ke exe rilis baru,
+untuk Windows dan Linux, dengan `cmd/mkpatch`. Patch antar-rilis biasanya sekitar
+3% dari ukuran exe (v0.27.0 ke v0.28.0: 1,3 MB). Patch ikut masuk ke `SHA256SUMS`
+rilis baru sebelum ditandatangani.
+
+Patch tidak dilampirkan ke rilisnya, supaya halaman rilis hanya berisi file yang
+diunduh orang. Semuanya ada di satu prerelease bertag `update-patches`, yang dibuat
+job release kalau belum ada, dengan nama `<exe>.from-v1.2.3.to-v1.3.0.bsdiff`.
+Prerelease tidak pernah jadi *latest release*, jadi tidak ditawarkan sebagai update.
+Setiap rilis menghapus patch ke versi yang bukan rilis terbaru dan bukan draft,
+karena tidak ada yang memakainya lagi. Jangan hapus prerelease itu; kalau terhapus,
+rilis berikutnya membuatnya lagi, dan sampai saat itu update mengunduh exe lengkap.
+
+Kalau ada patch dari versi yang sedang berjalan ke rilis terbaru, aplikasi mengunduh patch
+itu, mencocokkannya dengan `SHA256SUMS`, lalu menyusun exe baru dari exe yang
+sedang berjalan. Exe hasilnya dicek dengan checksum exe lengkap, sama seperti
+unduhan biasa. Kalau ada yang tidak beres (tidak ada patch untuk versi itu karena
+user melompati beberapa rilis, patch rusak, atau exe lokal sudah diubah, misalnya
+oleh antivirus), aplikasi mengunduh exe lengkap.
+
+`cmd/mkpatch` adalah modul Go tersendiri (`go.mod`-nya sendiri), jadi library
+bsdiff-nya tidak masuk ke aplikasi. Aplikasi menerapkan patch dengan bspatch
+miliknya sendiri (`internal/update/bspatch.go`), memakai bzip2 dari standard
+library. Untuk membuat patch secara manual:
+`cd cmd/mkpatch && go run . <exe lama> <exe baru> <patch>`.
+
+Patch hanya kecil kalau build-nya bisa direproduksi. Jangan hapus `-trimpath`,
+dan jangan kompres exe (misalnya dengan UPX).
+
 ### Kunci tanda tangan
 
 Job release menandatangani `SHA256SUMS` dengan `cmd/signrelease` memakai secret
 `RELEASE_SIGNING_KEY` (seed ed25519 dalam base64). Tanpa secret itu job release
 gagal. Kunci publiknya ada di `publicKey` (`internal/update/update.go`).
-
-Isi secret dengan **isi file hasil `-keygen` (seed privat)**, bukan kunci
-publik yang dicetaknya. Keduanya sama-sama 32 byte base64, jadi kunci publik
-yang kepaste pun lolos dan menandatangani dengan kunci yang salah — tanpa ada
-yang gagal sampai pengguna tidak bisa update. CI mencegahnya: step Sign
-checksums membandingkan kunci hasil sign dengan `publicKey` di kode dan gagal
-kalau beda. Ritual tiap rilis: pastikan baris log `signed ... with public key`
-sama dengan `publicKey` di kode.
 
 Simpan cadangan kunci privat di tempat aman. Kalau kunci hilang atau bocor, buat
 kunci baru (`go run ./cmd/signrelease -keygen <file>`, yang mencetak kunci publik
@@ -81,7 +109,7 @@ satu rilis itu secara manual.
 
 1. Tulis section versi baru di `CHANGELOG.md` (paling atas, `## [vX.Y.Z] - YYYY-MM-DD`).
    Workflow menerbitkannya verbatim sebagai release notes, dan gagal kalau
-   section-nya tidak ada — jadi changelog selalu ditulis sebelum tag.
+   section-nya tidak ada - jadi changelog selalu ditulis sebelum tag.
 2. Regenerasi snapshot landing page: `node build-releases.js`
    (menulis `releases.js`, sumber data section *Rilis* di halaman;
    tanpa ini LP tetap menampilkan versi lama).
@@ -89,8 +117,8 @@ satu rilis itu secara manual.
 4. Pada commit yang akan dirilis, buat dan push tag versi baru, misalnya:
 
    ```sh
-   git tag -a v1.0.0 -m "WhatsUpClients v1.0.0"
-   git push origin v1.0.0
+   git tag -a v1.8.0 -m "WhatsUpClients v1.8.0"
+   git push origin v1.8.0
    ```
 
 5. Setelah kedua build berhasil, workflow langsung membuat **release yang

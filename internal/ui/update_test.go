@@ -50,50 +50,33 @@ func TestUpdateRows(t *testing.T) {
 	}
 }
 
-func TestUpdateOffer(t *testing.T) {
-	u := New(mock.New())
+func TestAutoUpdateRows(t *testing.T) {
+	b := mock.New()
+	u := New(b)
 	u.Start(func() {})
+	u.applyEvents()
+	u.ShowPage("help")
 	h := &host{o: Options{Version: "v0.9.0", Relaunch: []string{}}, reqs: make(chan request, 16)}
-	h.b = u.backend
 	h.upd.h, h.upd.exe = h, "WhatsUpClients.exe"
 	u.host = h
 
-	// Nothing offered while no release is known.
-	u.offerUpdate()
-	if u.dialog.isOpen() {
-		t.Fatal("offered without a release")
+	if r := settingRowByKey(t, u, prefAutoUpdate); !r.on {
+		t.Fatal("automatic updates are off by default")
+	}
+	settingRowByKey(t, u, prefAutoUpdate).run()
+	if b.Pref(prefAutoUpdate) != "off" {
+		t.Fatal("the toggle didn't turn automatic updates off")
+	}
+	h.b = b
+	h.autoUpdate() // off: it doesn't start a check
+	if step, _, _, _, _ := h.upd.state(); step != updIdle {
+		t.Errorf("with automatic updates off, a tick moved the update to %d", step)
 	}
 
-	h.upd.step, h.upd.rel = updAvailable, &update.Release{Version: "v0.10.0"}
-	u.offerUpdate()
-	if !u.dialog.isOpen() || !strings.Contains(u.dialog.title, "v0.10.0") || len(u.dialog.buttons) != 2 {
-		t.Fatalf("offer: %+v", u.dialog)
-	}
-
-	// Closing it without answering doesn't open it again.
-	u.dialog = dialogState{}
-	u.offerUpdate()
-	if u.dialog.isOpen() {
-		t.Fatal("offered again after dismissing it")
-	}
-
-	// "Later" skips the version, even across a fresh check.
-	h.upd.offered = ""
-	h.upd.step, h.upd.rel = updAvailable, &update.Release{Version: "v0.10.0"}
-	u.dialog = dialogState{kind: dialogConfirm, title: "Update to v0.10.0 is available",
-		buttons: []dialogButton{{label: "Later", run: func() { h.b.SetPref(prefUpdateSkipped, "v0.10.0") }}}}
-	u.dialog.buttons[0].run()
-	u.dialog = dialogState{}
-	u.offerUpdate()
-	if u.dialog.isOpen() {
-		t.Fatal("offered a skipped version again")
-	}
-
-	// A newer release is offered despite the skip.
-	h.upd.offered = ""
-	h.upd.step, h.upd.rel = updAvailable, &update.Release{Version: "v0.11.0"}
-	u.offerUpdate()
-	if !u.dialog.isOpen() || !strings.Contains(u.dialog.title, "v0.11.0") {
-		t.Fatalf("newer release not offered: %+v", u.dialog)
+	u.settings.stale = true
+	h.upd.step, h.upd.rel = updReady, &update.Release{Version: "v0.10.0"}
+	r := settingRowByKey(t, u, "update")
+	if !strings.Contains(r.title, "Restart to update to v0.10.0") || r.run == nil {
+		t.Errorf("ready row: %q", r.title)
 	}
 }

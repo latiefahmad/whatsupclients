@@ -116,7 +116,7 @@ func Run(b model.Backend, o Options) error {
 		h.openWindow()
 	}
 	b.Start(h.poke)
-	go h.upd.autoCheck()
+	h.startAuto()
 	for {
 		select {
 		case e := <-h.events:
@@ -127,7 +127,7 @@ func Run(b model.Backend, o Options) error {
 				if err != nil {
 					return err
 				}
-				if h.quitting || !h.background() {
+				if h.quitting || !h.background() || h.updateReady() {
 					return nil
 				}
 			}
@@ -210,6 +210,7 @@ const (
 	reqSwitch                    // open another account
 	reqAddAccount                // link a new account
 	reqRedraw                    // an update moved on: show it
+	reqAutoUpdate                // time for an automatic update check
 	reqRestart                   // an update is in place: start it and quit
 )
 
@@ -330,6 +331,9 @@ func (h *host) handle(r request) bool {
 			h.u.settings.stale = true
 			h.win.Invalidate()
 		}
+		return h.updateReady()
+	case reqAutoUpdate:
+		h.autoUpdate()
 	case reqRestart:
 		return h.restart()
 	}
