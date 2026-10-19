@@ -68,7 +68,7 @@ func main() {
 	// window shows. Written before Lock, so the show it triggers finds it.
 	linkFile := filepath.Join(lockDir, "pending-link")
 	for _, a := range flag.Args() {
-		if _, _, ok := ui.ParseChatLink(a); ok {
+		if ui.ParseAppLink(a) {
 			_ = os.MkdirAll(lockDir, 0o700)
 			f, err := os.OpenFile(linkFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 			if err == nil {
@@ -86,6 +86,13 @@ func main() {
 	}
 	if desktop.EnsureProtocol() {
 		log.Println("registered whatsup:// chat links")
+	}
+	if version != "" && desktop.LinksRegistered() {
+		relaunch := []string{}
+		if *dataDir != defaultDataDir() {
+			relaunch = []string{"-data", *dataDir}
+		}
+		desktop.RegisterLinks(relaunch)
 	}
 	if exe, err := os.Executable(); err == nil && version != "" {
 		update.Cleanup(exe)

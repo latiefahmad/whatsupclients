@@ -67,11 +67,16 @@ Type: files; Name: "{app}\WhatsUpClients.exe.old"
 Type: files; Name: "{app}\WhatsUpClients.exe.new"
 
 [Registry]
-; What the app writes for itself: notifications (internal/notify) and
-; starting at login (internal/desktop). Removed on uninstall only.
+; What the app writes for itself: notifications (internal/notify),
+; starting at login and handling whatsapp: links (internal/desktop).
+; Removed on uninstall only; the whatsapp key itself goes in [Code], only
+; when it starts this app.
 Root: HKCU; Subkey: "Software\Classes\AppUserModelId\WhatsUpClients.Desktop"; ValueType: none; Flags: uninsdeletekey dontcreatekey
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{EC56F81C-5D4A-4D8C-8044-761DDA20EDC8}"; ValueType: none; Flags: uninsdeletekey dontcreatekey
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "WhatsUpClients"; ValueType: none; Flags: uninsdeletevalue dontcreatekey
+Root: HKCU; Subkey: "Software\Classes\WhatsUpClients.Link"; ValueType: none; Flags: uninsdeletekey dontcreatekey
+Root: HKCU; Subkey: "Software\WhatsUpClients"; ValueType: none; Flags: uninsdeletekey dontcreatekey
+Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueName: "WhatsUpClients"; ValueType: none; Flags: uninsdeletevalue dontcreatekey
 ; Chat links (whatsup://), mirrored from desktop.EnsureProtocol so the
 ; handler exists before the first run. Removed on uninstall only.
 Root: HKCU; Subkey: "Software\Classes\whatsup"; ValueType: string; ValueName: ""; ValueData: "URL:WhatsUp Clients Chat Link"; Flags: uninsdeletekey
@@ -84,10 +89,14 @@ Root: HKCU; Subkey: "Software\Classes\whatsup\shell\open\command"; ValueType: st
 // installing again doesn't mean linking again.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  Data: String;
+  Data, Cmd: String;
 begin
   if CurUninstallStep <> usPostUninstall then
     Exit;
+  // whatsapp: links, if they start this app (another may have the key).
+  if RegQueryStringValue(HKCU, 'Software\Classes\whatsapp\shell\open\command', '', Cmd) and
+     (Pos('whatsupclients.exe', Lowercase(Cmd)) > 0) then
+    RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Classes\whatsapp');
   Data := ExpandConstant('{userappdata}\WhatsUpClients');
   if not DirExists(Data) then
     Data := ExpandConstant('{userappdata}\WazzapClients');

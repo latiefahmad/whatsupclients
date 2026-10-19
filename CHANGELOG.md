@@ -9,6 +9,24 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.8.1] - 2026-10-19
+
+- **WhatsApp links open here** — `wa.me`, `api.whatsapp.com/send` and
+  `whatsapp://send` links open the number's chat with the link's text in
+  the composer, from a browser or another app. Group invites
+  (`chat.whatsapp.com`), channel links, business message links
+  (`wa.me/message`) and contact QR links (`wa.me/qr`) open their chat,
+  group or channel, or show the channel to follow first; a link that names
+  no chat asks which one to send it to. On Windows the app registers
+  itself as the handler of `whatsapp:` links and offers a bar above the
+  chat list (and a row in Settings > General) until you pick it in
+  Settings > Default apps.
+- **Link previews load with a spinner** — a link's preview now shows a
+  loading card while it's fetched, with a ✕ to cancel, instead of
+  appearing a moment later.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.8.0...v1.8.1
+
 ## [v1.8.0] - 2026-10-17
 
 ### 🚀 Updates

@@ -1,12 +1,10 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.8.0",
-  "date": "2026-10-17",
+  "ver": "v1.8.1",
+  "date": "2026-10-19",
   "items": [
-    "**Smaller downloads** — updating from one of the last five releases now downloads only what changed: a patch of a few percent of the exe, verified with checksums and its signature, then rebuilt from your running exe. Anything unexpected falls back to the full download.",
-    "**Automatic updates** — with the toggle in Settings > Help on, the app checks a minute after it starts, then every few hours. A new version downloads and installs itself in the background, and the app restarts when no window is open (tray only); with a window open it offers to restart now, once. The toggle is on by default, so updates just happen; turn it off in Settings > Help.",
-    "**Restart to update** — an automatic update doesn't interrupt: the installed version runs the next time the app starts, and the Help page's row restarts into it whenever you want.",
-    "Update downloads are patch-aware end to end: patches are made from the last five releases' executables at release time, signed together with the checksums, and applied with a bspatch of the app's own. A release without a usable patch still updates through the full exe."
+    "**WhatsApp links open here** — `wa.me`, `api.whatsapp.com/send` and `whatsapp://send` links open the number's chat with the link's text in the composer, from a browser or another app. Group invites (`chat.whatsapp.com`), channel links, business message links (`wa.me/message`) and contact QR links (`wa.me/qr`) open their chat, group or channel, or show the channel to follow first; a link that names no chat asks which one to send it to. On Windows the app registers itself as the handler of `whatsapp:` links and offers a bar above the chat list (and a row in Settings > General) until you pick it in Settings > Default apps.",
+    "**Link previews load with a spinner** — a link's preview now shows a loading card while it's fetched, with a ✕ to cancel, instead of appearing a moment later."
   ]
 };

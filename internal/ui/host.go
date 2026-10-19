@@ -449,8 +449,9 @@ func (h *host) openLinks() {
 	}
 	os.WriteFile(h.o.LinkFile, nil, 0o600)
 	for _, line := range strings.Split(string(data), "\n") {
-		if phone, text, ok := ParseChatLink(line); ok {
-			h.u.openChatLink(phone, text)
+		line = strings.TrimSpace(line)
+		if line != "" {
+			h.u.openAppLink(line)
 		}
 	}
 }

@@ -136,10 +136,15 @@ type UI struct {
 
 	// cardPhone is the number of a shared contact whose chat opens once
 	// the backend has looked it up, and cardPhoneName their name.
-	cardPhone, cardPhoneName string
+	cardPhone, cardPhoneName, cardPhoneText string
+
+	linkBar linkBar // asks to open WhatsApp links here (applink.go)
 	// linkPhone is the number of a chat link (wa.me, whatsup://) whose
 	// chat opens once looked up, and linkText the message it prefills.
 	linkPhone, linkText string
+	// resolving is the code of the link ResolveLink is looking up, and
+	// followed a channel followed from a link, opened once it's listed.
+	resolving, followed string
 
 	files  fileState   // documents and audio on disk
 	voice  voiceState  // the audio message playing
@@ -160,6 +165,7 @@ type UI struct {
 	dialog                  dialogState
 	picker                  emojiPicker
 	viewer                  mediaViewer
+	picView                 picView // a profile picture shown big (photoview.go)
 	toastMsg                toastState
 	mouse                   image.Point // last pointer position, in content coordinates
 	mousePress              image.Point // primary press, for locating a clicked thumbnail
@@ -196,6 +202,7 @@ type UI struct {
 
 	newChat newChatState // the New chat panel over the chat list
 	slash   slashState   // slash commands and their notes (slash.go)
+	codes   shortcodes   // :emoji: shortcodes over the composer (shortcode.go)
 	// Extra features turned on (extras.go); slash commands are slash.on.
 	adminMention, rawPhotos, editHistory, keepDeleted, viewOnceReplay bool
 	// captureBlocked keeps the window out of screenshots (viewonce.go).
@@ -736,6 +743,7 @@ func (u *UI) layoutWindow(gtx C) D {
 	u.layoutStatusText(gtx)
 	u.layoutGallery(gtx)
 	u.layoutViewer(gtx)
+	u.layoutPicView(gtx)
 	if u.picker.shown() && (u.picker.mode == pickReaction || u.picker.mode == pickMedia) {
 		u.layoutPicker(gtx, image.Point{}, gtx.Constraints.Max.X)
 	}
@@ -933,6 +941,7 @@ func (u *UI) update(gtx C) {
 			u.escape()
 		}
 	}
+	u.updateGroupEdit(gtx)
 	u.updateMenu(gtx)
 	u.updateFilterMenu(gtx)
 	u.galleryUpdate(gtx)
@@ -1033,6 +1042,7 @@ func (u *UI) update(gtx C) {
 	u.ctrlEnterKeys(gtx)
 	u.slashKeys(gtx)
 	u.mentionKeys(gtx)
+	u.shortcodeKeys(gtx)
 	for {
 		before := u.conv.composer.Text()
 		ev, ok := u.conv.composer.Update(gtx)
@@ -1041,6 +1051,7 @@ func (u *UI) update(gtx C) {
 		}
 		switch ev.(type) {
 		case widget.ChangeEvent:
+			u.completeShortcode(before)
 			u.touchLock()
 			if u.conv.composer.Text() != before {
 				u.reportComposerTyping()
@@ -1089,6 +1100,8 @@ func (u *UI) escape() {
 		u.closeReactions()
 	case u.dialog.isOpen():
 		u.closeDialog()
+	case u.picView.isOpen():
+		u.closePicView()
 	case u.status.text.isOpen():
 		u.closeStatusText()
 	case u.picker.open:
@@ -1112,6 +1125,8 @@ func (u *UI) escape() {
 		u.conv.mentionDismissed = string([]rune(u.conv.composer.Text())[ms.start:ms.end])
 	case u.slashShown(u.slashQuery()):
 		u.slash.dismissed, u.slash.problem = u.conv.composer.Text(), ""
+	case u.shortcodeQuery() != nil:
+		u.dismissShortcode()
 	case len(u.attach.files) > 0:
 		// The send view: stop typing, put the tool down, drop the
 		// selection, then close.
@@ -1126,6 +1141,8 @@ func (u *UI) escape() {
 		default:
 			u.closeSendView(false)
 		}
+	case u.info.edit.field != 0:
+		u.cancelGroupEdit()
 	case u.search.open:
 		u.search.open = false
 	case u.msgInfo.open:
@@ -1144,6 +1161,10 @@ func (u *UI) escape() {
 		u.status.viewer.close()
 	case u.page == pageSettings && u.settings.detail != 0:
 		u.settingsBack()
+	case u.info.open:
+		u.info.open = false
+	case u.selected != nil:
+		u.closeChat()
 	}
 }
 
@@ -1226,6 +1247,8 @@ func (u *UI) applyEvents() {
 			if !u.cardPhoneEvent(e) && !u.linkPhoneEvent(e) {
 				u.phoneEvent(e)
 			}
+		case model.LinkEvent:
+			u.linkResolved(e)
 		case model.GroupCreatedEvent:
 			u.groupCreated(e)
 		case model.DeletedEvent:
@@ -1263,6 +1286,7 @@ func (u *UI) applyEvents() {
 		case model.ChannelsEvent:
 			u.channels = u.backend.Channels()
 			u.suggested = u.backend.SuggestedChannels()
+			u.channelsChanged()
 		case model.CommunitiesEvent:
 			u.setCommunities(u.backend.Communities())
 		}
@@ -1933,11 +1957,38 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 	case "encryption":
 		u.openEncryption(u.selected, u.selected.Name)
 		u.applyEvents()
+	case "groupname", "groupdesc", "groupphoto":
+		// A group's info being edited (groupedit.go).
+		u.openInfo(u.selected.ID)
+		u.info.anim.snap(true)
+		info := u.backend.Info(u.selected.ID)
+		switch name {
+		case "groupname":
+			u.startGroupEdit(u.selected, info, editGroupName)
+		case "groupdesc":
+			u.startGroupEdit(u.selected, info, editGroupDesc)
+		default:
+			u.ctx = ctxMenu{kind: ctxInfoPhoto, chatID: u.selected.ID, at: u.mouse}
+		}
 	case "addmember":
 		u.openAddMembers(u.selected)
+	case "linkbar":
+		// The bar that asks to open WhatsApp links here (applink.go).
+		u.linkBar.demo = true
+	case "channellink":
+		// The demo backend's code of a suggested channel's link.
+		u.openAppLink("https://whatsapp.com/channel/DemoChannelBola")
 	case "invitelink":
 		u.openInviteLink(u.selected.ID)
 		u.applyEvents()
+	case "picview":
+		// The open chat's picture, shown big.
+		kind := avatarPerson
+		if u.selected.IsGroup {
+			kind = avatarGroup
+		}
+		u.openPicView(u.selected.ID, u.selected.Name, kind, image.Rectangle{})
+		u.picView.anim.snap(true)
 	case "perms", "starred", "changes":
 		// The info panel's pages.
 		u.openInfo(u.selected.ID)

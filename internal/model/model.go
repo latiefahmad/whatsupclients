@@ -973,6 +973,8 @@ const (
 	GroupApproval
 	// GroupName renames the group to Text.
 	GroupName
+	// GroupPhoto sets the group's picture to Photo (nil removes it).
+	GroupPhoto
 )
 
 // GroupRequest is a change to a group you administer (Backend.ManageGroup).
@@ -987,6 +989,8 @@ type GroupRequest struct {
 	On      bool
 	Text    string
 	Invite  *GroupInvite
+	// Photo is a square JPEG, for GroupPhoto.
+	Photo []byte
 }
 
 // GroupInvite is an invitation to join a group, which WhatsApp hands out
@@ -1058,6 +1062,31 @@ type JoinedEvent struct {
 	Err       string
 }
 
+// LinkKind is a kind of WhatsApp link only the server can resolve
+// (Backend.ResolveLink).
+type LinkKind int
+
+const (
+	LinkChannel  LinkKind = iota // a channel's invite: https://whatsapp.com/channel/<code>
+	LinkBusiness                 // a business's message link: https://wa.me/message/<code>
+	LinkContact                  // a contact's QR link: https://wa.me/qr/<code>
+)
+
+// LinkEvent answers Backend.ResolveLink. ID is the chat (a person or a
+// business) or channel the link led to; for a channel, Channel is a copy
+// of it, from the link, to show before it is followed. Err says why the
+// link couldn't be resolved.
+type LinkEvent struct {
+	Kind        LinkKind
+	Code        string // as passed to ResolveLink
+	Err         string
+	ID          string
+	Name        string // when the chat isn't in the list yet
+	Text        string // a business's message link's message
+	Description string // a channel's
+	Channel     *Channel
+}
+
 // DeletedEvent reports that messages were removed from a chat (deleted for
 // you, or the chat was cleared). IDs is nil when the whole chat was cleared.
 type DeletedEvent struct {
@@ -1081,6 +1110,7 @@ func (ChannelsEvent) isEvent()     {}
 func (CommunitiesEvent) isEvent()  {}
 func (NoticeEvent) isEvent()       {}
 func (PhoneEvent) isEvent()        {}
+func (LinkEvent) isEvent()         {}
 func (GroupCreatedEvent) isEvent() {}
 func (StickersEvent) isEvent()     {}
 func (DeletedEvent) isEvent()      {}
@@ -1311,6 +1341,10 @@ type Backend interface {
 	// after https://chat.whatsapp.com/) in the background; an InviteEvent
 	// answers.
 	GroupInvite(code string)
+	// ResolveLink looks up the code of a channel, business message or
+	// contact QR link (the part after /channel/, /message/ or /qr/) in
+	// the background; a LinkEvent answers.
+	ResolveLink(kind LinkKind, code string)
 	// JoinGroup joins the group of an invite link's code, or asks its
 	// admins to let you in, in the background; a JoinedEvent answers.
 	JoinGroup(code string)
@@ -1353,6 +1387,11 @@ type Backend interface {
 	// or nil. A missing or stale picture is fetched in the background and
 	// announced with an AvatarEvent. Safe to call from any goroutine.
 	Avatar(id string) []byte
+	// ProfilePhoto downloads the full-size profile picture of a chat or
+	// user (Avatar is a small preview) and returns it, or nil when there
+	// is none or it can't be fetched. It blocks: call it off the UI
+	// goroutine.
+	ProfilePhoto(id string) []byte
 	// MediaData returns a downloaded image or sticker, or nil. Missing media
 	// is downloaded in the background and announced with a MediaEvent. Safe
 	// to call from any goroutine.

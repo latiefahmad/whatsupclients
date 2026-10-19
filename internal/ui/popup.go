@@ -134,6 +134,7 @@ const (
 	ctxStatusMenu  // the Status page's ⋮
 	ctxGroupPhoto  // the new group's picture
 	ctxGroupTimer  // the new group's disappearing messages
+	ctxInfoPhoto   // a group's picture in its info panel (groupedit.go)
 	ctxCommunity   // the announcements' groups (chatID is the community's)
 	ctxConv        // the open chat's ⋮ menu
 	ctxTimer       // a chat's disappearing message timers
@@ -398,6 +399,10 @@ func (u *UI) layoutCtxMenu(gtx C) {
 		case ctxGroupPhoto:
 			if u.newChat.step == ncGroup {
 				items = u.groupPhotoItems()
+			}
+		case ctxInfoPhoto:
+			if u.info.open {
+				items = u.infoPhotoItems(m.chatID)
 			}
 		case ctxGroupTimer:
 			if u.newChat.step == ncGroup {

@@ -3,7 +3,6 @@ package ui
 import (
 	"image"
 	"image/color"
-	"os"
 	"strings"
 
 	"gioui.org/font"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/latiefahmad/whatsupclients/internal/filepick"
 	"github.com/latiefahmad/whatsupclients/internal/model"
-	"github.com/latiefahmad/whatsupclients/internal/photo"
 	"github.com/latiefahmad/whatsupclients/internal/ui/icon"
 )
 
@@ -194,9 +192,9 @@ func (u *UI) updateNewChat(gtx C) {
 			break
 		}
 		if _, ok := ev.(widget.SubmitEvent); ok && nc.step == ncChat {
-			// A pasted chat link opens the chat with its text.
-			if phone, text, ok := ParseChatLink(nc.search.Text()); ok {
-				u.openChatLink(phone, text)
+			// A pasted WhatsApp link opens its chat with its text.
+			if l, ok := parseAppLink(nc.search.Text()); ok && l.phone != "" {
+				u.openChatLink(l.phone, l.text)
 			} else if d := phoneDigits(nc.search.Text()); d != "" {
 				u.lookupPhone(d)
 			} else if cs := u.matchContacts(nc.search.Text(), false); len(cs) > 0 {
@@ -382,29 +380,7 @@ func (u *UI) pickGroupPhoto() {
 		nc.photos = make(chan groupPhoto, 1)
 	}
 	nc.photoBusy = true
-	out, notify := nc.photos, u.images.invalidate
-	go func() {
-		var r groupPhoto
-		paths, err := filepick.Open("Choose a group picture", false,
-			filepick.Filter{Name: "Pictures", Exts: photoExts}, filepick.Filter{Name: "All files"})
-		switch {
-		case err != nil:
-			r.err = err
-		case len(paths) == 0:
-			r.none = true
-		default:
-			var data []byte
-			if data, r.err = os.ReadFile(paths[0]); r.err == nil {
-				release := acquireDecode(data)
-				r.data, r.err = photo.Square(data, groupPhotoPx)
-				release()
-			}
-		}
-		out <- r
-		if notify != nil {
-			notify()
-		}
-	}()
+	pickSquarePhoto("Choose a group picture", nc.photos, u.images.invalidate)
 }
 
 // groupPhotoItems is the menu of the picture on the New group page.

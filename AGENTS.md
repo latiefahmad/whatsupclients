@@ -75,9 +75,11 @@ Gotchas already found in the pinned version (v0.10.x):
 - `widget.Clickable` registers its input area after drawing its content, so a Clickable
   wrapping a widget hides any Clickable inside it. Draw nested buttons afterwards, on
   top (see `layoutChatRow`), and use `hoverArea`/`rightClick`, which pass events through.
-- Popups that must draw above later siblings (the emoji picker) use `op.Defer`, which
-  keeps the local transform. Context menus instead open at `u.mouse`, the last pointer
-  position in content coordinates.
+ - Popups that must draw above later siblings (the emoji picker) use `op.Defer`, which
+   keeps the local transform. Context menus instead open at `u.mouse`, the last pointer
+   position in content coordinates. Inside a popup drawn under a transform (the emoji
+   picker over the composer) `u.mouse` is in the wrong coordinates: track the pointer
+   there yourself, as the picker's `panelMouse` does for its tone menu.
 - `widget.Editor` paints all its text, and its caret, in one color and one font. When the
   composer's text has formatting or @mentions, the editor paints it transparent and
   `paintComposerText` (`composertext.go`) draws the text and caret itself. Bold and italic
@@ -218,14 +220,23 @@ Gotchas already found in the pinned version (v0.10.x):
 - Files dropped on the window come through an OLE drop target (`desktop.EnableDrop`).
   OLE wants it registered on the window's own thread, so the window is subclassed and
   the registration posted to it; the callbacks run on that thread and only queue.
-- Chat links (`whatsup://`, `wa.me`) open the number's chat without saving
-  the contact (`internal/ui/chatlink.go`). Windows registers the scheme
-  per user on startup (`desktop.EnsureProtocol`, mirrored in the
-  installer's Registry section); Linux uses `installer/whatsup.desktop`.
+- Chat links (`whatsup://`, `wa.me`, `whatsapp://`, channel/business/QR links) open their
+  chat, group, channel or business without saving the contact, or ask for the chat (a
+  share link, text only). `parseAppLink`/`openAppLink` (`internal/ui/applink.go`) read
+  them; `openChatLink`/`linkPhoneEvent` (`internal/ui/chatlink.go`) are the phone lookup.
+  Windows registers `whatsup://` per user on startup (`desktop.EnsureProtocol`, mirrored
+  in the installer's Registry section); Linux uses `installer/whatsup.desktop`.
   A launch with a link appends it to `<data dir>/pending-link` before
   `desktop.Lock`, so the running instance finds it; the host drains the
   file whenever a window shows (an offline lookup toasts instead of
   waiting). `whatsup://` always opens the default data directory's instance.
+- Windows also registers the app as the handler of `whatsapp:` links, the way a browser or
+  mail app does: a ProgID and Capabilities the user picks in Settings > Default apps
+  (`desktop.RegisterLinks`/`LinksHandled`/`OpenLinkSettings`, `internal/desktop/links_windows.go`;
+  non-Windows stubs in `desktop_other.go`). Windows keeps the user's choice in a key apps
+  can't write, so the user picks it there. The chat list shows a bar ("WhatsApp links open
+  in another app", `layoutLinkBar`, `prefLinkBar`) and Settings > General a "WhatsApp links"
+  row until they have.
 - The server refuses native flow button answers (`InteractiveResponseMessage`) in groups
   with error 479. `PressButton` falls back to the older answer (`TemplateButtonReplyMessage`
   or `ListResponseMessage`), which still carries the button's or row's ID that bots read,
@@ -260,8 +271,10 @@ installer/         the Windows installer (Inno Setup), per user in %LocalAppData
 internal/model/    Chat/Message/Event types and the Backend interface the UI talks to
 internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, communities,
                    settings), conversation and composer (an album's pictures as one grid in
-                   album.go), contact/group info panel (a person's
-                   or business's sections in contactinfo.go), and the
+                   album.go),                    contact/group info panel (a person's
+                   or business's sections in contactinfo.go), editing a
+                   group's name, description and picture in place and
+                   viewing a picture big in groupedit.go and photoview.go, and the
                    overlays: context menus (popup.go), dialogs and toasts (dialog.go), emoji
                    picker (emoji.go, data in the generated emojidata.go, skin tones
                    in skintone.go from the generated emojitones.go table), media viewer
@@ -286,9 +299,11 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    search (chats, archived ones too, contacts and every chat's messages) in
                    listsearch.go; custom lists as filter chips and New list in lists.go; the composer's
                    formatting toolbar in formatbar.go; the attach
-                   menu, file tray and poll dialog in attach.go; slash commands (their
-                   picker over the composer and the notes only you see) in slash.go; scheduled
-                   messages as bubbles after a chat's newest (send now, edit, cancel) and
+                    menu, file tray and poll dialog in attach.go; slash commands (their
+                    picker over the composer and the notes only you see) in slash.go; emoji
+                    shortcodes (":mo" offers matching emojis over the composer, a typed
+                    ":moai:" becomes 🗿, Discord style) in shortcode.go; scheduled
+                    messages as bubbles after a chat's newest (send now, edit, cancel) and
                    the AFK bar above the chat list in scheduled.go; saved messages (Settings >
                    Snippets, the snippets /snippet send offers in the slash picker, their {variables}
                    and /catch's payload dialog) in snippets.go; and
@@ -374,7 +389,8 @@ internal/notify/   system notifications: WinRT toasts on Windows (replaced per c
                    when read, Reply and Mark as read through a COM activator), notify-send
                    or osascript elsewhere
 internal/desktop/  tray icon, one instance per data directory, start at login, window icon
-                   (Windows; stubs elsewhere), and the system's light or dark theme (Settings >
+                   (Windows; stubs elsewhere), registering the app as the handler of
+                   whatsapp: links (links_windows.go), and the system's light or dark theme (Settings >
                    Chats > Theme > System default, read again when the window gets focus)
 internal/update/   updates from GitHub releases when the user asks (Settings > Help): checks
                    the signed SHA256SUMS, swaps the executable (the running one moves to
@@ -525,8 +541,8 @@ go run ./cmd/screenshot -compare shot.webp -crop 0,0,2000,1250 -scale 1.22 -view
 go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -right \
     -scale 1.5616 -view info -infoscroll 7 -infooffset 40
 # Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, scheduled, ghost (/ghost; open a
-# group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, forwardpick, reply, replyphoto, linkpreview, invite,
-# delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
+#                     group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, forwardpick, reply, replyphoto, linkpreview, invite, groupedit (a group's info being edited: -ochat fams, groupname/groupdesc/groupphoto), picview, linkbar (the WhatsApp links bar), channellink,
+# delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
 # privacystatus, privacycommunities); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with

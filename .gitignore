@@ -6,3 +6,4 @@ bin/
 # internal/update/update.go; the seed goes in the RELEASE_SIGNING_KEY secret.
 release.key
 *.key
+*.exe

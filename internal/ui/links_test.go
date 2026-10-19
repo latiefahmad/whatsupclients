@@ -94,6 +94,102 @@ func TestLinkHoverClick(t *testing.T) {
 	}
 }
 
+// TestOpenAppLink checks that a wa.me link opens the number's chat with
+// the link's text in the composer.
+func TestOpenAppLink(t *testing.T) {
+	u := New(mock.New())
+	u.Start(func() {})
+	u.applyEvents()
+	u.openOutsideLink("whatsapp://send?phone=%2B1+555-123-4567&text=Hello%21")
+	u.applyEvents()
+	if u.selected == nil || u.selected.ID != "15551234567@s.whatsapp.net" {
+		t.Fatalf("open chat %v, want 15551234567@s.whatsapp.net", u.selected)
+	}
+	if got := u.conv.composer.Text(); got != "Hello!" {
+		t.Errorf("composer %q, want %q", got, "Hello!")
+	}
+}
+
+// TestResolveLinks opens the links the server resolves with the demo
+// backend: a business's message link and a contact's QR link open their
+// chats, a followed channel opens, and another shows to follow first.
+func TestResolveLinks(t *testing.T) {
+	u := New(mock.New())
+	u.Start(func() {})
+	u.applyEvents()
+	open := func(link string) {
+		t.Helper()
+		if !u.openAppLink(link) {
+			t.Fatalf("openAppLink(%q) = false", link)
+		}
+		u.applyEvents()
+	}
+	open("https://wa.me/message/" + mock.LinkBusiness)
+	if u.selected == nil || u.selected.ID != "vivy@lid" {
+		t.Fatalf("business link opened %v, want vivy@lid", u.selected)
+	}
+	if got := u.conv.composer.Text(); !strings.HasPrefix(got, "Hi! I'd like") {
+		t.Errorf("business link's composer %q", got)
+	}
+	open("https://wa.me/qr/" + mock.LinkContact)
+	if u.selected == nil || u.selected.ID != "arman" {
+		t.Fatalf("contact link opened %v, want arman", u.selected)
+	}
+	open("https://whatsapp.com/channel/" + mock.LinkChannelFollowed)
+	if u.page != pageChannels || u.selected == nil || u.selected.ID != "techdaily@newsletter" {
+		t.Fatalf("followed channel's link: page %v, chat %v", u.page, u.selected)
+	}
+	open("https://whatsapp.com/channel/" + mock.LinkChannelSuggested)
+	in := u.dialog.invite
+	if u.dialog.kind != dialogInvite || !in.channel || in.ch == nil || in.ch.ID != "bola@newsletter" {
+		t.Fatalf("suggested channel's link shows %+v", in)
+	}
+	u.followFromLink(in.ch.ID)
+	u.applyEvents()
+	if u.selected == nil || u.selected.ID != "bola@newsletter" {
+		t.Fatalf("followed channel opened %v, want bola@newsletter", u.selected)
+	}
+	open("https://wa.me/qr/Unknown1")
+	if u.selected.ID != "bola@newsletter" {
+		t.Errorf("an unknown link opened %v", u.selected)
+	}
+}
+
+// TestShareLink checks that a share link (text, no number) asks for the
+// chat, and that the chat picked opens with the text in its composer.
+func TestShareLink(t *testing.T) {
+	u := New(mock.New())
+	u.Start(func() {})
+	u.applyEvents()
+	const link = "https://api.whatsapp.com/send/?text=https%3A%2F%2Fwww.reddit.com%2Fr%2Fx&type=custom_url&app_absent=0"
+	if !u.openAppLink(link) {
+		t.Fatal("the share link wasn't taken")
+	}
+	if u.dialog.kind != dialogForward || u.dialog.shareText != "https://www.reddit.com/r/x" {
+		t.Fatalf("dialog %v with %q", u.dialog.kind, u.dialog.shareText)
+	}
+	var ops op.Ops
+	var r input.Router
+	frame := func() {
+		ops.Reset()
+		u.Layout(layout.Context{Ops: &ops, Now: testNow(), Source: r.Source(), Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1},
+			Constraints: layout.Exact(image.Pt(1100, 700))})
+		r.Frame(&ops)
+	}
+	frame()
+	u.btn("fwd:citra").Click()
+	frame()
+	if u.selected == nil || u.selected.ID != "citra" {
+		t.Fatalf("picked citra, open %v", u.selected)
+	}
+	if got := u.conv.composer.Text(); got != "https://www.reddit.com/r/x" {
+		t.Errorf("composer %q", got)
+	}
+	if u.dialog.isOpen() {
+		t.Error("the picker is still open")
+	}
+}
+
 // TestMentionClick checks that only mentions of people are clickable, and
 // that clicking one shows their contact info.
 func TestMentionClick(t *testing.T) {

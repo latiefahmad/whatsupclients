@@ -64,6 +64,9 @@ type dialogState struct {
 	addTo    string   // the group to add the picked people to
 	members  []string // addTo's members, left out of the list
 	fwd      []*model.Message
+	// shareText makes it the picker of a share link with no number
+	// (applink.go): the chat picked opens with the text in its composer.
+	shareText string
 	// newList makes the picker New list's (lists.go): a name for the
 	// list above the chats that go in it.
 	newList  bool
@@ -400,6 +403,11 @@ func (u *UI) forwardPanel(gtx C) D {
 	}
 	rows := u.forwardRows(d)
 	for _, r := range rows {
+		if r.header == "" && d.shareText != "" && u.btn("fwd:"+r.id).Clicked(gtx) && d.isOpen() {
+			u.closeDialog()
+			u.openLinkedChat(r.id, u.forwardName(d, r.id), d.shareText)
+			continue
+		}
 		if r.header == "" && u.btn("fwd:"+r.id).Clicked(gtx) {
 			if i := indexOf(d.picked, r.id); i >= 0 {
 				d.picked = append(d.picked[:i:i], d.picked[i+1:]...)
@@ -416,6 +424,8 @@ func (u *UI) forwardPanel(gtx C) D {
 		title = "Add member"
 	case d.share != "":
 		title = "Share contact"
+	case d.shareText != "":
+		title = "Send message to"
 	case d.contacts:
 		title = "Share contacts"
 	}
@@ -478,9 +488,14 @@ func (u *UI) forwardPanel(gtx C) D {
 								if on {
 									box, col = icCheckBox, p.Green
 								}
+								// A share link's picker opens the chat clicked: no boxes.
+								check, gap := iconW(box, 24, col), layout.Spacer{Width: 18}.Layout
+								if d.shareText != "" {
+									check, gap = layout.Spacer{}.Layout, layout.Spacer{}.Layout
+								}
 								return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-									layout.Rigid(iconW(box, 24, col)),
-									layout.Rigid(layout.Spacer{Width: 18}.Layout),
+									layout.Rigid(check),
+									layout.Rigid(gap),
 									layout.Rigid(func(gtx C) D { return u.avatar(gtx, r.id, r.name, r.group, 44) }),
 									layout.Rigid(layout.Spacer{Width: 14}.Layout),
 									layout.Flexed(1, func(gtx C) D {

@@ -4,36 +4,54 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/latiefahmad/whatsupclients/internal/model"
 )
 
 func TestParseChatLink(t *testing.T) {
-	for _, c := range []struct {
-		in, phone, text string
-		ok              bool
-	}{
-		{"whatsup://send?phone=6281234567890", "6281234567890", "", true},
-		{"whatsup://send?phone=6281234567890&text=hi%20there", "6281234567890", "hi there", true},
-		{"whatsup://6281234567890?text=hello", "6281234567890", "hello", true},
-		{"whatsup:6281234567890", "6281234567890", "", true},
-		{"https://wa.me/6281234567890", "6281234567890", "", true},
-		{"https://wa.me/6281234567890?text=order%20status%3F", "6281234567890", "order status?", true},
-		{"http://wa.me/6281234567890", "6281234567890", "", true},
-		{"https://api.whatsapp.com/send?phone=6281234567890&text=hi", "6281234567890", "hi", true},
-		{`"https://wa.me/6281234567890"`, "6281234567890", "", true},
-		{"https://wa.me/6281234567890/extra/path", "", "", false},
-		{"https://wa.me/notanumber", "", "", false},
-		{"https://wa.me/123", "", "", false},
-		{"https://example.com/6281234567890", "", "", false},
-		{"https://api.whatsapp.com/about", "", "", false},
-		{"whatsup://send?text=hi", "", "", false},
-		{"/kick @Gusti", "", "", false},
-		{"6281234567890", "", "", false},
-		{"", "", "", false},
+	for link, want := range map[string]*appLink{
+		"whatsup://send?phone=6281234567890":                                                       {phone: "6281234567890"},
+		"whatsup://send?phone=6281234567890&text=hi%20there":                                       {phone: "6281234567890", text: "hi there"},
+		"whatsup://6281234567890?text=hello":                                                       {phone: "6281234567890", text: "hello"},
+		"whatsup:6281234567890":                                                                    {phone: "6281234567890"},
+		`"https://wa.me/6281234567890"`:                                                            {phone: "6281234567890"},
+		"https://wa.me/6281234567890":                                                              {phone: "6281234567890"},
+		"https://wa.me/6281234567890?text=order%20status%3F":                                       {phone: "6281234567890", text: "order status?"},
+		"http://wa.me/6281234567890":                                                               {phone: "6281234567890"},
+		"https://api.whatsapp.com/send?phone=6281234567890&text=hi":                                {phone: "6281234567890", text: "hi"},
+		"whatsapp://send?phone=6281234567890&text=Hi%20there":                                      {phone: "6281234567890", text: "Hi there"},
+		"whatsapp://send/?phone=%2B62+812-3456-7890":                                               {phone: "6281234567890"},
+		"whatsapp://send?text=no+number":                                                           {text: "no number", share: true},
+		"whatsup://send?text=hi":                                                                   {text: "hi", share: true},
+		"whatsapp://chat?code=FrLhsO1aBMEBhOFBtpLwxl":                                              {code: "FrLhsO1aBMEBhOFBtpLwxl"},
+		"https://wa.me/message/ABCDEF":                                                             {resolve: "ABCDEF", kind: model.LinkBusiness},
+		"https://wa.me/qr/QRCODE12":                                                                {resolve: "QRCODE12", kind: model.LinkContact},
+		"https://whatsapp.com/channel/0029VaExample":                                               {resolve: "0029VaExample", kind: model.LinkChannel},
+		"https://api.whatsapp.com/send/?text=https%3A%2F%2Fwww.reddit.com%2Fr%2Fx&type=custom_url": {text: "https://www.reddit.com/r/x", share: true},
+		// No phone, group, channel, business or QR link.
+		"https://wa.me/6281234567890/extra/path":       nil,
+		"https://wa.me/notanumber":                     nil,
+		"https://wa.me/123":                            nil,
+		"https://wa.me.evil.example/6281234567890":     nil,
+		"https://wa.me/channel/0029VaExample":          nil,
+		"https://wa.me/qr/bad-code!":                   nil,
+		"https://wa.me/c/6281234567890":                nil,
+		"https://example.com/6281234567890":            nil,
+		"https://example.com/send?phone=6281234567890": nil,
+		"https://api.whatsapp.com/about":               nil,
+		"whatsapp://send?phone=12&text=hello":          nil,
+		"whatsapp://send":                              nil,
+		"whatsapp://chat?code=bad/../code":             nil,
+		"/kick @Gusti":                                 nil,
+		"6281234567890":                                nil,
+		"":                                             nil,
 	} {
-		phone, text, ok := ParseChatLink(c.in)
-		if phone != c.phone || text != c.text || ok != c.ok {
-			t.Errorf("ParseChatLink(%q) = %q, %q, %v; want %q, %q, %v",
-				c.in, phone, text, ok, c.phone, c.text, c.ok)
+		got, ok := parseAppLink(link)
+		switch {
+		case want == nil && ok:
+			t.Errorf("parseAppLink(%q) = %+v, want none", link, got)
+		case want != nil && (!ok || got != *want):
+			t.Errorf("parseAppLink(%q) = %+v, %v, want %+v", link, got, ok, *want)
 		}
 	}
 }

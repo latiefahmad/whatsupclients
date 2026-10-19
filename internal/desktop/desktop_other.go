@@ -34,3 +34,10 @@ func SetStartAtLogin(on bool, args []string) error { return ErrUnsupported }
 
 // WaitExit returns at once: Lock doesn't stop a second instance here.
 func WaitExit(pid int, d time.Duration) {}
+
+// WhatsApp links (applink.go): only Windows can be their handler.
+func CanHandleLinks() bool         { return false }
+func LinksRegistered() bool        { return false }
+func LinksHandled() bool           { return false }
+func RegisterLinks([]string) error { return ErrUnsupported }
+func OpenLinkSettings()            {}
