@@ -141,11 +141,16 @@ func (u *UI) touchLock() {
 // unlocks it first.
 const idleAfter = time.Minute
 
+// idleTime is how long the user hasn't touched the keyboard or mouse, in
+// any app (desktop.IdleTime). Tests swap it for one that stays at zero:
+// the real one keeps growing on a machine no one is using, as on CI.
+var idleTime = desktop.IdleTime
+
 func (u *UI) idle() bool {
 	// OS idle counts input in other apps too and keeps growing while
 	// the screen is locked, which the window's own input tracking
 	// misses: either of the two means the user is away.
-	if desktop.IdleTime() >= idleAfter {
+	if idleTime() >= idleAfter {
 		return true
 	}
 	l := u.lock

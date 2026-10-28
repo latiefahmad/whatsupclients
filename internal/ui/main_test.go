@@ -25,6 +25,9 @@ func testNow() time.Time { return testBase.Add(time.Since(testStarted)) }
 func TestMain(m *testing.M) {
 	time.Local = time.UTC
 	timeNow, mock.Clock = testNow, testNow
+	// The real idle time keeps growing on a machine no one is using, so a
+	// test that expects the open chat to be marked read would fail on CI.
+	idleTime = func() time.Duration { return 0 }
 	systemDark = func() (bool, bool) { return true, true } // the theme tests were drawn in
 	os.Exit(m.Run())
 }
