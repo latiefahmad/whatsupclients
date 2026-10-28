@@ -104,11 +104,81 @@ func (u *UI) closeChat() {
 func (u *UI) startSelect(m *model.Message) {
 	u.conv.selecting = true
 	u.conv.picked = map[string]bool{m.ID: true}
+	u.conv.selAnchor = m.ID
 }
 
 func (u *UI) endSelect() {
 	u.conv.selecting = false
-	u.conv.picked = nil
+	u.conv.picked, u.conv.selAnchor = nil, ""
+}
+
+// clickShift reports whether Shift was held for the click: the pointer
+// event carries the modifiers the click was made with, like a file
+// list's shift-click. The key tracker is the fallback for a click that
+// didn't come from our own pointer events.
+func (u *UI) clickShift() bool {
+	return u.shiftDown || u.mouseMod.Contain(key.ModShift)
+}
+
+// pickMsgOnly toggles what one click picks: a row's messages (an album's
+// pictures, a sticker line) together, anchored for shift-click ranges.
+func (u *UI) pickMsgOnly(ms []*model.Message) {
+	on := !u.pickedAll(ms)
+	for _, m := range ms {
+		if on {
+			u.conv.picked[m.ID] = true
+		} else {
+			delete(u.conv.picked, m.ID)
+		}
+	}
+	u.conv.selAnchor = ms[0].ID
+}
+
+// pickMsg handles a click in select mode: like pickRowAt of the chat list,
+// a plain click toggles one row (its album or sticker line together), and
+// a shift-click picks or clears the whole range from the last message a
+// plain click toggled. ms is the clicked row's messages, in chat order.
+func (u *UI) pickMsg(ms []*model.Message, shift bool) {
+	if !shift {
+		u.pickMsgOnly(ms)
+		return
+	}
+	c := &u.conv
+	id := ms[0].ID
+	if c.selAnchor == "" || c.selAnchor == id || len(u.msgs) == 0 {
+		u.pickMsgOnly(ms)
+		return
+	}
+	a, b := -1, -1
+	for i, m := range u.msgs {
+		if m.ID == c.selAnchor {
+			a = i
+		}
+		if m.ID == id {
+			b = i
+		}
+	}
+	if a < 0 || b < 0 {
+		u.pickMsgOnly(ms)
+		return
+	}
+	if a > b {
+		a, b = b, a
+	}
+	// The range follows the clicked row: a picked row clears it, an
+	// unpicked one picks it. System notes (the grey chips) aren't picked.
+	on := !c.picked[id]
+	for _, m := range u.msgs[a : b+1] {
+		if m.Kind == model.KindSystem {
+			continue
+		}
+		if on {
+			c.picked[m.ID] = true
+		} else {
+			delete(c.picked, m.ID)
+		}
+	}
+	// A shift-click doesn't move the anchor, so the range can grow.
 }
 
 // pickedMessages returns the selected messages in chat order.
@@ -611,7 +681,7 @@ func (u *UI) layoutReplyPreview(gtx C, m *model.Message) D {
 	}
 	q := &model.Quote{ID: m.ID, Text: m.Text, Media: m.Media}
 	if !m.FromMe {
-		q.Sender = m.Sender
+		q.Sender, q.SenderID = m.Sender, m.SenderID
 		if q.Sender == "" && u.selected != nil && !u.selected.IsGroup {
 			q.Sender = u.selected.Name
 		}
@@ -779,6 +849,15 @@ func (u *UI) layoutComposerBox(gtx C) D {
 				return D{Size: image.Pt(full.size.X, h)}
 			}),
 			layout.Rigid(func(gtx C) D {
+				if u.recording() {
+					// A voice message being recorded (voicerec.go).
+					v := easeOut(u.rec.anim.step(gtx, true, durSwitch))
+					return vcenter(gtx, gtx.Dp(55), func(gtx C) D {
+						return layout.Inset{Left: 8, Right: 8}.Layout(gtx, func(gtx C) D {
+							return fadeW(gtx, v, u.layoutRecordBar)
+						})
+					})
+				}
 				return vcenter(gtx, gtx.Dp(55), func(gtx C) D {
 					return layout.Inset{Left: 8, Right: 8}.Layout(gtx, func(gtx C) D {
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,

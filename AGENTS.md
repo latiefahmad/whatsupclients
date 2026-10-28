@@ -217,6 +217,22 @@ Gotchas already found in the pinned version (v0.10.x):
   is stored as a `KindWaiting` placeholder, "Waiting for this message". hypermeow sends a
   retry receipt, and the decrypted copy that comes back under the same ID replaces it in
   `putMessage` (and counts as new then); one that shows nothing drops it (`dropWaiting`).
+- Status privacy is the `status_privacy` app state action (regular_high, index
+  `["status_privacy"]`): a mode, the people of that mode's list only, and every
+  audience of your own (`customLists`, the chosen one `isSelected`). The other
+  modes' people are kept in `wz_meta` from the actions that named them, and a
+  change is sent as a whole new action built on the last one
+  (`internal/wa/statusprivacy.go`). A phone that never changed it syncs none:
+  once app state synced in full, the server's list (`GetStatusPrivacy`) stands
+  for it. Hiding a contact's statuses is `userStatusMute` (`["userStatusMute",
+  jid]`). WhatsApp Web takes a mutation of any version up to the newest it
+  knows, so the versions sent stay low.
+- hypermeow sends a status to the list WhatsApp's server keeps (`GetStatusPrivacy`),
+  not to the synced setting, and can't be given recipients. `statusAudience`
+  refuses to post when anyone outside the chosen audience would get it, and
+  labels close friends and custom audiences (`ContextInfo.statusAudienceMetadata`,
+  which viewers show as a chip on the picture). WhatsApp shows the statuses of
+  saved contacts only (`savedContact`).
 - Files dropped on the window come through an OLE drop target (`desktop.EnableDrop`).
   OLE wants it registered on the window's own thread, so the window is subclassed and
   the registration posted to it; the callbacks run on that thread and only queue.
@@ -317,6 +333,10 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    live memory numbers; app prefs kept in the package's `perf`) in perf.go;
                    view once messages (opened once, screenshots blocked) in viewonce.go; posting your own status
                    (its menus, the text composer, photos through the send view) in statuspost.go;
+                   Status privacy (the audiences, one chosen; an audience's people; an audience of
+                   your own's name and emoji, sliding in over the Status list like New chat) and
+                   a contact's Hide/Unhide menu in statusprivacy.go; the Status list's Hidden
+                   section (contacts you hid) in status.go;
                    animation helpers in anim.go; the "N unread messages" divider a chat
                    opens at in unread.go; the ⌄ button that goes back to the newest message
                    (with the unread count) and the day pinned at the top while a chat
@@ -371,6 +391,9 @@ internal/wa/       hypermeow backend: pairing, events, SQLite message store, nam
                    (LIMIT_SHARING, kept with its info; it can't be set) in about.go;
                    a chat's disappearing-messages timer (wz_chats.ephemeral, for the
                    avatars' timer badge) in timer.go;
+                   status privacy and your audiences (the status_privacy app state action),
+                   hidden statuses (userStatusMute) and the check that a status reaches only
+                   the chosen audience in statusprivacy.go;
                    snippets (wz_snippets, their media copied to snippet-media/) in snippets.go
                    and snippetmedia.go
 internal/mock/     demo Backend with fake chats (used by -demo and cmd/screenshot)

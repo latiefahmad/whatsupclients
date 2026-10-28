@@ -134,10 +134,13 @@ type Message struct {
 	FromMe   bool
 	Sender   string // display name; group chats only
 	SenderID string // sender JID; group chats only
-	Text     string
-	Time     time.Time
-	Receipt  Receipt
-	Quote    *Quote
+	// SenderLabel is the tag the sender gave themselves in the group
+	// ("Tyran"), shown beside their name; "" for none.
+	SenderLabel string
+	Text        string
+	Time        time.Time
+	Receipt     Receipt
+	Quote       *Quote
 	// Reactions counts the reactions to the message by emoji, the most
 	// given first, and MyReaction is yours ("" for none).
 	Reactions  []ReactionCount
@@ -501,8 +504,9 @@ type LinkImage struct {
 // Attachment is a file to send.
 type Attachment struct {
 	Path string
-	// Media is how it is sent: MediaImage, MediaVideo, MediaAudio or
-	// MediaDocument (any file, as is).
+	// Media is how it is sent: MediaImage, MediaVideo, MediaAudio,
+	// MediaVoice (a recorded voice message) or MediaDocument (any file,
+	// as is).
 	Media Media
 	// Quality is how a photo is scaled and compressed.
 	Quality Quality
@@ -510,6 +514,11 @@ type Attachment struct {
 	ViewOnce bool
 	// Album puts a photo or video in the album NewAlbum opened.
 	Album string
+	// Seconds and Waveform are a recorded voice message's (MediaVoice,
+	// an OGG Opus file): its length and loudness, as Message has them.
+	// The file is read as it is sent and may be deleted afterwards.
+	Seconds  int
+	Waveform []byte
 }
 
 // Quality is the size a photo is sent at.
@@ -535,6 +544,17 @@ type Poll struct {
 	HideVoters bool
 	// End is when voting closes; zero means never.
 	End time.Time
+}
+
+// NewEvent is an event to send.
+type NewEvent struct {
+	Name, Description string
+	// Start is when it begins; End is zero when it has no set end.
+	Start, End time.Time
+	// Place is where it is, as typed, or "".
+	Place string
+	// AllowGuests lets those invited bring others.
+	AllowGuests bool
 }
 
 // ChatList is a custom chat list ("Add to list").
@@ -664,6 +684,10 @@ type StatusUpdate struct {
 	// Revoked is when its poster deleted it, for an update kept with
 	// PrefKeepDeleted; zero otherwise.
 	Revoked time.Time
+	// Audience is the name of the audience its poster shared it with, and
+	// AudienceEmoji that audience's emoji, when they chose one of their own
+	// (close friends or a custom audience); empty otherwise.
+	Audience, AudienceEmoji string
 }
 
 // StatusThread is everything one contact posted in the last 24 hours,
@@ -673,11 +697,24 @@ type StatusThread struct {
 	Group   bool
 	Name    string
 	Mine    bool
+	Muted   bool // hidden: listed apart, under Hidden (MuteStatus)
 	Updates []*StatusUpdate
 }
 
 // Last returns the newest update.
 func (t *StatusThread) Last() *StatusUpdate { return t.Updates[len(t.Updates)-1] }
+
+// Latest returns the newest update its poster hasn't deleted, or the
+// newest of all when they deleted every one (kept with PrefKeepDeleted).
+// The status list shows it, as WhatsApp shows what's left.
+func (t *StatusThread) Latest() *StatusUpdate {
+	for i := len(t.Updates) - 1; i >= 0; i-- {
+		if t.Updates[i].Revoked.IsZero() {
+			return t.Updates[i]
+		}
+	}
+	return t.Last()
+}
 
 // StatusPost is a status update to post: Text on a Background color, or
 // a photo or video (File) with Text as its caption.
@@ -688,24 +725,74 @@ type StatusPost struct {
 	File       *Attachment
 }
 
-// StatusAudience is who sees your status updates, as set on your phone.
+// StatusAudience is who sees your status updates.
 type StatusAudience int
 
 const (
 	AudienceContacts StatusAudience = iota // all your contacts
 	AudienceExcept                         // your contacts except some
 	AudienceOnly                           // only some contacts
+	AudienceClose                          // your close friends
+	AudienceList                           // one of your own audiences (StatusPrivacy.ListID)
 )
 
-// StatusPrivacy is your status privacy setting. Count is how many contacts
-// the "except" or "only" list holds.
+// StatusList is an audience of your own: a name and an emoji, which the
+// people in it see on your status updates, and the people. A new one has
+// no ID until SetStatusPrivacy gives it one; StatusPrivacy.ListID "" then
+// chooses it.
+type StatusList struct {
+	ID, Name, Emoji string
+	Members         []string // one-to-one chat IDs
+}
+
+// StatusPrivacy is your status privacy setting. Count is how many people
+// the chosen audience holds (none for AudienceContacts).
+//
+// Editable is set once your phone has synced the whole setting: the people
+// of every audience and your own audiences. Only then can it be changed
+// (SetStatusPrivacy); before, only Audience and Count are known.
 type StatusPrivacy struct {
 	Audience StatusAudience
 	Count    int
+	Editable bool
+	ListID   string // the chosen audience, for AudienceList
+	// The people of each audience, as one-to-one chat IDs.
+	Except, Only, Close []string
+	Lists               []StatusList
+	// Unknown lists the audiences (AudienceExcept, AudienceOnly,
+	// AudienceClose) whose people the phone hasn't synced yet: it names
+	// only the chosen audience's. Setting one replaces the phone's.
+	Unknown []StatusAudience
 }
 
-// Viewed reports whether every update has been seen.
+// Knows reports whether the people of an audience are known.
+func (p *StatusPrivacy) Knows(a StatusAudience) bool { return !slices.Contains(p.Unknown, a) }
+
+// List returns the audience of your own with that ID, or nil.
+func (p *StatusPrivacy) List(id string) *StatusList {
+	for i := range p.Lists {
+		if p.Lists[i].ID == id {
+			return &p.Lists[i]
+		}
+	}
+	return nil
+}
+
+// Viewed reports whether every update has been seen. Updates their poster
+// deleted (kept with PrefKeepDeleted) don't count, unless they all were.
 func (t *StatusThread) Viewed() bool {
+	kept := false
+	for _, u := range t.Updates {
+		if u.Revoked.IsZero() {
+			kept = true
+			if !u.Viewed {
+				return false
+			}
+		}
+	}
+	if kept {
+		return true
+	}
 	for _, u := range t.Updates {
 		if !u.Viewed {
 			return false
@@ -831,6 +918,14 @@ type AvatarEvent struct{ ID string }
 type MediaEvent struct {
 	ChatID, MsgID string
 	Failed        bool // the download failed; a NoticeEvent says why
+}
+
+// LabelEvent reports that a group member changed the label beside their
+// name (Message.SenderLabel). Members holds their IDs, LID and phone JID.
+type LabelEvent struct {
+	ChatID  string
+	Members []string
+	Label   string
 }
 
 // InfoEvent reports that the info panel details of a chat changed.
@@ -1105,6 +1200,7 @@ func (SyncEvent) isEvent()         {}
 func (AvatarEvent) isEvent()       {}
 func (MediaEvent) isEvent()        {}
 func (InfoEvent) isEvent()         {}
+func (LabelEvent) isEvent()        {}
 func (StatusEvent) isEvent()       {}
 func (ChannelsEvent) isEvent()     {}
 func (CommunitiesEvent) isEvent()  {}
@@ -1302,6 +1398,9 @@ type Backend interface {
 	SendContacts(chatID string, contactIDs []string) *Message
 	// SendPoll sends a poll.
 	SendPoll(chatID string, p Poll) *Message
+	// SendEvent sends an event (a gathering) with a start, and an optional
+	// end, place and guest allowance.
+	SendEvent(chatID string, e NewEvent) *Message
 	// VotePoll votes for options of a poll (indexes into Poll.Options),
 	// in place of your earlier vote; none takes it back. A MessageEvent
 	// with the new count follows.
@@ -1412,6 +1511,12 @@ type Backend interface {
 	// isn't known yet: it is fetched in the background and announced with
 	// a StatusEvent.
 	StatusPrivacy() *StatusPrivacy
+	// SetStatusPrivacy changes who sees your status updates and your own
+	// audiences, and syncs them to your phone. p must be Editable.
+	SetStatusPrivacy(p StatusPrivacy)
+	// MuteStatus hides a contact's status updates (they're listed apart,
+	// under Hidden) or shows them again, on your phone too.
+	MuteStatus(id string, muted bool)
 	// Channels lists followed channels, newest activity first.
 	Channels() []*Channel
 	// SuggestedChannels lists channels to follow.

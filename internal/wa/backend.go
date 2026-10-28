@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -70,6 +71,9 @@ type Backend struct {
 
 	subMu     sync.Mutex
 	subtitles map[string]string // group JID → participant list
+
+	labelMu sync.Mutex
+	labels  map[string]map[string]memberLabel // group JID → member → label (labels.go)
 
 	openMu   sync.Mutex
 	openChat string // the chat Open was last called with, for avatar fetching
@@ -810,7 +814,12 @@ func (b *Backend) handle(evt any) {
 		if len(e.Index) > 0 && e.Index[0] == appstate.IndexFavorites && e.GetFavoritesAction() != nil {
 			b.onFavorites(e.GetFavoritesAction())
 		}
+		if len(e.Index) > 0 && e.Index[0] == appstate.IndexStatusPrivacy {
+			b.onStatusPrivacy(e.GetStatusPrivacy())
+		}
 		b.onStickerAppState(e)
+	case *events.UserStatusMute:
+		b.onStatusMute(e)
 
 	case *events.Contact:
 		b.names.clear()
@@ -829,9 +838,21 @@ func (b *Backend) handle(evt any) {
 		b.names.clear()
 		b.retitle(e.JID)
 	case *events.AppStateSyncError:
-		if errors.Is(e.Error, appstate.ErrMismatchingLTHash) {
-			b.requestAppStateRecovery(e.Name)
+		if !errors.Is(e.Error, appstate.ErrMismatchingLTHash) {
+			break
 		}
+		// hypermeow ignores the phone's repair copy when its version is
+		// older than this device's â€” which the broken local state inflates
+		// by counting its refused patches â€” and says so only in the log.
+		// Once a recovery was asked for and a hash still fails, the copy
+		// has come and gone: forget the local state, and the next sync
+		// starts over from the server's snapshot, healing the hash.
+		key := "appstate_recovery:" + string(e.Name)
+		if t, err := time.Parse(time.RFC3339, b.store.meta(b.ctx, key)); err == nil && time.Since(t) < recoveryGap {
+			b.resyncAppState(e.Name)
+			return
+		}
+		b.requestAppStateRecovery(e.Name)
 	case *events.AppStateSyncComplete:
 		if e.Recovery {
 			b.log.Infof("app state %s repaired by the phone (v%d)", e.Name, e.Version)
@@ -944,8 +965,15 @@ func clearedUpTo(r *waSyncAction.SyncActionMessageRange, at time.Time) (int64, b
 // appStateResyncKey marks resyncAppStateOnce as done, in wz_meta. v2 also
 // picks up lists and favourites, which older versions ignored; v3 favourite
 // stickers; v4 again, for the ones v3 dropped; v5 the pins, mutes and
-// archives of chats whose history came after them, which were dropped.
-const appStateResyncKey = "appstate_resynced_v5"
+// archives of chats whose history came after them, which were dropped; v6
+// status privacy and hidden statuses (regular_high alone, after v5).
+const appStateResyncKey = "appstate_resynced_v6"
+
+// prevResyncKey is the resync before appStateResyncKey. Once it was done,
+// only the collections in resyncAgain are fetched again.
+const prevResyncKey = "appstate_resynced_v5"
+
+var resyncAgain = []appstate.WAPatchName{appstate.WAPatchRegularHigh}
 
 // recoveryGap is how long to wait before asking the phone again to repair
 // the same app state collection.
@@ -983,6 +1011,25 @@ func (b *Backend) requestAppStateRecovery(name appstate.WAPatchName) {
 	}()
 }
 
+// resyncAppState drops the collection's local state and refetches it
+// whole from the server's snapshot.
+func (b *Backend) resyncAppState(name appstate.WAPatchName) {
+	cli := b.client()
+	if cli == nil {
+		return
+	}
+	if err := cli.Store.AppState.DeleteAppStateVersion(b.ctx, string(name)); err != nil {
+		b.log.Warnf("reset app state %s: %v", name, err)
+	}
+	go func() {
+		if err := cli.FetchAppState(b.ctx, name, true, false); err != nil {
+			b.log.Warnf("resync app state %s after a broken hash: %v", name, err)
+		} else {
+			b.log.Infof("resynced app state %s from a snapshot", name)
+		}
+	}()
+}
+
 // resyncAppStateOnce refetches all app state (pins, mutes, archives,
 // contacts) once per session database. Sessions linked before app state
 // events were enabled never received their pins and mutes.
@@ -992,11 +1039,15 @@ func (b *Backend) resyncAppStateOnce() {
 		return
 	}
 	cli := b.client()
+	again := b.store.meta(b.ctx, prevResyncKey) != ""
 	for _, name := range appstate.AllPatchNames {
 		// Remember each patch that synced, so that one which keeps failing
 		// doesn't refetch all the others on every connect.
 		done := key + ":" + string(name)
 		if b.store.meta(b.ctx, done) != "" {
+			continue
+		}
+		if again && !slices.Contains(resyncAgain, name) {
 			continue
 		}
 		if err := cli.FetchAppState(b.ctx, name, true, false); err != nil {
@@ -1178,6 +1229,11 @@ func (b *Backend) apply(info *types.MessageInfo, p parsed) {
 	} else if isNew {
 		_ = b.store.addUnread(ctx, chat, false)
 	}
+	// The message landed in the chat's row keyed by its LID; an older
+	// phone-number row for the same person folds into it.
+	if cj, _ := types.ParseJID(chat); cj.Server == types.HiddenUserServer {
+		go b.mergeAliases(ctx, cj)
+	}
 }
 
 // revoke applies a delete for everyone, by its sender or a group admin.
@@ -1208,36 +1264,27 @@ func (b *Backend) onReceipt(e *events.Receipt) {
 	ctx := b.ctx
 	chat := b.canonical(ctx, e.Chat).String()
 	var r model.Receipt
-	if isStatus(e.Chat) {
-		// Statuses seen on another device.
-		if e.Type == types.ReceiptTypeReadSelf {
-			ids := make([]string, len(e.MessageIDs))
-			for i, id := range e.MessageIDs {
-				ids[i] = string(id)
-			}
-			_ = b.store.setStatusViewed(ctx, ids)
+	// Statuses you saw on another device: your phone's read (or played)
+	// receipt, or read-self with read receipts off. Group stories come in
+	// their group, mixed with its messages.
+	if statusSeenByMe(e) && (isStatus(e.Chat) || e.Chat.Server == types.GroupServer) {
+		group := chat
+		if isStatus(e.Chat) {
+			group = ""
+		}
+		n := b.store.statusesSeen(ctx, group, e.MessageIDs)
+		if n > 0 {
 			b.emit(model.StatusEvent{})
 		}
-		return
+		if group == "" || n == int64(len(e.MessageIDs)) {
+			return
+		}
+	} else if isStatus(e.Chat) {
+		return // someone viewed one of yours
 	}
 	switch e.Type {
 	case types.ReceiptTypeReadSelf:
-		if len(e.MessageIDs) > 0 {
-			args := []any{chat}
-			for _, id := range e.MessageIDs {
-				args = append(args, id)
-			}
-			result, err := b.db.ExecContext(ctx, `UPDATE wz_status SET viewed = 1 WHERE group_jid = ? AND id IN (`+placeholders(len(e.MessageIDs))+`)`, args...)
-			if err == nil {
-				n, _ := result.RowsAffected()
-				if n > 0 {
-					b.emit(model.StatusEvent{})
-				}
-				if n == int64(len(e.MessageIDs)) {
-					return
-				}
-			}
-		}
+		// Status receipts were caught above; what's left are messages.
 		b.readElsewhere(chat, e.MessageIDs)
 		return
 	case types.ReceiptTypeDelivered:
@@ -1247,9 +1294,12 @@ func (b *Backend) onReceipt(e *events.Receipt) {
 	default:
 		return
 	}
-	if e.IsFromMe {
+	selfChat := b.isMe(b.canonical(ctx, e.Chat))
+	if e.IsFromMe && !selfChat {
 		// Your other device got or read someone else's messages. With read
-		// receipts off, reading them comes as ReadSelf instead.
+		// receipts off, reading them comes as ReadSelf instead. In "Message
+		// yourself" the chat is you, so the receipt is about your own
+		// messages and moves their ticks.
 		if r == model.Read {
 			b.readElsewhere(chat, e.MessageIDs)
 		}
@@ -1354,6 +1404,11 @@ func (b *Backend) onHistory(e *events.HistorySync) {
 		cd := convData{jid: jid, isGroup: jid.Server == types.GroupServer}
 		if conv.LimitSharing != nil {
 			b.setLimitSharing(ctx, jid.String(), conv.GetLimitSharing(), conv.GetLimitSharingSettingTimestamp())
+		}
+		for _, gp := range conv.GetParticipant() {
+			if who, err := types.ParseJID(gp.GetUserJID()); err == nil && cd.isGroup {
+				b.setMemberLabel(ctx, jid.String(), who, gp.GetMemberLabel())
+			}
 		}
 		if cd.isGroup || isChannel(jid) {
 			cd.name = first(conv.GetName(), conv.GetDisplayName())
@@ -1515,6 +1570,13 @@ func (b *Backend) onHistory(e *events.HistorySync) {
 	b.emitAllChats()
 	if len(statuses) > 0 {
 		b.emit(model.StatusEvent{})
+	}
+	// Fold this sync's phone-number chat rows into their LIDs, once the
+	// sync's LID mappings are in.
+	for _, cd := range convs {
+		if cd.jid.Server == types.HiddenUserServer {
+			go b.mergeAliases(ctx, cd.jid)
+		}
 	}
 
 	switch data.GetSyncType() {

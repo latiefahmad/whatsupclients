@@ -9,6 +9,49 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.0] - 2026-10-28
+
+### 🔒 Status
+
+- **Who sees your status** — a Status privacy panel (the Status page's ⋮ menu)
+  picks the audience for your updates: My contacts, My contacts except…, Only
+  share with…, Close friends, or an audience of your own. The setting is synced
+  with your phone, so both change together.
+- **Your own audiences** — make a list with a name and an emoji ("Gym 💪") and
+  pick who is in it; the people in it see your name and emoji on your updates.
+- **Close friends and audience badge** — a status shared with close friends or
+  an audience of yours shows a chip with its emoji and name on the picture.
+- **Hide a contact's statuses** — Hide or Unhide from a contact's row; hidden
+  ones move under a collapsible Hidden section, ready to unhide.
+- **Only the chosen audience** — a status that would reach someone outside the
+  audience you picked is refused with a notice instead of posted.
+
+### 🎙️ Voice messages
+
+- **Record a voice message** — the composer's mic records with a live waveform,
+  a pulsing dot and a timer; pause and resume, play the take back, then send it
+  (as a reply too). Encoded to OGG Opus with ffmpeg; you're told when a mic or
+  ffmpeg is missing.
+
+### 🧩 New message types and tools
+
+- **Camera** — Attach > Camera opens your system's camera app (Windows Camera,
+  macOS Photo Booth, GNOME Cheese/Kamoso) and brings the photo or video back
+  into the send view.
+- **Events** — Attach > Event creates an event (name, description, start and
+  end, place, "allow guests") and sends it as an event message.
+- **Member labels** — a group member's label shows beside their name in a
+  colored pill and stays current as they change it.
+- **Select chats, by range** — shift-click picks a whole run of chats in the
+  chat list, next to Archive, Mute, Pin, Mark read/unread and Delete.
+
+### ⚙️ Settings
+
+- **Auto-lock on idle** — the app lock can lock itself after a chosen time
+  without use, measured from real system idle time.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.8.1...v1.9.0
+
 ## [v1.8.1] - 2026-10-19
 
 - **WhatsApp links open here** — `wa.me`, `api.whatsapp.com/send` and

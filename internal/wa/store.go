@@ -150,6 +150,13 @@ CREATE TABLE IF NOT EXISTS wz_list_chats (
 	chat TEXT NOT NULL,
 	PRIMARY KEY (list, chat)
 );
+CREATE TABLE IF NOT EXISTS wz_member_labels (
+	chat   TEXT NOT NULL,             -- group JID
+	member TEXT NOT NULL,             -- participant, canonical (usually a LID)
+	label  TEXT NOT NULL DEFAULT '',  -- '' once they removed it
+	ts     INTEGER NOT NULL DEFAULT 0, -- Unix seconds it was set
+	PRIMARY KEY (chat, member)
+);
 `
 
 // migrations add columns to databases created by older versions.
@@ -176,6 +183,13 @@ var migrations = []string{
 	`ALTER TABLE wz_messages ADD COLUMN revoked_by TEXT NOT NULL DEFAULT ''`,
 	// 1 for a group you left or were removed from (model.Chat.Left).
 	`ALTER TABLE wz_chats ADD COLUMN not_member INTEGER NOT NULL DEFAULT 0`,
+	// The audience its poster shared a status with, when they chose close
+	// friends or one of their own: its name and emoji.
+	`ALTER TABLE wz_status ADD COLUMN audience TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE wz_status ADD COLUMN audience_emoji TEXT NOT NULL DEFAULT ''`,
+	// A status's poster as it came (a LID or a phone number), which its
+	// read receipt names; sender is canonical.
+	`ALTER TABLE wz_status ADD COLUMN participant TEXT NOT NULL DEFAULT ''`,
 }
 
 func (s *msgStore) init(ctx context.Context) error {
@@ -276,6 +290,60 @@ func boolInt(b bool) int {
 	return 0
 }
 
+// mergeChat moves a chat's messages and everything tied to them from one
+// JID's row to another's: the same person may first be known by their
+// phone-number JID and later by their LID (canonical), which used to leave
+// two chats. Chats go last so unsticking the messages can read the sender's
+// row. It reports whether anything merged.
+func (s *msgStore) mergeChat(ctx context.Context, x execer, from, to string) error {
+	if from == to {
+		return nil
+	}
+	for _, q := range []string{
+		// The chat's messages, with their votes, reactions, receipts and
+		// edits; votes and reactions are keyed (chat, id, who), the others
+		// (chat, id). A message that lives on both sides keeps the target's.
+		`DELETE FROM wz_messages WHERE chat = ?1 AND id IN (SELECT id FROM wz_messages WHERE chat = ?2)`,
+		`DELETE FROM wz_votes WHERE chat = ?1 AND id IN (SELECT id FROM wz_votes WHERE chat = ?2)`,
+		`DELETE FROM wz_reactions WHERE chat = ?1 AND id IN (SELECT id FROM wz_reactions WHERE chat = ?2)`,
+		`UPDATE OR IGNORE wz_messages SET chat = ?2 WHERE chat = ?1`,
+		`UPDATE OR IGNORE wz_votes SET chat = ?2 WHERE chat = ?1`,
+		`UPDATE OR IGNORE wz_reactions SET chat = ?2 WHERE chat = ?1`,
+		`UPDATE OR IGNORE wz_receipts SET chat = ?2 WHERE chat = ?1`,
+		`UPDATE OR IGNORE wz_edits SET chat = ?2 WHERE chat = ?1`,
+		`UPDATE OR IGNORE wz_list_chats SET chat = ?2 WHERE chat = ?1`,
+		// One chat's settings go to the other, keeping the extremes:
+		// pin's timestamp and the last message's, the longer mute, more
+		// unread and mentions, and OR for flags.
+		`UPDATE wz_chats SET
+			name = CASE WHEN name = '' THEN (SELECT name FROM wz_chats WHERE jid = ?1) ELSE name END,
+			pinned = MAX(pinned, (SELECT pinned FROM wz_chats WHERE jid = ?1)),
+			muted_until = CASE
+				WHEN muted_until = 0 OR (SELECT muted_until FROM wz_chats WHERE jid = ?1) = -1 THEN (SELECT muted_until FROM wz_chats WHERE jid = ?1)
+				WHEN (SELECT muted_until FROM wz_chats WHERE jid = ?1) = 0 THEN muted_until
+				ELSE MAX(muted_until, (SELECT muted_until FROM wz_chats WHERE jid = ?1)) END,
+			archived = archived | (SELECT archived FROM wz_chats WHERE jid = ?1),
+			unread = unread + (SELECT unread FROM wz_chats WHERE jid = ?1),
+			mentioned = mentioned | (SELECT mentioned FROM wz_chats WHERE jid = ?1),
+			favorite = favorite | (SELECT favorite FROM wz_chats WHERE jid = ?1),
+			last_ts = MAX(last_ts, (SELECT last_ts FROM wz_chats WHERE jid = ?1)),
+			settled = settled | (SELECT settled FROM wz_chats WHERE jid = ?1),
+			ephemeral = CASE WHEN ephemeral = 0 THEN (SELECT ephemeral FROM wz_chats WHERE jid = ?1) ELSE ephemeral END
+			WHERE jid = ?2`,
+		`DELETE FROM wz_chats WHERE jid = ?1`,
+	} {
+		if _, err := x.ExecContext(ctx, q, from, to); err != nil {
+			return fmt.Errorf("merge %s into %s: %w", from, to, err)
+		}
+	}
+	// What the UPDATE OR IGNOREs left behind on a key clash belongs to the
+	// target already; what it pushed out goes.
+	if _, err := x.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat = ?`, from); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ensureChat creates the chat if needed and fills in its name if it has none.
 func (s *msgStore) ensureChat(ctx context.Context, x execer, jid string, isGroup bool, name string) error {
 	_, err := x.ExecContext(ctx, `
@@ -309,6 +377,11 @@ type chatMeta struct {
 	ephemeral                  uint32 // disappearing-messages timer, seconds
 }
 
+// setMeta applies a history sync conversation's settings. Unread rises
+// from the phone's count only while the bit isn't settled: a read here or
+// on the phone settled it, and the sync's snapshot is older than that. It
+// unsettles again with every message that comes in (addUnread), so the
+// phone can correct the count for messages this device never received.
 func (s *msgStore) setMeta(ctx context.Context, x execer, jid string, m chatMeta) error {
 	_, err := x.ExecContext(ctx, `
 		UPDATE wz_chats SET
@@ -394,12 +467,16 @@ func (s *msgStore) readAfter(ctx context.Context, jid string, ts int64, unmark b
 
 // addUnread counts one more unread message, which is for you (forMe) or
 // not. A chat's mentioned flag starts over with its unread count, so it
-// needs no clearing wherever the chat is read.
+// needs no clearing wherever the chat is read. Unsettling the unread bit
+// lets a history sync's UnreadCount — the phone's, which counts messages
+// this device hasn't received yet — correct the count later; a read
+// settles it again.
 func (s *msgStore) addUnread(ctx context.Context, jid string, forMe bool) error {
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE wz_chats SET unread = MAX(unread, 0) + 1,
-			mentioned = (unread > 0 AND mentioned != 0) OR ?
-		WHERE jid = ?`, boolInt(forMe), jid)
+			mentioned = (unread > 0 AND mentioned != 0) OR ?,
+			settled = settled & ~?
+		WHERE jid = ?`, boolInt(forMe), settledBits["unread"], jid)
 	return err
 }
 

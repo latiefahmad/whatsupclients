@@ -134,14 +134,19 @@ func (u *UI) layoutChips(gtx C) D {
 			active := sel.of(i)
 			fg := mix(p.ChipText, p.ChipActiveText, active)
 			parts[i] = record(cgtx, func(gtx C) D {
+				it.count = u.chipCount(it)
 				return u.chip(gtx, u.btn("chip:"+itoa(i)), active, func(gtx C) D {
 					if it.add {
 						// A round "+", as wide as it is tall.
 						gtx.Constraints.Min.X = more
 						return layout.Center.Layout(gtx, iconW(icAdd, 22, p.ChipText))
 					}
+					name := it.name
+					if it.count > 0 {
+						name += "  " + itoa(it.count)
+					}
 					return layout.Inset{Left: 12, Right: 12}.Layout(gtx,
-						u.label(15, it.name, fg, labelOpts{weight: font.SemiBold, maxLines: 1}).Layout)
+						u.label(15, name, fg, labelOpts{weight: font.SemiBold, maxLines: 1}).Layout)
 				})
 			})
 		}
@@ -545,7 +550,7 @@ func (u *UI) layoutRowName(gtx C, c *model.Chat, verified bool) D {
 			gtx.Constraints.Min.X = 0
 			return u.label(17.5, c.Name, p.Text).Layout(gtx)
 		}),
-		layout.Rigid(u.label(17.5, "  (You)", p.Text).Layout),
+		layout.Rigid(u.label(17.5, " (You)", p.Text).Layout),
 	)
 }
 

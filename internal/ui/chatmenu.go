@@ -81,6 +81,7 @@ func (u *UI) convMenuItems(c *model.Chat) []menuItem {
 func (u *UI) startSelectNone() {
 	u.conv.selecting = true
 	u.conv.picked = map[string]bool{}
+	u.conv.selAnchor = ""
 }
 
 func (u *UI) confirmBlock(id, name string) {

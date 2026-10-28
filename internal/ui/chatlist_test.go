@@ -248,6 +248,157 @@ func TestSelectChats(t *testing.T) {
 	}
 }
 
+// TestSelectRange checks the shift-click range of the select mode: it
+// picks the chats from the last plain-clicked row to the clicked one, and
+// grows or clears with more shift-clicks.
+func TestSelectRange(t *testing.T) {
+	u, _, frame, _ := chatListUI(t)
+	u.startChatSelect()
+	frame()
+	u.pickRow("arman")
+	u.pickRowAt("bank", true) // range arman..bank, in u.chats order
+	between := map[string]bool{}
+	for _, c := range rangeBetween(u, "arman", "bank") {
+		between[c.ID] = true
+	}
+	got := map[string]bool{}
+	for _, c := range u.pickedChats() {
+		got[c.ID] = true
+	}
+	if !slices.Equal(keysOf(got), keysOf(between)) {
+		t.Errorf("shift-click picked %d chats, want the %d between arman and bank", len(got), len(between))
+	}
+	if u.sidebar.pick.anchor != "arman" {
+		t.Error("a shift-click moved the anchor")
+	}
+
+	// A shift-click on a picked row clears its range instead: what stays
+	// is what was picked beyond the cleared range.
+	u.pickRowAt("pelatnas", true)
+	cleared := map[string]bool{}
+	for _, c := range rangeBetween(u, "arman", "pelatnas") {
+		cleared[c.ID] = true
+	}
+	var kept []*model.Chat
+	for _, c := range u.pickedChats() {
+		if !cleared[c.ID] {
+			kept = append(kept, c)
+		}
+	}
+	wantKept := len(rangeBetween(u, "pelatnas", "bank")) - 1 // bank's span past pelatnas
+	if len(kept) != wantKept {
+		t.Errorf("clearing kept %d chats (%v), want %d", len(kept), keptIDs(kept), wantKept)
+	}
+	u.pickRowAt("citra", true) // grows: anchor still arman
+	if n := len(u.pickedChats()); n <= len(kept) {
+		t.Errorf("the range didn't grow back (%d chats)", n)
+	}
+
+	// A shift-click without an anchor picks just the one chat.
+	u.endChatSelect()
+	u.startChatSelect()
+	u.pickRowAt("arman", true)
+	if n := len(u.pickedChats()); n != 1 || !u.sidebar.pick.picked["arman"] {
+		t.Errorf("a lone shift-click picked %d chats", n)
+	}
+}
+
+// TestSelectMsgRange checks the shift-click range of the conversation's
+// select mode: it picks the messages from the last plain-clicked row to
+// the clicked one, past the system notes, and clears with more
+// shift-clicks.
+func TestSelectMsgRange(t *testing.T) {
+	u, _, frame, _ := chatListUI(t)
+	u.SelectID("citra")
+	frame()
+	u.startSelectNone()
+	frame()
+	n := len(u.msgs)
+	if n < 3 {
+		t.Fatalf("the demo chat has %d messages", n)
+	}
+	first, last := u.msgs[0], u.msgs[n-1]
+	u.pickMsg([]*model.Message{first}, false)
+	u.pickMsg([]*model.Message{last}, true)
+	want := 0
+	between := false
+	for _, m := range u.msgs {
+		if m.ID == first.ID {
+			between = true
+		}
+		if between && m.Kind != model.KindSystem {
+			want++
+		}
+	}
+	if got := len(u.pickedMessages()); got != want {
+		t.Errorf("shift-click picked %d messages, want the %d from first to last", got, want)
+	}
+	if u.conv.selAnchor != first.ID {
+		t.Error("a shift-click moved the anchor")
+	}
+
+	// A shift-click on a picked row clears its range: what stays is the
+	// span past the cleared one.
+	mid := u.msgs[1]
+	u.pickMsg([]*model.Message{mid}, true)
+	wantKept := 0
+	for i := 2; i < n; i++ {
+		if u.msgs[i].Kind != model.KindSystem {
+			wantKept++
+		}
+	}
+	if got := len(u.pickedMessages()); got != wantKept {
+		t.Errorf("clearing kept %d messages, want %d", got, wantKept)
+	}
+
+	// A shift-click without an anchor picks just the one message.
+	u.endSelect()
+	u.startSelectNone()
+	u.pickMsg([]*model.Message{last}, true)
+	if got := len(u.pickedMessages()); got != 1 || !u.conv.picked[last.ID] {
+		t.Errorf("a lone shift-click picked %d messages", got)
+	}
+}
+
+// rangeBetween returns the chats from one to the other, in the list's
+// order, the range a shift-click picks.
+func rangeBetween(u *UI, a, b string) []*model.Chat {
+	picked := false
+	var out []*model.Chat
+	for _, c := range u.chats {
+		if c.ID == a || c.ID == b {
+			picked = !picked
+		}
+		if picked {
+			out = append(out, c)
+		}
+	}
+	if c := u.chatByID(b); c != nil && (len(out) == 0 || out[len(out)-1].ID != b) {
+		out = append(out, c)
+	}
+	return out
+}
+
+// keptIDs lists a slice of chats' IDs, for error messages.
+func keptIDs(cs []*model.Chat) []string {
+	var out []string
+	for _, c := range cs {
+		out = append(out, c.ID)
+	}
+	return out
+}
+
+// keysOf returns a shallow copy of a set, so two maps can be compared with
+// slices.Equal regardless of ordering.
+func keysOf(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	slices.Sort(out)
+	return out
+}
+
 // TestAppLock sets a password, locks, unlocks with it and turns it off.
 func TestAppLock(t *testing.T) {
 	stored := hashPassword("secret1")

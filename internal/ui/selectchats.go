@@ -20,7 +20,8 @@ import (
 type chatPick struct {
 	on     bool
 	picked map[string]bool
-	anim   tween // the checkboxes sliding in
+	anim   tween  // the checkboxes sliding in
+	anchor string // the last row a plain click toggled, for shift ranges
 }
 
 func (u *UI) startChatSelect() {
@@ -51,6 +52,50 @@ func (u *UI) pickRow(id string) {
 	} else {
 		s.picked[id] = true
 	}
+	s.anchor = id
+}
+
+// pickRowAt handles a row's click in select mode: a plain click toggles
+// the chat, a shift-click picks or unpicks the whole range from the last
+// plain-clicked chat, like a file list's.
+func (u *UI) pickRowAt(id string, shift bool) {
+	if !shift {
+		u.pickRow(id)
+		return
+	}
+	s := &u.sidebar.pick
+	from := s.anchor
+	if from == "" || from == id {
+		u.pickRow(id)
+		return
+	}
+	a, b := -1, -1
+	for i, c := range u.chats {
+		if c.ID == from {
+			a = i
+		}
+		if c.ID == id {
+			b = i
+		}
+	}
+	if a < 0 || b < 0 {
+		u.pickRow(id)
+		return
+	}
+	if a > b {
+		a, b = b, a
+	}
+	// The range follows the clicked row: a picked row clears it, an
+	// unpicked one picks it.
+	on := !s.picked[id]
+	for _, c := range u.chats[a : b+1] {
+		if on {
+			s.picked[c.ID] = true
+		} else {
+			delete(s.picked, c.ID)
+		}
+	}
+	// A shift-click doesn't move the anchor, so the range can grow.
 }
 
 // pickActions runs the select bar's buttons.

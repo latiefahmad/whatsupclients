@@ -26,6 +26,7 @@ import (
 	"github.com/latiefahmad/whatsupclients/internal/auto"
 	"github.com/latiefahmad/whatsupclients/internal/linkpreview"
 	"github.com/latiefahmad/whatsupclients/internal/model"
+	recorder "github.com/latiefahmad/whatsupclients/internal/record"
 )
 
 // Chat list filters, in chip order.
@@ -148,6 +149,7 @@ type UI struct {
 
 	files  fileState   // documents and audio on disk
 	voice  voiceState  // the audio message playing
+	rec    recState    // the voice message being recorded (voicerec.go)
 	attach attachState // files picked to send
 
 	menu       menuState
@@ -163,13 +165,15 @@ type UI struct {
 	ctx                     ctxMenu
 	reacts                  reactionsPopup // who reacted to a message (reactions.go)
 	dialog                  dialogState
+	shiftDown               bool // Shift is held (for shift-click ranges)
 	picker                  emojiPicker
 	viewer                  mediaViewer
 	picView                 picView // a profile picture shown big (photoview.go)
 	toastMsg                toastState
-	mouse                   image.Point // last pointer position, in content coordinates
-	mousePress              image.Point // primary press, for locating a clicked thumbnail
-	tipKey                  string      // hover tooltip showing (tip.go), or ""
+	mouse                   image.Point   // last pointer position, in content coordinates
+	mouseMod                key.Modifiers // modifiers of the last pointer event, for shift-clicks
+	mousePress              image.Point   // primary press, for locating a clicked thumbnail
+	tipKey                  string        // hover tooltip showing (tip.go), or ""
 	tipText                 string
 	tipSince                time.Time
 	mediaChat, mediaGallery viewerViewport
@@ -270,6 +274,7 @@ type UI struct {
 		mentionDismissed string
 		selecting        bool            // "Select" mode
 		picked           map[string]bool // selected message IDs
+		selAnchor        string          // the last message a plain click toggled, for shift-click ranges
 		flash            string          // message highlighted after a jump
 		flashUntil       time.Time
 		composerH        int
@@ -537,6 +542,7 @@ func (u *UI) setPage(pg page) {
 	u.page = pg
 	u.status.groupID = ""
 	u.closeNewChat()
+	u.closeStatusPrivacy()
 	u.settings.detail = 0
 	u.hideInfo()
 	u.hideChatSearch()
@@ -631,17 +637,19 @@ func (u *UI) open(c *model.Chat) {
 	u.closePicker()
 	u.picker.anim.snap(false)
 	u.stopVoice()
+	u.discardRecording()
 	u.dropAttachments()
 	u.restoreDraft()
 }
 
 // markSeen marks the open chat read while it is on screen and the window
-// has focus, as WhatsApp does: messages that arrive in it never count as
-// unread, and ones that came while the window was away are read on return.
+// has focus and you're at the computer, as WhatsApp does: messages that
+// arrive in it never count as unread, and ones that came while the
+// window was away or you were idle for a minute are read on return.
 // It reports whether it marked anything.
 func (u *UI) markSeen() bool {
 	c := u.selected
-	if c == nil || u.away || u.selPage != u.page || u.page == pageStatus || u.page == pageSettings {
+	if c == nil || u.away || u.idle() || u.selPage != u.page || u.page == pageStatus || u.page == pageSettings {
 		return false
 	}
 	// An open channel is a copy (channelChat); new posts count in u.channels.
@@ -744,7 +752,7 @@ func (u *UI) layoutWindow(gtx C) D {
 	u.layoutGallery(gtx)
 	u.layoutViewer(gtx)
 	u.layoutPicView(gtx)
-	if u.picker.shown() && (u.picker.mode == pickReaction || u.picker.mode == pickMedia) {
+	if u.picker.shown() && (u.picker.mode == pickReaction || u.picker.mode == pickMedia || u.picker.mode == pickAudience) {
 		u.layoutPicker(gtx, image.Point{}, gtx.Constraints.Max.X)
 	}
 	u.layoutCtxMenu(gtx)
@@ -821,7 +829,13 @@ func (u *UI) layoutPageSidebar(gtx C) D {
 	u.sidebar.openSel.step(gtx, openID, durSwitch)
 	switch u.page {
 	case pageStatus:
-		return u.layoutStatusList(gtx)
+		if u.statusPrivacyCovers() {
+			u.layoutStatusPrivacy(gtx)
+			return D{Size: gtx.Constraints.Max}
+		}
+		d := u.layoutStatusList(gtx)
+		u.layoutStatusPrivacy(gtx)
+		return d
 	case pageChannels:
 		return u.layoutChannelList(gtx)
 	case pageCommunities:
@@ -933,6 +947,16 @@ func (u *UI) layoutWithInfo(gtx C) D {
 // update handles input events before anything is drawn.
 func (u *UI) update(gtx C) {
 	for {
+		// Track Shift for shift-click ranges on the chat rows.
+		for {
+			ev, ok := gtx.Event(key.Filter{Name: key.NameShift})
+			if !ok {
+				break
+			}
+			if ke, ok := ev.(key.Event); ok && ke.Name == key.NameShift {
+				u.shiftDown = ke.State == key.Press
+			}
+		}
 		ev, ok := gtx.Event(key.Filter{Name: key.NameEscape})
 		if !ok {
 			break
@@ -956,6 +980,7 @@ func (u *UI) update(gtx C) {
 		u.sidebar.list.Position = layout.Position{}
 	}
 	u.updateNewChat(gtx)
+	u.updateStatusPrivacy(gtx)
 	// The open page's rail button hides its list, or shows it again.
 	if chats := u.rail.chats.Clicked(gtx); chats && u.page == pageChats && !u.sidebar.showArchived && u.newChat.step == ncNone {
 		u.setListHidden(!u.split.hidden)
@@ -1015,7 +1040,9 @@ func (u *UI) update(gtx C) {
 	for id, click := range u.sidebar.rows {
 		if click.Clicked(gtx) {
 			if u.sidebar.pick.on {
-				u.pickRow(id)
+				// A shift-click picks the range back to the last plain-clicked
+				// row, like a file list's.
+				u.pickRowAt(id, u.clickShift())
 			} else if c := u.chatByID(id); c != nil {
 				u.open(c)
 			}
@@ -1060,9 +1087,10 @@ func (u *UI) update(gtx C) {
 			u.sendComposer()
 		}
 	}
-	if u.conv.send.Clicked(gtx) {
+	if u.conv.send.Clicked(gtx) && !u.micClicked() {
 		u.sendComposer()
 	}
+	u.updateRecording(gtx)
 	if u.conv.outgoingTyping != "" && !u.canReportTyping() {
 		u.stopOutgoingTyping()
 	}
@@ -1159,6 +1187,8 @@ func (u *UI) escape() {
 		u.conv.reply = nil
 	case u.status.viewer.isOpen():
 		u.status.viewer.close()
+	case u.status.privacy.open():
+		u.statusPrivacyBack()
 	case u.page == pageSettings && u.settings.detail != 0:
 		u.settingsBack()
 	case u.info.open:
@@ -1272,6 +1302,8 @@ func (u *UI) applyEvents() {
 			u.inviteLooked(e)
 		case model.JoinedEvent:
 			u.inviteJoined(e)
+		case model.LabelEvent:
+			u.labelChanged(e)
 		case model.InfoEvent:
 			if u.conv.membersFor == e.ChatID {
 				u.conv.membersFor = ""
@@ -1281,6 +1313,7 @@ func (u *UI) applyEvents() {
 			}
 		case model.StatusEvent:
 			u.statuses = u.backend.Statuses()
+			u.statusPrivacyEvent()
 		case model.StickersEvent:
 			u.picker.stickersOK = [3]bool{} // reloaded when next drawn
 		case model.ChannelsEvent:
@@ -1471,7 +1504,7 @@ func (u *UI) applyReceipt(e model.ReceiptEvent) {
 // "statusmenu", "statusprivacy", "statustext" and "statussend"; the zoom's "zoombubble" and
 // Font size "zoommenu"; or the New chat panel:
 // "newchat", "newnumber" (a typed phone number), "newmembers" (Create a similar group of the
-// open chat) or "newgroup"; the ⋮ menu "menu", its account switcher "accounts", or the
+// open chat) or "newgroup"; the â‹® menu "menu", its account switcher "accounts", or the
 // switcher on the login screen "loginaccounts", its Starred messages "starredall"; slash commands in a group: the
 // picker "slash", /kick's options "slashkick", /calc's answer as you type "slashcalc", a mention
 // in /schedule's message "slashschedule", the notes of commands run "slashrun", a scheduled
@@ -1522,7 +1555,7 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		u.privacy.fx.snap(true)
 		u.privacy.v = 1
 	case "menu", "accounts", "loginaccounts":
-		// The chat list's ⋮ menu, and its account switcher with a second
+		// The chat list's â‹® menu, and its account switcher with a second
 		// demo account; or the switcher on the login screen of an account
 		// being added.
 		if u.accounts == nil {
@@ -1622,7 +1655,7 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		const link = "https://villakayu.example/ubud"
 		u.conv.composer.SetText("This is the one " + link)
 		u.conv.link.url = link
-		u.conv.link.got = &linkResult{url: link, prev: &linkpreview.Preview{Title: "Villa Kayu · Ubud, Bali",
+		u.conv.link.got = &linkResult{url: link, prev: &linkpreview.Preview{Title: "Villa Kayu Â· Ubud, Bali",
 			Description: "A private pool villa among the rice fields, 10 minutes from Ubud center."}}
 	case "delete":
 		if lastOut != nil {
@@ -1640,6 +1673,14 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 	case "edit":
 		if lastOut != nil {
 			u.startEdit(lastOut)
+		}
+	case "recording", "recordingpaused":
+		// A voice message 0:07 into recording, or paused to play back.
+		if u.selected != nil {
+			u.rec.sess, u.rec.chatID = recorder.Sample(7*time.Second, false), u.selected.ID
+			if name == "recordingpaused" {
+				u.pauseRecording()
+			}
 		}
 	case "edits":
 		for _, m := range u.msgs {
@@ -1714,6 +1755,8 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		u.openAttachMenu()
 	case "poll":
 		u.openPoll()
+	case "newevent":
+		u.openNewEvent()
 	case "contacts":
 		u.openContactPicker()
 	case "invite":
@@ -1801,19 +1844,47 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 			u.status.viewer.show(t)
 			u.status.viewer.anim.snap(true)
 		}
-	case "statusadd", "statusmenu", "statusprivacy", "statustext", "statussend":
-		// Posting a status, from the Status page.
+	case "statusadd", "statusmenu", "statusprivacy", "statustext", "statussend",
+		"statushidden", "statusrowmenu", "statuspeople", "statusname", "statusnew", "statusaudience":
+		// Posting a status, from the Status page; the Hidden section open,
+		// a contact's menu (Hide), an update shared with close friends;
+		// Status privacy, an audience's people, its name and emoji, and a
+		// new audience's.
 		u.setPage(pageStatus)
 		switch name {
 		case "statusadd":
 			u.openStatusAdd()
 		case "statusmenu":
 			u.ctx = ctxMenu{kind: ctxStatusMenu, at: u.mouse}
-		case "statusprivacy":
+		case "statushidden":
+			u.status.showHidden = true
+		case "statusrowmenu":
+			u.ctx = ctxMenu{kind: ctxStatusRow, chatID: "arman", at: u.mouse}
+		case "statusaudience":
+			for _, t := range u.statuses {
+				if t.ID == "citra" && len(t.Updates) > 1 {
+					u.status.viewer.show(t)
+					u.status.viewer.index = 1
+					u.status.viewer.paused = true
+					u.status.viewer.anim.snap(true)
+				}
+			}
+		case "statusprivacy", "statuspeople", "statusname", "statusnew":
 			u.openStatusPrivacy()
+			switch name {
+			case "statuspeople":
+				u.openAudiencePeople(model.AudienceList, 0, false)
+			case "statusname":
+				u.openAudiencePeople(model.AudienceList, 0, false)
+				u.openAudienceName(0)
+			case "statusnew":
+				u.openAudienceName(-1)
+				u.status.privacy.name.SetText("Weekend crew")
+			}
+			u.status.privacy.snap()
 		case "statustext":
 			u.openStatusText()
-			u.status.text.ed.SetText("Off to the beach this weekend 🌊")
+			u.status.text.ed.SetText("Off to the beach this weekend ðŸŒŠ")
 			u.status.text.anim.snap(true)
 		case "statussend":
 			photo := os.Getenv("WHATSUP_DEMO_PHOTO")
@@ -1848,7 +1919,7 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 					Text: "Fried rice 25,000, iced tea 8K, parking 5,000", Time: u.now()}
 			}
 			u.slash.calcMore = true
-			set("/calc ceil((25000 + 8000 + 5000) ÷ 3)")
+			set("/calc ceil((25000 + 8000 + 5000) Ã· 3)")
 		case "slashschedule":
 			set("/schedule tomorrow 08:00 Standup in 10 minutes @")
 		case "slashrun":
@@ -1929,7 +2000,7 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		}
 		u.gallery.anim.snap(true)
 	case "starredall":
-		// The ⋮ menu's Starred messages, from every chat; the demo stars
+		// The â‹® menu's Starred messages, from every chat; the demo stars
 		// none, so star the last messages in and out first.
 		for _, m := range []*model.Message{lastIn, lastOut, img} {
 			if m != nil {
@@ -1940,14 +2011,14 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		u.applyEvents()
 		u.gallery.anim.snap(true)
 	case "convmenu", "timer":
-		// The open chat's ⋮ menu, or its disappearing message timers.
+		// The open chat's â‹® menu, or its disappearing message timers.
 		if name == "convmenu" {
 			u.openConvMenu()
 		} else {
 			u.openTimerMenu(u.selected)
 		}
 	case "left":
-		// A group you're no longer a member of, with its ⋮ menu.
+		// A group you're no longer a member of, with its â‹® menu.
 		u.backend.LeaveGroup(u.selected.ID)
 		u.applyEvents()
 		u.openConvMenu()

@@ -15,6 +15,7 @@ type chipItem struct {
 	filter int    // filterAll... or filterList
 	list   string // filterList's list ID
 	add    bool   // the "+" chip
+	count  int    // chats the filter shows, drawn after the name
 }
 
 // chipItems lists the filter row's chips, in order. The buffer is reused
@@ -30,6 +31,51 @@ func (u *UI) chipItems() []chipItem {
 	out = append(out, chipItem{name: "New list", add: true})
 	u.sidebar.chipBuf = out
 	return out
+}
+
+// chipCount is how many chats a chip's filter shows, WhatsApp's "Unread 6"
+// and "Groups 2". 0 draws as no number, like WhatsApp's All.
+func (u *UI) chipCount(it chipItem) int {
+	switch it.filter {
+	case filterUnread:
+		n := 0
+		for _, c := range u.chats {
+			if c.Unread > 0 {
+				n++
+			}
+		}
+		return n
+	case filterFavorites, filterGroups, filterList:
+		n := 0
+		for _, c := range u.chats {
+			if c.Archived == u.sidebar.showArchived {
+				switch it.filter {
+				case filterFavorites:
+					if c.Favorite {
+						n++
+					}
+				case filterGroups:
+					if c.IsGroup {
+						n++
+					}
+				case filterList:
+					for _, l := range u.lists {
+						if l.ID != it.list {
+							continue
+						}
+						for _, id := range l.Chats {
+							if id == c.ID {
+								n++
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+		return n
+	}
+	return 0
 }
 
 // activeChip is the index of the chip whose filter is on.

@@ -378,6 +378,17 @@ func demo(now time.Time) []*demoChat {
 			{FromMe: true, Media: model.MediaVoice, Duration: 7, Time: day(0, 9, 53), Receipt: model.Delivered},
 		},
 	}
+	// The labels members gave themselves, beside their names.
+	labels := map[string]string{"mas rif": "Release manager", "ririiiin": "QA"}
+	for _, m := range work.Messages {
+		if m.Sender != "" && m.SenderID == "" {
+			m.SenderID = strings.ToLower(m.Sender)
+		}
+		if q := m.Quote; q != nil && q.Sender != "" && q.SenderID == "" {
+			q.SenderID = strings.ToLower(q.Sender)
+		}
+		m.SenderLabel = labels[m.SenderID]
+	}
 
 	chats := []*demoChat{
 		rina, family, work,

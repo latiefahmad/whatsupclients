@@ -369,6 +369,11 @@ func (b *Backend) parse(ctx context.Context, evt *events.Message) (p parsed, ok 
 			}
 			b.setLimitSharing(ctx, chat.String(), ls.GetSharingLimited(), ts)
 			return p, false
+		case waE2E.ProtocolMessage_GROUP_MEMBER_LABEL_CHANGE:
+			if ml := pm.GetMemberLabel(); evt.Info.IsGroup && b.setMemberLabel(ctx, chat.String(), evt.Info.Sender, ml) {
+				b.emitLabel(chat.String(), evt.Info.Sender, ml.GetLabel())
+			}
+			return p, false
 		default:
 			return p, false
 		}
@@ -451,6 +456,10 @@ func (b *Backend) parse(ctx context.Context, evt *events.Message) (p parsed, ok 
 	}
 	p.msg.senderJID = evt.Info.Sender.ToNonAD().String()
 	p.msg.senderPush = evt.Info.PushName
+	if ml := c.ctx.GetMemberLabel(); ml != nil && evt.Info.IsGroup &&
+		b.setMemberLabel(ctx, chat.String(), evt.Info.Sender, ml) {
+		b.emitLabel(chat.String(), evt.Info.Sender, ml.GetLabel())
+	}
 	raw := evt.RawMessage
 	if raw == nil {
 		raw = evt.Message

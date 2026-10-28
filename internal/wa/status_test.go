@@ -52,8 +52,17 @@ func TestStatusQuoteAndExpiry(t *testing.T) {
 	if len(threads) != 1 || len(threads[0].Updates) != 2 {
 		t.Fatalf("statuses = %+v", threads)
 	}
-	if _, err := os.Stat(old); !os.IsNotExist(err) {
-		t.Errorf("expired status video kept: %v", err)
+	// The old media's removal runs in the background.
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(old); os.IsNotExist(err) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Errorf("expired status video kept")
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
@@ -67,7 +76,7 @@ func TestAudienceOf(t *testing.T) {
 		{types.StatusPrivacy{Type: types.StatusPrivacyTypeBlacklist, List: jids}, model.StatusPrivacy{Audience: model.AudienceExcept, Count: 2}},
 		{types.StatusPrivacy{Type: types.StatusPrivacyTypeWhitelist, List: jids[:1]}, model.StatusPrivacy{Audience: model.AudienceOnly, Count: 1}},
 	} {
-		if got := *audienceOf(c.in); got != c.want {
+		if got := *audienceOf(c.in); got.Audience != c.want.Audience || got.Count != c.want.Count {
 			t.Errorf("%s: got %+v, want %+v", c.in.Type, got, c.want)
 		}
 	}

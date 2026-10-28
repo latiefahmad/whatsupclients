@@ -100,7 +100,12 @@ func (u *UI) drawAvatar(gtx C, id, name string, kind avatarKind, size unit.Dp) D
 			centerIn(gtx, px, u.label(unit.Sp(float32(size)*0.42), "💬", p.Text).Layout)
 			return dims
 		}
-		fillCircle(gtx, mid, px/2, p.GroupAvatar)
+		bg := p.GroupAvatar
+		if n := len(p.AvatarBgs); n > 0 {
+			i := avatarTint(id, name, n)
+			bg = p.AvatarBgs[i]
+		}
+		fillCircle(gtx, mid, px/2, bg)
 		centerIn(gtx, px, iconW(icGroup, size*0.5, p.GroupAvatarIcon))
 		return dims
 	}

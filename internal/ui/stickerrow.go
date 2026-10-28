@@ -56,22 +56,11 @@ func (u *UI) layoutStickerRow(gtx C, c *model.Chat, r convRow, maxW, margin int)
 		for _, l := range lines {
 			line := ms[l[0]:l[1]]
 			if u.btn("srow:" + line[0].ID).Clicked(gtx) {
-				all := u.pickedAll(line)
-				for _, m := range line {
-					if all {
-						delete(u.conv.picked, m.ID)
-					} else {
-						u.conv.picked[m.ID] = true
-					}
-				}
+				u.pickMsg(line, u.clickShift())
 			}
 			for _, m := range line {
 				if u.btn("row:" + m.ID).Clicked(gtx) {
-					if u.conv.picked[m.ID] {
-						delete(u.conv.picked, m.ID)
-					} else {
-						u.conv.picked[m.ID] = true
-					}
+					u.pickMsg([]*model.Message{m}, u.clickShift())
 				}
 			}
 		}

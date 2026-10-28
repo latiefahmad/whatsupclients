@@ -19,6 +19,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 
+	"github.com/latiefahmad/whatsupclients/internal/desktop"
 	"github.com/latiefahmad/whatsupclients/internal/model"
 )
 
@@ -131,6 +132,24 @@ func (u *UI) touchLock() {
 	if u.lock != nil {
 		u.lock.last = u.now()
 	}
+}
+
+// idle reports whether the window has gone without keyboard or pointer
+// input for a minute — the user may be away even with the window in
+// front, and then messages stay unread (see markSeen) like when it
+// isn't. A locked screen counts: it stops the frames, and any input
+// unlocks it first.
+const idleAfter = time.Minute
+
+func (u *UI) idle() bool {
+	// OS idle counts input in other apps too and keeps growing while
+	// the screen is locked, which the window's own input tracking
+	// misses: either of the two means the user is away.
+	if desktop.IdleTime() >= idleAfter {
+		return true
+	}
+	l := u.lock
+	return l != nil && !l.last.IsZero() && u.now().Sub(l.last) >= idleAfter
 }
 
 // autoLock locks the app once it has gone without input for the chosen

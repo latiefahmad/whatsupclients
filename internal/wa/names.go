@@ -67,6 +67,42 @@ func (b *Backend) canonical(ctx context.Context, j types.JID) types.JID {
 	return j
 }
 
+// mergeAliases folds a one-to-one chat's older phone-number row into its
+// LID row, once a mapping exists: the same person held two chats, the old
+// one never hearing from them again. It runs off the hot path (once per
+// chat whose message just came in under the LID).
+func (b *Backend) mergeAliases(ctx context.Context, lid types.JID) {
+	if lid.Server != types.HiddenUserServer {
+		return
+	}
+	cli := b.client()
+	if cli == nil {
+		return
+	}
+	pn, err := cli.Store.LIDs.GetPNForLID(ctx, lid)
+	if err != nil || pn.IsEmpty() {
+		return
+	}
+	if _, ok := b.store.chat(ctx, pn.String()); !ok {
+		return // no old row to fold in
+	}
+	tx, err := b.db.BeginTx(ctx, nil)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+	if err := b.store.mergeChat(ctx, tx, pn.String(), lid.String()); err != nil {
+		b.log.Warnf("merge %s into %s: %v", pn, lid, err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		b.log.Warnf("merge %s into %s: %v", pn, lid, err)
+		return
+	}
+	b.log.Infof("merged chat %s into %s", pn, lid)
+	b.emitAllChats()
+}
+
 func (b *Backend) isMe(j types.JID) bool {
 	cli := b.client()
 	if cli == nil || cli.Store.ID == nil {
@@ -278,6 +314,9 @@ func (b *Backend) resolve(ctx context.Context, r rawMsg, isGroup bool) *model.Me
 	}
 	if isGroup && !m.FromMe && r.senderJID != "" {
 		m.Sender = b.senderNameStr(ctx, r.senderJID, r.senderPush)
+		if l, ok := b.memberLabelOf(ctx, m.ChatID, r.senderJID); ok {
+			m.SenderLabel = l
+		}
 	}
 	if r.quote != nil {
 		m.Quote = b.resolveQuote(ctx, m.ChatID, r.quote)

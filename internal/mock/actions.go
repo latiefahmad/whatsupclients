@@ -231,6 +231,8 @@ func (b *Backend) SendFile(chatID string, a model.Attachment, d model.Draft) *mo
 			if x.Text == "" {
 				x.Text = x.FileName
 			}
+		case model.MediaVoice:
+			x.Duration, x.Waveform = a.Seconds, a.Waveform
 		}
 	})
 	return b.copyOf(m)
@@ -271,6 +273,18 @@ func (b *Backend) SendPoll(chatID string, p model.Poll) *model.Message {
 		}
 		for _, o := range p.Options {
 			x.Poll.Options = append(x.Poll.Options, model.PollOption{Name: o})
+		}
+	})
+	return b.copyOf(m)
+}
+
+func (b *Backend) SendEvent(chatID string, e model.NewEvent) *model.Message {
+	m := b.Send(chatID, model.Draft{Text: e.Name})
+	b.update(m, func(x *model.Message) {
+		x.Media = model.MediaEventInvite
+		x.Event = &model.EventInfo{Name: e.Name, Description: e.Description, Start: e.Start, End: e.End}
+		if e.Place != "" {
+			x.Event.Place = &model.Location{Name: e.Place}
 		}
 	})
 	return b.copyOf(m)
