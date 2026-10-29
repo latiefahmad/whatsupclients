@@ -1016,16 +1016,19 @@ func (s *msgStore) deleteMessageEvery(ctx context.Context, chats []string, id st
 		args = append(args, c)
 	}
 	in := numbered(len(chats), 2)
-	res, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE id = ?1 AND chat IN (`+in+`);
-		DELETE FROM wz_edits WHERE id = ?1 AND chat IN (`+in+`);
-		DELETE FROM wz_receipts WHERE id = ?1 AND chat IN (`+in+`);
-		DELETE FROM wz_votes WHERE id = ?1 AND chat IN (`+in+`);
-		DELETE FROM wz_reactions WHERE id = ?1 AND chat IN (`+in+`)`, args...)
+	// The message goes first and on its own: multi-statement Exec reports
+	// only the last statement's count, which is 0 whenever a message has no
+	// reactions, and callers read it as "wasn't stored here".
+	res, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE id = ?1 AND chat IN (`+in+`)`, args...)
 	if err != nil {
 		return 0, err
 	}
 	n, _ := res.RowsAffected()
-	return n, nil
+	_, err = s.db.ExecContext(ctx, `DELETE FROM wz_edits WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_receipts WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_votes WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_reactions WHERE id = ?1 AND chat IN (`+in+`)`, args...)
+	return n, err
 }
 
 // numbered returns "?start, ?start+1, ..." for n parameters, for queries

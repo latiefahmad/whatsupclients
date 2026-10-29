@@ -67,22 +67,45 @@ func (b *Backend) canonical(ctx context.Context, j types.JID) types.JID {
 	return j
 }
 
-// chatKeys returns every key a chat's messages may be stored under: the
-// canonical JID first, then its phone-number/LID alias. A deletion that
-// arrives under one identity must reach messages stored under the other
-// (mergeAliases only folds the old row in once a message comes in).
+// chatKeys returns every key a chat's messages may be stored under: the JID
+// as the event named it, its canonical LID, and the phone number it maps
+// to. A deletion that arrives under one identity must reach messages stored
+// under the other (mergeAliases only folds the old row in once a message
+// comes in).
+//
+// Both directions are followed. A phone number maps to a LID only once
+// hypermeow has learnt it, and an event may name either form, so taking the
+// LID as the one true key would miss messages stored under the number.
 func (b *Backend) chatKeys(ctx context.Context, j types.JID) []string {
+	j = j.ToNonAD()
 	key := b.canonical(ctx, j)
 	keys := []string{key.String()}
-	if key.Server != types.HiddenUserServer {
-		return keys
+	add := func(k types.JID) {
+		if k.IsEmpty() {
+			return
+		}
+		s := k.ToNonAD().String()
+		for _, have := range keys {
+			if have == s {
+				return
+			}
+		}
+		keys = append(keys, s)
 	}
+	// The event's own JID, which the canonical one may differ from.
+	add(j)
 	cli := b.client()
 	if cli == nil {
 		return keys
 	}
-	if pn, err := cli.Store.LIDs.GetPNForLID(ctx, key); err == nil && !pn.IsEmpty() {
-		keys = append(keys, pn.ToNonAD().String())
+	if key.Server == types.HiddenUserServer {
+		if pn, err := cli.Store.LIDs.GetPNForLID(ctx, key); err == nil && !pn.IsEmpty() {
+			add(pn)
+		}
+	} else if j.Server == types.DefaultUserServer {
+		if lid, err := cli.Store.LIDs.GetLIDForPN(ctx, j); err == nil && !lid.IsEmpty() {
+			add(lid)
+		}
 	}
 	return keys
 }

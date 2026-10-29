@@ -985,6 +985,15 @@ var resyncAgain = []appstate.WAPatchName{appstate.WAPatchRegularHigh}
 // the same app state collection.
 const recoveryGap = time.Hour
 
+// resyncGap is how long to wait before dropping a broken collection and
+// refetching it again. A resync that fails dispatches another
+// AppStateSyncError, which asks for another resync: without a gap the two
+// chase each other twice a second until WhatsApp blocks the device with
+// "429 rate-overlimit". In that time nothing the collection carries — a
+// message deleted for me, a cleared chat — arrives, which looked like the
+// deletions were being ignored.
+const resyncGap = 30 * time.Second
+
 // requestAppStateRecovery asks the phone for a fresh copy of an app state
 // collection whose sync data no longer verifies (an LTHash mismatch), as
 // WhatsApp's own linked devices do. Until then the collection can't sync,
@@ -1020,6 +1029,9 @@ func (b *Backend) requestAppStateRecovery(name appstate.WAPatchName) {
 // resyncAppState drops the collection's local state and refetches it
 // whole from the server's snapshot.
 func (b *Backend) resyncAppState(name appstate.WAPatchName) {
+	if !b.takeResyncSlot("appstate_resync:" + string(name)) {
+		return
+	}
 	cli := b.client()
 	if cli == nil {
 		return
@@ -1036,15 +1048,51 @@ func (b *Backend) resyncAppState(name appstate.WAPatchName) {
 	}()
 }
 
+// takeResyncSlot reports whether a resync may run now under key, and marks it
+// as run if so. Only one goes through per resyncGap, however many sync
+// errors report the same broken hash: each failure dispatches another error,
+// and left alone the two looped twice a second until WhatsApp answered
+// "429 rate-overlimit". While they did, nothing the collection carries — a
+// message deleted for me, a cleared chat — was applied, which looked like
+// the deletions were being ignored.
+func (b *Backend) takeResyncSlot(key string) bool {
+	if t, err := time.Parse(time.RFC3339, b.store.meta(b.ctx, key)); err == nil && time.Since(t) < resyncGap {
+		return false
+	}
+	_ = b.store.setMetaValue(b.ctx, key, time.Now().Format(time.RFC3339))
+	return true
+}
+
 // resyncAppStateOnce refetches all app state (pins, mutes, archives,
 // contacts) once per session database. Sessions linked before app state
 // events were enabled never received their pins and mutes.
 func (b *Backend) resyncAppStateOnce() {
 	key := appStateResyncKey
+	// A collection marked done whose version is still 0 was sealed by an
+	// earlier pass that stored nothing (FetchAppState reports success
+	// either way). Drop that mark so a later connect fetches it again,
+	// whatever the overall marker says: this account's regular_high stayed
+	// sealed for two days that way, and every message deleted for me in it
+	// was never applied.
+	if cli := b.client(); cli != nil {
+		for _, name := range appstate.AllPatchNames {
+			done := key + ":" + string(name)
+			if b.store.meta(b.ctx, done) == "" {
+				continue
+			}
+			if v, _, err := cli.Store.AppState.GetAppStateVersion(b.ctx, string(name)); err == nil && v == 0 {
+				b.log.Warnf("app state %s was marked synced but has no state; resyncing it", name)
+				_ = b.store.setMetaValue(b.ctx, done, "")
+			}
+		}
+	}
 	if b.store.meta(b.ctx, key) != "" {
 		return
 	}
 	cli := b.client()
+	if cli == nil {
+		return
+	}
 	again := b.store.meta(b.ctx, prevResyncKey) != ""
 	for _, name := range appstate.AllPatchNames {
 		// Remember each patch that synced, so that one which keeps failing
@@ -1059,6 +1107,16 @@ func (b *Backend) resyncAppStateOnce() {
 		if err := cli.FetchAppState(b.ctx, name, true, false); err != nil {
 			b.log.Warnf("resync app state %s: %v", name, err)
 			return
+		}
+		// FetchAppState returns nil whether or not the collection ended up
+		// with any state. Sealing one that stored nothing (its version stays
+		// 0) would leave it never synced for good: nothing it carries — a
+		// message deleted for me, a cleared chat — would ever arrive. Leave
+		// it unsealed so a later connect tries again.
+		v, _, verr := cli.Store.AppState.GetAppStateVersion(b.ctx, string(name))
+		if verr != nil || v == 0 {
+			b.log.Warnf("resync app state %s stored no version (%d, %v); will retry", name, v, verr)
+			continue
 		}
 		_ = b.store.setMetaValue(b.ctx, done, time.Now().Format(time.RFC3339))
 	}
