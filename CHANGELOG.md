@@ -9,6 +9,19 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.1] - 2026-10-28
+
+### 🐛 Fixes
+
+- **Delete for me now reaches this device** — a message you delete for
+  yourself on your phone (Delete > Delete for me) used to stay in the desktop
+  app. The two can be stored under a person's LID or their phone number until
+  they're merged, so a deletion that came in under one of them missed the
+  other. It now clears the message under either, and the same fix covers
+  Clear chat and Delete chat.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.0...v1.9.1
+
 ## [v1.9.0] - 2026-10-28
 
 ### 🔒 Status
