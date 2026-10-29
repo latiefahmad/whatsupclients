@@ -101,6 +101,39 @@ func TestSimilarGroupBack(t *testing.T) {
 	}
 }
 
+// TestNewChatEscapeChecksOutSearch checks that Esc in New chat clears the
+// search first and only closes the panel on the next press, as WhatsApp Web
+// does.
+func TestNewChatEscapeChecksOutSearch(t *testing.T) {
+	u := New(mock.New())
+	u.Start(func() {})
+	u.openNewChat()
+	u.newChat.search.SetText("kocul")
+	u.escape()
+	if !u.newChat.open() {
+		t.Fatal("the first Esc closed New chat")
+	}
+	if got := u.newChat.search.Text(); got != "" {
+		t.Fatalf("search still holds %q", got)
+	}
+	u.escape()
+	if u.newChat.open() {
+		t.Error("the second Esc didn't close New chat")
+	}
+}
+
+// TestNewChatEscapeEmptyCloses checks that Esc with nothing typed closes
+// the panel straight away.
+func TestNewChatEscapeEmptyCloses(t *testing.T) {
+	u := New(mock.New())
+	u.Start(func() {})
+	u.openNewChat()
+	u.escape()
+	if u.newChat.open() {
+		t.Error("Esc with an empty search didn't close New chat")
+	}
+}
+
 // TestPhoneLookup types a number and expects its chat.
 func TestPhoneLookup(t *testing.T) {
 	u := New(mock.New())

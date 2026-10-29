@@ -142,6 +142,9 @@ func (u *UI) newChatBack() {
 	case nc.step == ncNone:
 	case nc.step <= nc.base:
 		nc.step = ncNone
+		nc.search.SetText("")
+		nc.list.Position = layout.Position{}
+		nc.resetGroup()
 	case nc.step == ncMembers:
 		nc.step = ncChat
 		nc.picked = nil
@@ -150,6 +153,20 @@ func (u *UI) newChatBack() {
 		nc.step--
 		u.requestFocus(&nc.members)
 	}
+}
+
+// newChatEscape handles Esc in the panel: the first press clears the
+// search (keeping the panel open, as WhatsApp Web does), then going back a
+// page closes it on the first one.
+func (u *UI) newChatEscape() {
+	nc := &u.newChat
+	if nc.step == ncChat && nc.search.Text() != "" {
+		nc.search.SetText("")
+		nc.list.Position = layout.Position{}
+		u.requestFocus(&nc.search)
+		return
+	}
+	u.newChatBack()
 }
 
 // closeNewChat closes the panel at once (when another page is chosen).

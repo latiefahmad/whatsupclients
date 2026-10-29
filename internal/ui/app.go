@@ -1176,7 +1176,7 @@ func (u *UI) escape() {
 	case u.msgInfo.open:
 		u.msgInfo.open = false
 	case u.newChat.open():
-		u.newChatBack()
+		u.newChatEscape()
 	case u.sidebar.pick.on && u.page == pageChats:
 		u.endChatSelect()
 	case u.conv.selecting:
@@ -1195,6 +1195,12 @@ func (u *UI) escape() {
 		u.info.open = false
 	case u.selected != nil:
 		u.closeChat()
+	case u.page == pageChats && u.listQuery() != "":
+		// With no chat open, Esc clears the chat list's search, bringing
+		// the whole list back.
+		u.sidebar.search.SetText("")
+		u.runListSearch("")
+		u.sidebar.list.Position = layout.Position{}
 	}
 }
 

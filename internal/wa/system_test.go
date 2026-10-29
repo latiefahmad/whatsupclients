@@ -100,6 +100,36 @@ func TestHistoryStub(t *testing.T) {
 	}
 }
 
+// TestLabelsNeverShowRawNumbers checks the stand-in a name falls back to.
+// WhatsApp sends "+62………52" for someone who doesn't have this account
+// saved, which still tells people apart, so it's shown; a bare LID says
+// nothing, so it isn't.
+func TestLabelsNeverShowRawNumbers(t *testing.T) {
+	lid := types.NewJID("183801430251524", types.HiddenUserServer)
+	pn := types.NewJID("62812345678", types.DefaultUserServer)
+	cases := []struct {
+		name string
+		n    contactNames
+		j    types.JID
+		want string
+	}{
+		{"saved", contactNames{saved: "Alice"}, lid, "Alice"},
+		{"push", contactNames{push: "alice"}, lid, "~alice"},
+		{"phone", contactNames{phone: "+62 812-3456-789"}, lid, "+62 812-3456-789"},
+		{"masked number", contactNames{redacted: "+62………52"}, lid, "+62………52"},
+		{"bare LID", contactNames{}, lid, "Someone"},
+		{"phone JID", contactNames{}, pn, "+62 812-3456-78"},
+	}
+	for _, c := range cases {
+		if got := c.n.label(c.j); got != c.want {
+			t.Errorf("%s: label = %q, want %q", c.name, got, c.want)
+		}
+		if got := c.n.author(c.j); got != c.want {
+			t.Errorf("%s: author = %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
 func TestTimerText(t *testing.T) {
 	for secs, want := range map[int]string{86400: "24 hours", 604800: "7 days", 7776000: "90 days", 3600: "1 hour"} {
 		if got := timerText(secs); got != want {

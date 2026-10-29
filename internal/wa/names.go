@@ -235,7 +235,7 @@ func (b *Backend) chatName(ctx context.Context, j types.JID) string {
 		return v
 	}
 	n := b.lookup(ctx, j)
-	name := first(n.saved, n.business, n.phone, tilde(n.push), n.redacted, j.User)
+	name := n.label(j)
 	b.names.put(k, name)
 	return name
 }
@@ -261,7 +261,7 @@ func (b *Backend) senderName(ctx context.Context, j types.JID, push string) stri
 		// someone whose messages came from history, for one).
 		n.push = b.storedPush(ctx, j)
 	}
-	name := first(n.saved, n.business, tilde(n.push), n.phone, n.redacted, j.User)
+	name := n.author(j)
 	b.names.put(k, name)
 	return name
 }

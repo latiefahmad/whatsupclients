@@ -404,7 +404,9 @@ func (b *Backend) systemText(ctx context.Context, r rawMsg, t stubType, params [
 		}
 		return by("turned off admin approval to join this group", "Admin approval to join this group was turned off"), 0
 	case waWeb.WebMessageInfo_GROUP_PARTICIPANT_ADD:
-		if actor == "" || len(params) == 1 && name(params[0]) == actor {
+		// Joined by themselves rather than added: compare the JIDs, since
+		// two different people can both read as "Someone".
+		if actor == "" || len(params) == 1 && sameJID(params[0], r.senderJID) {
 			return people(name) + " joined", 0
 		}
 		return actor + " added " + people(object), 0
@@ -464,6 +466,23 @@ func (b *Backend) systemText(ctx context.Context, r rawMsg, t stubType, params [
 		return by("pinned a message", "A message was pinned"), 0
 	}
 	return "", 0
+}
+
+// sameJID reports whether two JID strings name the same person, ignoring
+// the device part.
+func sameJID(a, b string) bool {
+	if a == b {
+		return true
+	}
+	ja, err := types.ParseJID(a)
+	if err != nil {
+		return false
+	}
+	jb, err := types.ParseJID(b)
+	if err != nil {
+		return false
+	}
+	return ja.ToNonAD() == jb.ToNonAD()
 }
 
 // listNames joins names as a sentence does: "A", "A and B", "A, B and C".

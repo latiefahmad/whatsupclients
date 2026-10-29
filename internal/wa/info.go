@@ -348,5 +348,31 @@ func (b *Backend) memberNames(ctx context.Context, j, pn types.JID) contactNames
 // label is how a group participant is listed: saved name, business name,
 // phone number, then "~push name".
 func (n contactNames) label(j types.JID) string {
-	return first(n.saved, n.business, n.phone, tilde(n.push), n.redacted, j.User)
+	return n.pick(j, n.saved, n.business, n.phone, tilde(n.push))
+}
+
+// author is how a message author is listed: the same, but with their phone
+// number after the push name rather than before it.
+func (n contactNames) author(j types.JID) string {
+	return n.pick(j, n.saved, n.business, tilde(n.push), n.phone)
+}
+
+// pick returns the first name given, or the best stand-in for who this is.
+func (n contactNames) pick(j types.JID, names ...string) string {
+	if s := first(names...); s != "" {
+		return s
+	}
+	// WhatsApp sends only a masked number ("+62………52") for someone who
+	// doesn't have this account saved. It still tells people apart, so it
+	// beats a bare LID, which says nothing at all.
+	if n.redacted != "" {
+		return n.redacted
+	}
+	if j.Server == types.DefaultUserServer {
+		return formatPhone(j.User)
+	}
+	if j.Server == types.HiddenUserServer {
+		return "Someone"
+	}
+	return j.User
 }

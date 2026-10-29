@@ -132,6 +132,32 @@ func TestListSearch(t *testing.T) {
 	}
 }
 
+// TestListSearchEscape checks that Esc closes the open chat first, then
+// clears the chat list's search, bringing the whole list back.
+func TestListSearchEscape(t *testing.T) {
+	u, _, frame, _ := chatListUI(t)
+	u.SelectID("citra")
+	u.sidebar.search.SetText("anam")
+	for range 3 {
+		frame()
+	}
+	u.escape()
+	if u.selected != nil {
+		t.Fatal("the first Esc didn't close the chat")
+	}
+	if got := u.listQuery(); got != "anam" {
+		t.Errorf("the first Esc cleared the search too: %q", got)
+	}
+	u.escape()
+	if got := u.listQuery(); got != "" {
+		t.Errorf("search still holds %q", got)
+	}
+	// The whole list is back, not just what matched.
+	if n := len(u.sidebar.find.msgs); n != 0 {
+		t.Errorf("%d found messages left", n)
+	}
+}
+
 // TestChatRowMenu checks the chat row's menu follows WhatsApp's: Block for
 // a contact, and no Close chat even for the open chat.
 func TestChatRowMenu(t *testing.T) {
