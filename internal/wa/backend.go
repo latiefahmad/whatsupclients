@@ -1042,6 +1042,10 @@ func (b *Backend) resyncAppState(name appstate.WAPatchName) {
 	go func() {
 		if err := cli.FetchAppState(b.ctx, name, true, false); err != nil {
 			b.log.Warnf("resync app state %s after a broken hash: %v", name, err)
+			// The server's own patches don't verify either, so the only
+			// state that can heal the collection is the phone's copy.
+			// WhatsApp's linked devices ask for one at this point.
+			b.requestAppStateRecovery(name)
 		} else {
 			b.log.Infof("resynced app state %s from a snapshot", name)
 		}
@@ -1074,6 +1078,7 @@ func (b *Backend) resyncAppStateOnce() {
 	// whatever the overall marker says: this account's regular_high stayed
 	// sealed for two days that way, and every message deleted for me in it
 	// was never applied.
+	reopened := false
 	if cli := b.client(); cli != nil {
 		for _, name := range appstate.AllPatchNames {
 			done := key + ":" + string(name)
@@ -1083,10 +1088,14 @@ func (b *Backend) resyncAppStateOnce() {
 			if v, _, err := cli.Store.AppState.GetAppStateVersion(b.ctx, string(name)); err == nil && v == 0 {
 				b.log.Warnf("app state %s was marked synced but has no state; resyncing it", name)
 				_ = b.store.setMetaValue(b.ctx, done, "")
+				reopened = true
 			}
 		}
 	}
-	if b.store.meta(b.ctx, key) != "" {
+	// A reopened collection has to be fetched now: the overall marker being
+	// set is exactly the state that sealed it, so stopping here would leave
+	// it sealed and never synced.
+	if b.store.meta(b.ctx, key) != "" && !reopened {
 		return
 	}
 	cli := b.client()
