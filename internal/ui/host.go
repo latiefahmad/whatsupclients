@@ -21,6 +21,7 @@ import (
 	"github.com/latiefahmad/whatsupclients/internal/memtrim"
 	"github.com/latiefahmad/whatsupclients/internal/model"
 	"github.com/latiefahmad/whatsupclients/internal/notify"
+	"github.com/latiefahmad/whatsupclients/internal/sound"
 	"github.com/latiefahmad/whatsupclients/internal/ui/icon"
 )
 
@@ -81,6 +82,7 @@ func Run(b model.Backend, o Options) error {
 		drafts:  make(map[string]*chatDraft),
 	}
 	h.notes = newNotifier(b, h)
+	sound.Init(o.NotifyDir)
 	h.upd.h = h
 	if exe, err := os.Executable(); err == nil {
 		h.upd.exe = exe

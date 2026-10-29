@@ -17,6 +17,7 @@ import (
 	"github.com/latiefahmad/whatsupclients/internal/desktop"
 	"github.com/latiefahmad/whatsupclients/internal/filepick"
 	"github.com/latiefahmad/whatsupclients/internal/model"
+	"github.com/latiefahmad/whatsupclients/internal/sound"
 	"github.com/latiefahmad/whatsupclients/internal/ui/icon"
 )
 
@@ -247,6 +248,31 @@ func (u *UI) settingsPage() []settingsSection {
 	return u.categoryPage(s.detail - 1)
 }
 
+// soundSettings is the notification sound picker. Picking a sound also
+// plays it, so it's heard before it's kept; it shows only while sounds are
+// on.
+func (u *UI) soundSettings() settingsSection {
+	b := u.backend
+	cur := b.Pref(prefNotifyTone)
+	sec := settingsSection{title: "Sound"}
+	for _, c := range sound.Choices {
+		c := c
+		sec.rows = append(sec.rows, settingRow{
+			key: "tone:" + c.Key, kind: setRadio, title: c.Name, on: cur == c.Key,
+			show: func() bool { return prefOn(b, prefNotifySound) },
+			run: func() {
+				b.SetPref(prefNotifyTone, c.Key)
+				if c.Key != "" {
+					sound.Play(c.Key)
+				} else {
+					sound.Preview()
+				}
+			},
+		})
+	}
+	return sec
+}
+
 // categoryPage is the rows of settings category k.
 func (u *UI) categoryPage(k int) []settingsSection {
 	b := u.backend
@@ -269,6 +295,7 @@ func (u *UI) categoryPage(k int) []settingsSection {
 			{title: "Groups", rows: []settingRow{
 				pref(prefNotifyGroups, "Group notifications", "Show notifications for group messages"),
 			}},
+			u.soundSettings(),
 		}
 	case settingGeneral:
 		return u.generalSettings(pref)

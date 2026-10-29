@@ -29,5 +29,8 @@ func TestMain(m *testing.M) {
 	// test that expects the open chat to be marked read would fail on CI.
 	idleTime = func() time.Duration { return 0 }
 	systemDark = func() (bool, bool) { return true, true } // the theme tests were drawn in
+	// Tests click all over the window, Donate among it: a real open would
+	// start a browser (Saweria twice, from the click test) on every run.
+	openTargetHook = func(string) bool { return true }
 	os.Exit(m.Run())
 }

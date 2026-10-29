@@ -9,6 +9,25 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.3] - 2026-10-29
+
+### 🔊 Notification sounds
+
+- **Pick your notification sound** — Settings > Notifications lists Default
+  (the Windows one) and three sounds of the app's own; picking one plays it,
+  so you hear it before you keep it.
+- **Sounds play again** — the sound setting asked the system for a tone in a
+  place Windows ignores, so notifications arrived silently whatever the
+  setting said. They now play.
+
+### 🐛 Fixes
+
+- **No browser while building** — running the tests clicked every part of the
+  window, Donate included, which opened the donation page in a browser twice
+  on every run. Tests no longer open links at all.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.2...v1.9.3
+
 ## [v1.9.2] - 2026-10-28
 
 ### 🐛 Fixes

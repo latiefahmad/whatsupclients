@@ -9,6 +9,7 @@ import (
 	"github.com/latiefahmad/whatsupclients/internal/desktop"
 	"github.com/latiefahmad/whatsupclients/internal/model"
 	"github.com/latiefahmad/whatsupclients/internal/notify"
+	"github.com/latiefahmad/whatsupclients/internal/sound"
 	"github.com/latiefahmad/whatsupclients/internal/ui/icon"
 )
 
@@ -19,7 +20,8 @@ const (
 	prefNotifyGroups   = "notify_groups"
 	prefNotifyPreviews = "notify_previews" // message text in notifications
 	prefNotifySound    = "notify_sound"
-	prefBackground     = "background" // keep running when the window closes
+	prefNotifyTone     = "notify_tone" // which sound ("" is the system's)
+	prefBackground     = "background"  // keep running when the window closes
 )
 
 func prefOn(b model.Backend, key string) bool { return b.Pref(key) != "off" }
@@ -55,6 +57,7 @@ type notifier struct {
 	tooltip func(string)
 	focused func() bool // the window has focus
 	now     func() time.Time
+	play    func(key string) bool // plays a chosen sound
 
 	meID    string
 	chats   map[string]chatInfo
@@ -82,6 +85,7 @@ func newNotifier(b model.Backend, h *host) *notifier {
 		tooltip: desktop.SetTooltip,
 		focused: func() bool { return h.focused },
 		now:     time.Now,
+		play:    sound.Play,
 		chats:   map[string]chatInfo{},
 		shown:   map[string]int{},
 		unread:  -1,
@@ -164,6 +168,7 @@ func (n *notifier) flush() {
 		}
 		byChat[m.ChatID] = append(byChat[m.ChatID], m)
 	}
+	any := false
 	for _, id := range order {
 		ms := byChat[id]
 		c, known := n.chats[id]
@@ -172,6 +177,14 @@ func (n *notifier) flush() {
 		}
 		n.shown[id] += len(ms)
 		n.show(n.notification(id, c, ms[len(ms)-1], n.shown[id]))
+		any = true
+	}
+	// One sound for the whole burst. A sound the user picked plays here;
+	// the default one is the toast's own, so it needs nothing more.
+	if any && prefOn(n.b, prefNotifySound) {
+		if key := n.b.Pref(prefNotifyTone); key != "" && n.play != nil {
+			n.play(key)
+		}
 	}
 }
 

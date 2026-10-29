@@ -21,8 +21,16 @@ func openURL(link string) bool {
 	return openTarget(p.String())
 }
 
+// openTargetHook replaces opening a link in tests, which click all over the
+// window: a click on Donate would otherwise open a browser on every run.
+// Nil opens the link for real.
+var openTargetHook func(string) bool
+
 // openTarget hands a URL to the system, which opens it with its app.
 func openTarget(target string) bool {
+	if openTargetHook != nil {
+		return openTargetHook(target)
+	}
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":

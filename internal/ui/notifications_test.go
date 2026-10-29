@@ -13,6 +13,7 @@ type notifyTest struct {
 	b       *mock.Backend
 	shown   []notify.Notification
 	removed []string
+	played  []string
 	focused bool
 }
 
@@ -25,6 +26,7 @@ func newNotifyTest(t *testing.T) *notifyTest {
 	n.remove = func(id string) { nt.removed = append(nt.removed, id) }
 	n.tooltip = func(string) {}
 	n.focused = func() bool { return nt.focused }
+	n.play = func(key string) bool { nt.played = append(nt.played, key); return true }
 	n.setChats([]*model.Chat{
 		{ID: "ana@lid", Name: "Ana"},
 		{ID: "team@g.us", Name: "Team", IsGroup: true},
@@ -115,6 +117,47 @@ func TestNotifySkips(t *testing.T) {
 	nt.receive("team@g.us", "Bob", "x")
 	if got := nt.flush(t); len(got) != 0 {
 		t.Fatalf("group notified with group notifications off: %+v", got)
+	}
+}
+
+// TestNotifyTone checks that a sound the user picked plays once for a burst
+// of messages, and not at all for the default one (the toast plays that).
+func TestNotifyTone(t *testing.T) {
+	nt := newNotifyTest(t)
+	nt.receive("ana@lid", "", "hi")
+	nt.receive("team@g.us", "Bob", "standup?")
+	nt.flush(t)
+	if len(nt.played) != 0 {
+		t.Errorf("the default sound was played by the app: %v", nt.played)
+	}
+
+	nt.b.SetPref(prefNotifyTone, "2")
+	nt.receive("ana@lid", "", "hi again")
+	nt.receive("team@g.us", "Bob", "later?")
+	nt.flush(t)
+	if len(nt.played) != 1 || nt.played[0] != "2" {
+		t.Errorf("a burst played %v, want one \"2\"", nt.played)
+	}
+
+	nt.played = nil
+	setPref(nt.b, prefNotifySound, false)
+	nt.receive("ana@lid", "", "quiet now")
+	nt.flush(t)
+	if len(nt.played) != 0 {
+		t.Errorf("sounds are off but it played %v", nt.played)
+	}
+}
+
+// TestNotifyToneFocus checks that nothing plays while the window has focus,
+// where no notification shows either.
+func TestNotifyToneFocus(t *testing.T) {
+	nt := newNotifyTest(t)
+	nt.b.SetPref(prefNotifyTone, "1")
+	nt.focused = true
+	nt.receive("ana@lid", "", "hi")
+	nt.flush(t)
+	if len(nt.played) != 0 {
+		t.Errorf("played %v with the window focused", nt.played)
 	}
 }
 

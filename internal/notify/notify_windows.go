@@ -379,16 +379,18 @@ func toastXML(n Notification, image string) string {
 		b.WriteString(`<image placement="appLogoOverride" hint-crop="circle" src="` + esc(image) + `"/>`)
 	}
 	b.WriteString(`</binding></visual>`)
+	// The schema puts <audio> before <actions>; Windows ignores it anywhere
+	// else, which left every toast silent.
+	if n.Silent {
+		b.WriteString(`<audio silent="true"/>`)
+	} else {
+		b.WriteString(`<audio src="ms-winsoundevent:Notification.IM"/>`)
+	}
 	if n.Reply {
 		b.WriteString(`<actions><input id="reply" type="text" placeHolderContent="Type a reply"/>`)
 		b.WriteString(`<action content="Reply" activationType="background" arguments="` + esc(args(n.ID, "reply")) + `"/>`)
 		b.WriteString(`<action content="Mark as read" activationType="background" arguments="` + esc(args(n.ID, "read")) + `"/>`)
 		b.WriteString(`</actions>`)
-	}
-	if n.Silent {
-		b.WriteString(`<audio silent="true"/>`)
-	} else {
-		b.WriteString(`<audio src="ms-winsoundevent:Notification.IM"/>`)
 	}
 	b.WriteString(`</toast>`)
 	return b.String()
