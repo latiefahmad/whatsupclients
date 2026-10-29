@@ -9,6 +9,17 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.5] - 2026-10-29
+
+### 🐛 Fixes
+
+- **An HD photo no longer shows twice** — WhatsApp sends a photo picked as HD
+  as two messages: the picture and a second copy of it. Only one is shown in
+  WhatsApp's own apps; this app kept both, so the same photo appeared twice
+  in the chat. It shows once now.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.4...v1.9.5
+
 ## [v1.9.4] - 2026-10-29
 
 ### 🐛 Fixes
