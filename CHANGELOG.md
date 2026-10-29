@@ -9,6 +9,31 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.4] - 2026-10-29
+
+### 🐛 Fixes
+
+- **Deleting a message on your phone reaches this app again** — deletes,
+  clears and other chat changes travel in one of WhatsApp's own settings
+  channels, and that channel had stopped syncing: it held no data here, yet
+  the app had recorded it as done, so it never tried again. Everything that
+  channel carries was silently lost, deletions included. The app now checks
+  that a channel really stored something before recording it as done, and
+  reopens one that did not.
+- **No more request storms while a channel is broken** — a sync failure
+  asked for another sync, twice a second, until WhatsApp started refusing
+  them outright (rate limit). Retries now wait 30 seconds, and when the
+  server's copy is unusable the app asks your phone for a fresh one, as
+  WhatsApp's own linked devices do.
+- **A deletion finds a chat stored under either of its IDs** — a chat can
+  be stored under its phone number or its newer WhatsApp ID; a deletion
+  naming one now reaches messages stored under the other.
+- **Messages that were deleted could be reported as "not here"** — the
+  count that decides that came from the wrong table, so a message with no
+  reactions looked untouched even though it had been removed.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.3...v1.9.4
+
 ## [v1.9.3] - 2026-10-29
 
 ### 🔊 Notification sounds
