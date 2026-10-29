@@ -181,6 +181,23 @@ func albumOf(m *waE2E.Message) string {
 	return ""
 }
 
+// hdCopyOf returns, for the copy WhatsApp sends when a photo or video goes
+// as HD, the key it is a copy of. One HD picture arrives as two messages: the
+// picture itself and this second copy pointing back at it. WhatsApp Desktop
+// shows one; storing both showed the same picture twice.
+func hdCopyOf(m *waE2E.Message) string {
+	for i := 0; i < 5 && m != nil; i++ {
+		a := m.GetMessageContextInfo().GetMessageAssociation()
+		if a.GetAssociationType() == waE2E.MessageAssociation_HD_IMAGE_DUAL_UPLOAD {
+			if id := a.GetParentMessageKey().GetID(); id != "" {
+				return id
+			}
+		}
+		m = unwrapOnce(m)
+	}
+	return ""
+}
+
 func describe(m *waE2E.Message) content {
 	m = unwrap(m)
 	switch {
@@ -317,6 +334,12 @@ func (b *Backend) parse(ctx context.Context, evt *events.Message) (p parsed, ok 
 		return p, false
 	}
 	p.msg.Message = &model.Message{ChatID: chat.String()}
+
+	// The copy of an HD photo or video is the same picture the original
+	// already shows: keep it out of the chat.
+	if hdCopyOf(m) != "" {
+		return p, false
+	}
 
 	if r := m.GetReactionMessage(); r != nil {
 		ts := r.GetSenderTimestampMS()
