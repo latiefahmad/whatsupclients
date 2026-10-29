@@ -178,6 +178,8 @@
     body.innerHTML = items.length
       ? (data.ver ? "<h4>" + esc(data.ver) + (data.date ? " &middot; " + esc(data.date) : "") + "</h4>" : "")
         + "<ul><li>" + items.map(bold).join("</li><li>") + "</li></ul>"
+        + '<a class="news-all" href="https://github.com/latiefahmad/whatsupclients/blob/main/CHANGELOG.md" '
+        + 'target="_blank" rel="noopener">Riwayat lengkap &rarr;</a>'
       : '<p class="muted">Catatan rilis lengkap ada di halaman GitHub.</p>';
   }
 

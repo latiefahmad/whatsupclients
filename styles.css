@@ -223,6 +223,55 @@ h2 { font-size: clamp(26px, 3.5vw, 34px); margin: 0 0 10px; letter-spacing: -.01
 
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 34px; }
 
+/* ---- features ----
+   Two cards carry the argument, the rest are a compact list. A uniform
+   grid of seven left the last row with one card and no reading order. */
+.lede.sub { margin: 0; max-width: 620px; color: var(--muted); }
+
+.feat { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 38px; }
+.feat-hero {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--panel2);
+  border-radius: var(--radius); padding: 30px 30px 28px;
+  transition: border-color .22s, transform .22s, box-shadow .22s;
+}
+.feat-hero::after {
+  content: ""; position: absolute; inset: auto -60px -80px auto;
+  width: 220px; height: 220px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--green) 22%, transparent), transparent 70%);
+}
+.feat-hero:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--green) 55%, var(--panel2));
+  box-shadow: 0 18px 40px var(--shadow);
+}
+.feat-hero h3 { margin: 18px 0 10px; font-size: 22px; }
+.feat-hero p { margin: 0; color: var(--muted); font-size: 15.5px; line-height: 1.62; }
+.feat-hero .feat-aside {
+  margin-top: auto; padding-top: 14px; font-size: 14px;
+  border-top: 1px solid var(--panel2);
+}
+.feat-hero code { color: var(--green); font-family: Consolas, monospace; }
+
+.feat-rest {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; margin-top: 20px;
+  background: var(--panel2);
+  border: 1px solid var(--panel2); border-radius: var(--radius); overflow: hidden;
+}
+.feat-item {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--panel); padding: 22px;
+  transition: background .2s;
+}
+.feat-item:hover { background: var(--panel2); }
+.feat-item h3 { margin: 0 0 6px; font-size: 16.5px; }
+.feat-item p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.feat-item code { color: var(--green); font-family: Consolas, monospace; }
+
+.tile.sm { width: 38px; height: 38px; border-radius: 11px; font-size: 23px; flex: none; }
+
 .card {
   position: relative; min-width: 0;
   background: var(--panel); border: 1px solid var(--panel2);
@@ -266,6 +315,11 @@ h2 { font-size: clamp(26px, 3.5vw, 34px); margin: 0 0 10px; letter-spacing: -.01
 .news h4 { margin: 0 0 10px; font-size: 17px; font-family: Consolas, monospace; }
 .news ul { margin: 0; padding-left: 20px; color: var(--muted); }
 .news li { margin-bottom: 7px; }
+.news-all {
+  display: inline-block; margin-top: 14px; font-size: 14px; font-weight: 600;
+  color: var(--green); text-decoration: none;
+}
+.news-all:hover { text-decoration: underline; }
 
 /* ---- download ---- */
 .dl-card .btn { width: 100%; justify-content: center; }
@@ -273,8 +327,10 @@ h2 { font-size: clamp(26px, 3.5vw, 34px); margin: 0 0 10px; letter-spacing: -.01
 .dl-card.recommended::after {
   content: "Untuk perangkatmu"; position: absolute; top: -13px; left: 20px;
   background: var(--green); color: #05130c; font-size: 12px; font-weight: 700;
-  padding: 3px 13px; border-radius: 999px;
+  padding: 3px 13px; border-radius: 999px; white-space: nowrap; line-height: 1.5;
 }
+/* Room for the badge above the first row, so it never sits on the heading. */
+#dl-grid { margin-top: 52px; }
 html[data-theme="light"] .dl-card.recommended::after { color: #fff; }
 
 /* Highlighted SmartScreen / update note */
@@ -336,6 +392,7 @@ footer { border-top: 1px solid var(--panel2); padding: 24px 0; font-size: 14px; 
   .hero-in { grid-template-columns: 1fr; gap: 44px; }
   .hero { padding-top: 60px; }
   .grid, .shot-row { grid-template-columns: 1fr 1fr; }
+  .feat-rest { grid-template-columns: 1fr 1fr; }
   .stats-in { grid-template-columns: 1fr 1fr; }
   .chip-a { left: 12px; } .chip-b { right: 12px; }
 }
@@ -368,6 +425,9 @@ footer { border-top: 1px solid var(--panel2); padding: 24px 0; font-size: 14px; 
   }
 
   .grid, .shot-row, .stats-in { grid-template-columns: 1fr; }
+  .feat, .feat-rest { grid-template-columns: 1fr; }
+  .feat-hero { padding: 24px 22px; }
+  .feat-hero h3 { font-size: 20px; }
   .section { padding: 52px 0; }
   .shots { padding-bottom: 44px; }
   .stat { padding: 4px 0; }

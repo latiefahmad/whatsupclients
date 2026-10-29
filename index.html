@@ -52,10 +52,11 @@
 <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61M14.12 14.12a3 3 0 1 1-4.24-4.24m2.82-2.82L2 2"/></symbol>
 <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
 <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M3 21v-5h5"/></symbol>
+<symbol id="i-realtime" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/></symbol>
 <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5M12 15V3"/></symbol>
 <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
 <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
-<symbol id="i-windows" viewBox="0 0 24 24"><rect x="3" y="3" width="9" height="9"/><rect x="12" y="3" width="9" height="9"/><rect x="3" y="12" width="9" height="9"/><rect x="12" y="12" width="9" height="9"/></symbol>
+<symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.6 10.3 4.6v6.9H3zM11.4 4.4 21 3v8.5h-9.6zM3 12.6h7.3v6.9L3 18.4zM11.4 12.6H21V21l-9.6-1.4z"/></symbol>
 <symbol id="i-package" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zm-18 4 9 5 9-5M12 22V12"/></symbol>
 <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
 <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></symbol>
@@ -126,41 +127,75 @@
     <div class="wrap">
       <p class="kicker">Fitur</p>
       <h2>Kenapa WhatsUp Clients?</h2>
-      <div class="grid">
-        <div class="card">
+      <p class="lede sub">Bukan sekadar pembungkus WhatsApp Web. Ini yang membuatnya beda.</p>
+
+      <div class="feat">
+        <article class="feat-hero">
           <span class="tile"><svg class="ic"><use href="#i-zap"/></svg></span>
           <h3>Ringan &amp; native</h3>
-          <p>Satu file binary. Cache dibatasi ukuran, memori dikembalikan ke OS saat idle. Tutup jendela, koneksi tetap jalan dari tray.</p>
+          <p>Satu file binary, tanpa WebView dan tanpa Electron. Cache dibatasi ukurannya, dan
+            memori dikembalikan ke OS setelah sepuluh detik tanpa aktivitas.</p>
+          <p class="feat-aside">Tutup jendelanya &mdash; koneksi tetap jalan dari tray, soalnya
+            memori GPU-nya dilepas.</p>
+        </article>
+
+        <article class="feat-hero">
+          <span class="tile"><svg class="ic"><use href="#i-realtime"/></svg></span>
+          <h3>Sinkron walau ditutup</h3>
+          <p>Hapus, edit, atau baca pesan dari HP &mdash; perubahan itu sampai ke sini tanpa
+            reload. Juga saat jendela ditutup dan aplikasi hanya diam di tray.</p>
+          <p class="feat-aside">Pesan terjadwal tetap terkirim tepat waktu, notifikasi tetap masuk.</p>
+        </article>
+      </div>
+
+      <div class="feat-rest">
+        <div class="feat-item">
+          <span class="tile sm"><svg class="ic"><use href="#i-terminal"/></svg></span>
+          <div>
+            <h3>Slash commands</h3>
+            <p>Ketik <code>/</code> seperti Discord: kelola grup, <code>/schedule</code> kirim
+              nanti, <code>/afk</code> balas otomatis, <code>/calc</code>, snippet tersimpan.</p>
+          </div>
         </div>
-        <div class="card">
-          <span class="tile"><svg class="ic"><use href="#i-layout"/></svg></span>
-          <h3>Familiar</h3>
-          <p>Layout, ukuran, dan warna diukur dari screenshot aplikasi resmi. Chat, grup, polling, status, channel, dan communities — semua ada.</p>
+        <div class="feat-item">
+          <span class="tile sm"><svg class="ic"><use href="#i-layout"/></svg></span>
+          <div>
+            <h3>Familiar</h3>
+            <p>Layout, ukuran, dan warna diukur dari screenshot aplikasi resmi. Chat, grup,
+              polling, status, channel, dan communities.</p>
+          </div>
         </div>
-        <div class="card">
-          <span class="tile"><svg class="ic"><use href="#i-terminal"/></svg></span>
-          <h3>Slash commands</h3>
-          <p>Ketik <code>/</code> seperti Discord: kelola grup, <code>/schedule</code> kirim nanti, <code>/afk</code> balas otomatis, <code>/calc</code>, snippet tersimpan, dan lainnya.</p>
+        <div class="feat-item">
+          <span class="tile sm"><svg class="ic"><use href="#i-eyeoff"/></svg></span>
+          <div>
+            <h3>Privacy mode</h3>
+            <p>Nama dan pesan jadi bar, gambar blur sampai ditunjuk. Plus ghost mode dan
+              pesan terjadwal.</p>
+          </div>
         </div>
-        <div class="card">
-          <span class="tile"><svg class="ic"><use href="#i-external"/></svg></span>
-          <h3>Chat links</h3>
-          <p>Buka chat langsung dari link <code>whatsup://</code> atau tempel link <code>wa.me</code> di New chat — tanpa simpan nomor, pesan terisi otomatis.</p>
+        <div class="feat-item">
+          <span class="tile sm"><svg class="ic"><use href="#i-external"/></svg></span>
+          <div>
+            <h3>Chat links</h3>
+            <p>Buka chat dari link <code>whatsup://</code> atau tempel <code>wa.me</code> di New
+              chat &mdash; tanpa simpan nomor.</p>
+          </div>
         </div>
-        <div class="card">
-          <span class="tile"><svg class="ic"><use href="#i-eyeoff"/></svg></span>
-          <h3>Privacy mode</h3>
-          <p>Layar bisa dilihat orang? Nama dan pesan jadi bar, gambar blur sampai ditunjuk. Plus ghost mode, edit history, dan pesan terjadwal.</p>
+        <div class="feat-item">
+          <span class="tile sm"><svg class="ic"><use href="#i-bell"/></svg></span>
+          <div>
+            <h3>Notifikasi &amp; multi-akun</h3>
+            <p>Notifikasi sistem dengan Reply dan Mark as read, beberapa akun tertaut, draft per
+              chat, @mention, dan formatting.</p>
+          </div>
         </div>
-        <div class="card">
-          <span class="tile"><svg class="ic"><use href="#i-bell"/></svg></span>
-          <h3>Notifikasi &amp; multi-akun</h3>
-          <p>Notifikasi sistem (Reply dan Mark as read di Windows), beberapa akun tertaut, draft per chat, @mention, dan formatting.</p>
-        </div>
-        <div class="card">
-          <span class="tile"><svg class="ic"><use href="#i-refresh"/></svg></span>
-          <h3>Update otomatis</h3>
-          <p>Aplikasi memeriksa rilis baru sendiri dan menawarkan <b>Update now</b> atau <b>Later</b>. Setiap rilis bertanda tangan dan terverifikasi.</p>
+        <div class="feat-item">
+          <span class="tile sm"><svg class="ic"><use href="#i-refresh"/></svg></span>
+          <div>
+            <h3>Update otomatis</h3>
+            <p>Rilis baru ditawarkan sendiri sebagai <b>Update now</b> atau <b>Later</b>, dan
+              setiap rilis bertanda tangan.</p>
+          </div>
         </div>
       </div>
     </div>
