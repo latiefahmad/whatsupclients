@@ -67,6 +67,26 @@ func (b *Backend) canonical(ctx context.Context, j types.JID) types.JID {
 	return j
 }
 
+// chatKeys returns every key a chat's messages may be stored under: the
+// canonical JID first, then its phone-number/LID alias. A deletion that
+// arrives under one identity must reach messages stored under the other
+// (mergeAliases only folds the old row in once a message comes in).
+func (b *Backend) chatKeys(ctx context.Context, j types.JID) []string {
+	key := b.canonical(ctx, j)
+	keys := []string{key.String()}
+	if key.Server != types.HiddenUserServer {
+		return keys
+	}
+	cli := b.client()
+	if cli == nil {
+		return keys
+	}
+	if pn, err := cli.Store.LIDs.GetPNForLID(ctx, key); err == nil && !pn.IsEmpty() {
+		keys = append(keys, pn.ToNonAD().String())
+	}
+	return keys
+}
+
 // mergeAliases folds a one-to-one chat's older phone-number row into its
 // LID row, once a mapping exists: the same person held two chats, the old
 // one never hearing from them again. It runs off the hot path (once per

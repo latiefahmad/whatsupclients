@@ -781,7 +781,13 @@ func (b *Backend) handle(evt any) {
 		}
 	case *events.DeleteForMe:
 		chat := b.canonical(ctx, e.ChatJID).String()
-		_ = b.store.deleteMessage(ctx, chat, e.MessageID)
+		keys := b.chatKeys(ctx, e.ChatJID)
+		n, err := b.store.deleteMessageEvery(ctx, keys, e.MessageID)
+		if err != nil {
+			b.log.Warnf("delete for me %s/%s: %v", chat, e.MessageID, err)
+		} else if n == 0 {
+			b.log.Infof("delete for me %s/%s: not stored under %v", chat, e.MessageID, keys)
+		}
 		if !e.FromFullSync {
 			b.emit(model.DeletedEvent{ChatID: chat, IDs: []string{e.MessageID}})
 			b.emitChat(chat)
@@ -792,7 +798,7 @@ func (b *Backend) handle(evt any) {
 			return
 		}
 		chat := b.canonical(ctx, e.JID).String()
-		_ = b.store.clearChat(ctx, chat, upTo)
+		_ = b.store.clearChatEvery(ctx, b.chatKeys(ctx, e.JID), upTo)
 		if !e.FromFullSync {
 			b.emit(model.DeletedEvent{ChatID: chat})
 			b.emitChat(chat)
@@ -802,7 +808,7 @@ func (b *Backend) handle(evt any) {
 		if !ok {
 			return
 		}
-		_ = b.store.deleteChat(ctx, b.canonical(ctx, e.JID).String(), upTo)
+		_ = b.store.deleteChatEvery(ctx, b.chatKeys(ctx, e.JID), upTo)
 		if !e.FromFullSync {
 			b.emitAllChats()
 		}

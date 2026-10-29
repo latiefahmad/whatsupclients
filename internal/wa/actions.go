@@ -1002,30 +1002,59 @@ func (s *msgStore) setMessageFlag(ctx context.Context, chat, id, field string, v
 }
 
 func (s *msgStore) deleteMessage(ctx context.Context, chat, id string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat = ?1 AND id = ?2;
-		DELETE FROM wz_edits WHERE chat = ?1 AND id = ?2;
-		DELETE FROM wz_receipts WHERE chat = ?1 AND id = ?2;
-		DELETE FROM wz_votes WHERE chat = ?1 AND id = ?2;
-		DELETE FROM wz_reactions WHERE chat = ?1 AND id = ?2`, chat, id)
+	_, err := s.deleteMessageEvery(ctx, []string{chat}, id)
 	return err
 }
 
-// dropOrphanEdits deletes the versions, receipts, votes and reactions of
-// chat ?1's messages that are gone.
-const dropOrphanEdits = `DELETE FROM wz_edits WHERE chat = ?1 AND NOT EXISTS
-	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_edits.chat AND m.id = wz_edits.id);
-	DELETE FROM wz_receipts WHERE chat = ?1 AND NOT EXISTS
-	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_receipts.chat AND m.id = wz_receipts.id);
-	DELETE FROM wz_votes WHERE chat = ?1 AND NOT EXISTS
-	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_votes.chat AND m.id = wz_votes.id);
-	DELETE FROM wz_reactions WHERE chat = ?1 AND NOT EXISTS
-	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_reactions.chat AND m.id = wz_reactions.id)`
+// deleteMessageEvery deletes a message of any of the given chat keys, so a
+// deletion that arrives under one identity reaches a message stored under
+// its alias. It reports how many messages it removed.
+func (s *msgStore) deleteMessageEvery(ctx context.Context, chats []string, id string) (int64, error) {
+	args := make([]any, 0, len(chats)+1)
+	args = append(args, id)
+	for _, c := range chats {
+		args = append(args, c)
+	}
+	in := numbered(len(chats), 2)
+	res, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_edits WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_receipts WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_votes WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_reactions WHERE id = ?1 AND chat IN (`+in+`)`, args...)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
+// numbered returns "?start, ?start+1, ..." for n parameters, for queries
+// that also bind values by number.
+func numbered(n, start int) string {
+	b := make([]byte, 0, n*4)
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			b = append(b, ',', ' ')
+		}
+		b = append(b, '?')
+		b = strconv.AppendInt(b, int64(start+i), 10)
+	}
+	return string(b)
+}
 
 // clearChat deletes the chat's unstarred messages sent at or before upTo
 // (unix seconds), or all of them when upTo is 0.
 func (s *msgStore) clearChat(ctx context.Context, chat string, upTo int64) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat = ?1 AND starred = 0 AND (?2 = 0 OR ts <= ?2);
-		`+dropOrphanEdits, chat, upTo)
+	return s.clearChatEvery(ctx, []string{chat}, upTo)
+}
+
+// clearChatEvery is clearChat over every key a chat's messages may be
+// stored under.
+func (s *msgStore) clearChatEvery(ctx context.Context, chats []string, upTo int64) error {
+	args := append([]any{upTo}, stringsToAny(chats)...)
+	in := numbered(len(chats), 2)
+	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat IN (`+in+`) AND starred = 0 AND (?1 = 0 OR ts <= ?1);
+		`+orphanEditsFor("chat IN ("+in+")"), args...)
 	return err
 }
 
@@ -1033,11 +1062,40 @@ func (s *msgStore) clearChat(ctx context.Context, chat string, upTo int64) error
 // seconds), or all of them when upTo is 0, and then the chat itself unless
 // newer messages are left.
 func (s *msgStore) deleteChat(ctx context.Context, chat string, upTo int64) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat = ?1 AND (?2 = 0 OR ts <= ?2);
-		DELETE FROM wz_chats WHERE jid = ?1 AND NOT EXISTS (SELECT 1 FROM wz_messages WHERE chat = ?1);
-		DELETE FROM wz_list_chats WHERE chat = ?1 AND NOT EXISTS (SELECT 1 FROM wz_chats WHERE jid = ?1);
-		`+dropOrphanEdits, chat, upTo)
+	return s.deleteChatEvery(ctx, []string{chat}, upTo)
+}
+
+// deleteChatEvery is deleteChat over every key a chat's messages may be
+// stored under.
+func (s *msgStore) deleteChatEvery(ctx context.Context, chats []string, upTo int64) error {
+	args := append([]any{upTo}, stringsToAny(chats)...)
+	in := numbered(len(chats), 2)
+	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat IN (`+in+`) AND (?1 = 0 OR ts <= ?1);
+		DELETE FROM wz_chats WHERE jid IN (`+in+`) AND NOT EXISTS (SELECT 1 FROM wz_messages WHERE chat = wz_chats.jid);
+		DELETE FROM wz_list_chats WHERE chat IN (`+in+`) AND NOT EXISTS (SELECT 1 FROM wz_chats WHERE jid = wz_list_chats.chat);
+		`+orphanEditsFor("chat IN ("+in+")"), args...)
 	return err
+}
+
+func stringsToAny(ss []string) []any {
+	out := make([]any, len(ss))
+	for i, s := range ss {
+		out[i] = s
+	}
+	return out
+}
+
+// orphanEditsFor deletes the versions, receipts, votes and reactions of the
+// messages that are gone, for the chats matching cond.
+func orphanEditsFor(cond string) string {
+	return `DELETE FROM wz_edits WHERE ` + cond + ` AND NOT EXISTS
+	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_edits.chat AND m.id = wz_edits.id);
+	DELETE FROM wz_receipts WHERE ` + cond + ` AND NOT EXISTS
+	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_receipts.chat AND m.id = wz_receipts.id);
+	DELETE FROM wz_votes WHERE ` + cond + ` AND NOT EXISTS
+	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_votes.chat AND m.id = wz_votes.id);
+	DELETE FROM wz_reactions WHERE ` + cond + ` AND NOT EXISTS
+	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_reactions.chat AND m.id = wz_reactions.id)`
 }
 
 func (s *msgStore) putList(ctx context.Context, id, name string, custom, deleted bool, order int) error {

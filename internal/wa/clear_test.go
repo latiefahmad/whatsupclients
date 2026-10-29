@@ -55,3 +55,69 @@ func TestClearUpTo(t *testing.T) {
 		t.Errorf("clear all: %d messages left", m)
 	}
 }
+
+// TestDeleteAcrossAliases checks that a deletion arriving under one identity
+// reaches messages stored under the other: a one-to-one chat's messages can
+// sit under both its LID and its phone number until mergeAliases folds them.
+func TestDeleteAcrossAliases(t *testing.T) {
+	ctx := context.Background()
+	db, err := sql.Open("sqlite", "file:"+filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	s := &msgStore{db: db}
+	if err := s.init(ctx); err != nil {
+		t.Fatal(err)
+	}
+	keys := []string{"42@lid", "628@s.whatsapp.net"}
+	for _, chat := range keys {
+		if _, err := db.ExecContext(ctx, `INSERT INTO wz_chats (jid) VALUES (?)`, chat); err != nil {
+			t.Fatal(err)
+		}
+		for _, id := range []string{"m1", "m2"} {
+			if _, err := db.ExecContext(ctx, `INSERT INTO wz_messages (chat, id, ts) VALUES (?, ?, 1)`,
+				chat, id); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if _, err := s.deleteMessageEvery(ctx, keys, "m1"); err != nil {
+		t.Fatal(err)
+	}
+	for _, chat := range keys {
+		var n int
+		db.QueryRowContext(ctx, `SELECT count(*) FROM wz_messages WHERE chat = ? AND id = 'm1'`, chat).Scan(&n)
+		if n != 0 {
+			t.Errorf("delete for me left m1 in %s", chat)
+		}
+	}
+
+	if err := s.clearChatEvery(ctx, keys, 0); err != nil {
+		t.Fatal(err)
+	}
+	for _, chat := range keys {
+		var n int
+		db.QueryRowContext(ctx, `SELECT count(*) FROM wz_messages WHERE chat = ?`, chat).Scan(&n)
+		if n != 0 {
+			t.Errorf("clear left %d messages in %s", n, chat)
+		}
+	}
+
+	for _, chat := range keys {
+		if _, err := db.ExecContext(ctx, `INSERT INTO wz_messages (chat, id, ts) VALUES (?, 'm3', 1)`, chat); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.deleteChatEvery(ctx, keys, 0); err != nil {
+		t.Fatal(err)
+	}
+	for _, chat := range keys {
+		var n int
+		db.QueryRowContext(ctx, `SELECT count(*) FROM wz_chats WHERE jid = ?`, chat).Scan(&n)
+		if n != 0 {
+			t.Errorf("delete chat left %s", chat)
+		}
+	}
+}
