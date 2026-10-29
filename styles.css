@@ -72,10 +72,8 @@ p { margin: 0 0 14px; }
   color: var(--text); font-weight: 700; font-size: 18px;
 }
 .brand-mark {
-  display: grid; place-items: center;
+  display: block;
   width: 32px; height: 32px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--green), var(--green-2));
-  color: #05130c; font-size: 18px;
 }
 html[data-theme="light"] .brand-mark { color: #fff; }
 
