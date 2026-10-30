@@ -3,6 +3,7 @@ package wa
 import (
 	"testing"
 
+	"github.com/polymorfa/hypermeow/proto/waAICommon"
 	"github.com/polymorfa/hypermeow/proto/waAICommonDeprecated"
 	"github.com/polymorfa/hypermeow/proto/waE2E"
 	"google.golang.org/protobuf/proto"
@@ -57,6 +58,59 @@ func TestRichResponseWithoutText(t *testing.T) {
 	}
 	if got.kind != model.KindText {
 		t.Errorf("kind: %v, want KindText so it isn't shown as unreadable", got.kind)
+	}
+}
+
+// TestRichResponseUnified checks the shape newer bots send: no submessages at
+// all, the reply is one JSON document in unifiedResponse. This is the payload
+// a real bot sent, trimmed of its UUID.
+func TestRichResponseUnified(t *testing.T) {
+	e := &waE2E.AIRichResponseMessage{
+		MessageType: waAICommonDeprecated.AIRichResponseMessageType_AI_RICH_RESPONSE_TYPE_STANDARD.Enum(),
+		UnifiedResponse: &waAICommon.AIRichResponseUnifiedResponse{
+			Data: []byte(`{"response_id":"x","sections":[{"view_model":{"__typename":"GenAISingleLayoutViewModel","primitive":{"__typename":"GenAIMarkdownTextUXPrimitive","text":"Bisa banget, Hatz — tapi ada"}}}]}`),
+		},
+	}
+	got := describe(&waE2E.Message{RichResponseMessage: e})
+	if got.kind == model.KindUnsupported {
+		t.Fatal("unified response became KindUnsupported")
+	}
+	if got.text != "Bisa banget, Hatz — tapi ada" {
+		t.Errorf("text: %q", got.text)
+	}
+}
+
+// TestRichResponseUnifiedSections checks that a reply split into several
+// sections keeps them all, in order.
+func TestRichResponseUnifiedSections(t *testing.T) {
+	data := `{"sections":[
+		{"view_model":{"primitive":{"text":"Pertama"}}},
+		{"view_model":{"primitive":{"text":"Kedua"}}}]}`
+	if got := unifiedText([]byte(data)); got != "Pertama\n\nKedua" {
+		t.Errorf("text: %q, want %q", got, "Pertama\n\nKedua")
+	}
+}
+
+// TestRichResponseUnifiedItems checks a list view model, whose text sits in
+// its items rather than in a single primitive.
+func TestRichResponseUnifiedItems(t *testing.T) {
+	data := `{"sections":[{"view_model":{"items":[
+		{"text":"satu"},{"text":"dua"}]}}]}`
+	if got := unifiedText([]byte(data)); got != "satu\ndua" {
+		t.Errorf("text: %q, want %q", got, "satu\ndua")
+	}
+}
+
+// TestRichResponseUnifiedGarbage checks that a malformed document leaves the
+// message unreadable rather than crashing the reader.
+func TestRichResponseUnifiedGarbage(t *testing.T) {
+	if got := unifiedText([]byte("not json")); got != "" {
+		t.Errorf("text: %q, want empty", got)
+	}
+	if got := describe(&waE2E.Message{RichResponseMessage: &waE2E.AIRichResponseMessage{
+		UnifiedResponse: &waAICommon.AIRichResponseUnifiedResponse{Data: []byte("{")},
+	}}); got.text != "" {
+		t.Errorf("text: %q, want empty", got.text)
 	}
 }
 

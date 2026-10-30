@@ -9,6 +9,20 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.7] - 2026-10-30
+
+### 🐛 Fixes
+
+- **AI agent replies really show up now** — v1.9.6 read only one of the two
+  shapes a bot's reply comes in, and newer bots send the other one: no
+  submessages at all, one JSON document holding the text instead. Those
+  replies still read "This message couldn't load". Both shapes are read now.
+- **Bot replies that arrived before this are recovered** — they were stored
+  as unreadable, but the message itself was kept, so the app reads them back
+  once on first start and shows their text. Nothing else is touched.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.6...v1.9.7
+
 ## [v1.9.6] - 2026-10-30
 
 ### 🐛 Fixes

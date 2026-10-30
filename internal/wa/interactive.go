@@ -167,10 +167,11 @@ func describeInteractive(e *waE2E.InteractiveMessage) content {
 }
 
 // richResponse reads a bot's rich reply, the AI answers a Meta AI or a
-// business agent sends. Its text arrives as a run of submessages, one per
-// paragraph or list; the rest of the submessage kinds (images, tables, code,
-// LaTeX, maps) carry no text we can lay out, so they are left out rather than
-// shown as fields the user never wrote.
+// business agent sends.
+//
+// Newer bots send no submessages at all: the reply is one JSON document in
+// unifiedResponse.data, whose sections each hold a view model with a text
+// primitive. Submessages are read too, for the older shape.
 func richResponse(e *waE2E.AIRichResponseMessage) content {
 	var parts []string
 	for _, s := range e.GetSubmessages() {
@@ -178,10 +179,77 @@ func richResponse(e *waE2E.AIRichResponseMessage) content {
 			parts = append(parts, t)
 		}
 	}
+	if t := unifiedText(e.GetUnifiedResponse().GetData()); t != "" {
+		parts = append(parts, t)
+	}
 	if len(parts) == 0 {
 		return content{}
 	}
 	return content{text: strings.Join(parts, "\n\n"), ctx: e.GetContextInfo()}
+}
+
+// unifiedText reads the text of a unified response's JSON. Sections are walked
+// as raw JSON because a bot picks which view model and primitive it sends, and
+// only the ones carrying text matter here.
+func unifiedText(data []byte) string {
+	if len(data) == 0 {
+		return ""
+	}
+	var doc struct {
+		Sections []struct {
+			ViewModel json.RawMessage `json:"view_model"`
+		} `json:"sections"`
+	}
+	if json.Unmarshal(data, &doc) != nil {
+		return ""
+	}
+	var texts []string
+	for _, s := range doc.Sections {
+		if t := strings.TrimSpace(textOf(s.ViewModel)); t != "" {
+			texts = append(texts, t)
+		}
+	}
+	return strings.Join(texts, "\n\n")
+}
+
+// textOf pulls the text out of a view model: its primitive's text, or the
+// text of the primitives a list view model holds.
+func textOf(vm json.RawMessage) string {
+	if len(vm) == 0 {
+		return ""
+	}
+	var v struct {
+		Primitive json.RawMessage   `json:"primitive"`
+		Items     []json.RawMessage `json:"items"`
+	}
+	if json.Unmarshal(vm, &v) != nil {
+		return ""
+	}
+	var texts []string
+	if t := primitiveText(v.Primitive); t != "" {
+		texts = append(texts, t)
+	}
+	for _, it := range v.Items {
+		if t := primitiveText(it); t != "" {
+			texts = append(texts, t)
+		}
+	}
+	return strings.Join(texts, "\n")
+}
+
+// primitiveText reads a text primitive's text. Other primitives (images,
+// buttons, code) carry no text to lay out here.
+func primitiveText(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var p struct {
+		Text string `json:"text"`
+	}
+	if json.Unmarshal(raw, &p) != nil {
+		return ""
+	}
+	return p.Text
 }
 
 func describeList(e *waE2E.ListMessage) content {

@@ -208,6 +208,9 @@ func (s *msgStore) init(ctx context.Context) error {
 	if err := s.keepOldReactions(ctx); err != nil {
 		return fmt.Errorf("keep old reactions: %w", err)
 	}
+	if err := s.rereadRichResponses(ctx); err != nil {
+		return fmt.Errorf("reread rich responses: %w", err)
+	}
 	if dropped {
 		s.vacuum(ctx)
 	}
