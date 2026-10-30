@@ -166,6 +166,24 @@ func describeInteractive(e *waE2E.InteractiveMessage) content {
 	return c
 }
 
+// richResponse reads a bot's rich reply, the AI answers a Meta AI or a
+// business agent sends. Its text arrives as a run of submessages, one per
+// paragraph or list; the rest of the submessage kinds (images, tables, code,
+// LaTeX, maps) carry no text we can lay out, so they are left out rather than
+// shown as fields the user never wrote.
+func richResponse(e *waE2E.AIRichResponseMessage) content {
+	var parts []string
+	for _, s := range e.GetSubmessages() {
+		if t := strings.TrimSpace(s.GetMessageText()); t != "" {
+			parts = append(parts, t)
+		}
+	}
+	if len(parts) == 0 {
+		return content{}
+	}
+	return content{text: strings.Join(parts, "\n\n"), ctx: e.GetContextInfo()}
+}
+
 func describeList(e *waE2E.ListMessage) content {
 	bi := &buttonsInfo{Footer: e.GetFooterText()}
 	var sections []model.ListSection

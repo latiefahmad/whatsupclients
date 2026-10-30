@@ -304,6 +304,8 @@ func describe(m *waE2E.Message) content {
 		return describeInteractive(m.GetInteractiveMessage())
 	case m.GetListMessage() != nil:
 		return describeList(m.GetListMessage())
+	case m.GetRichResponseMessage() != nil:
+		return richResponse(m.GetRichResponseMessage())
 	case m.GetGroupInviteMessage() != nil:
 		e := m.GetGroupInviteMessage()
 		return content{text: "Group invite: " + e.GetGroupName(), ctx: e.GetContextInfo()}
