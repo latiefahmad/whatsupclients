@@ -1001,6 +1001,26 @@ func (s *msgStore) setMessageFlag(ctx context.Context, chat, id, field string, v
 	return err
 }
 
+// refreshLastTS recomputes wz_chats.last_ts from the messages that are left,
+// so a chat whose newest message was deleted sinks back to its remaining
+// newest one. putMessage only ever raises last_ts (MAX), and a delete never
+// lowered it, so the chat stayed at the top of the list — where WhatsApp puts
+// it by the messages it still holds, not by the ones it once held.
+//
+// A chat with no messages left keeps its last_ts: it still has a place in the
+// list until the chat itself goes.
+func (s *msgStore) refreshLastTS(ctx context.Context, chats []string) error {
+	if len(chats) == 0 {
+		return nil
+	}
+	args := stringsToAny(chats)
+	in := numbered(len(chats), 1)
+	_, err := s.db.ExecContext(ctx, `UPDATE wz_chats SET last_ts = COALESCE(
+			(SELECT MAX(ts) FROM wz_messages WHERE chat = wz_chats.jid), last_ts)
+		WHERE jid IN (`+in+`)`, args...)
+	return err
+}
+
 func (s *msgStore) deleteMessage(ctx context.Context, chat, id string) error {
 	_, err := s.deleteMessageEvery(ctx, []string{chat}, id)
 	return err
@@ -1028,6 +1048,9 @@ func (s *msgStore) deleteMessageEvery(ctx context.Context, chats []string, id st
 		DELETE FROM wz_receipts WHERE id = ?1 AND chat IN (`+in+`);
 		DELETE FROM wz_votes WHERE id = ?1 AND chat IN (`+in+`);
 		DELETE FROM wz_reactions WHERE id = ?1 AND chat IN (`+in+`)`, args...)
+	if err == nil {
+		err = s.refreshLastTS(ctx, chats)
+	}
 	return n, err
 }
 
@@ -1058,7 +1081,10 @@ func (s *msgStore) clearChatEvery(ctx context.Context, chats []string, upTo int6
 	in := numbered(len(chats), 2)
 	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat IN (`+in+`) AND starred = 0 AND (?1 = 0 OR ts <= ?1);
 		`+orphanEditsFor("chat IN ("+in+")"), args...)
-	return err
+	if err != nil {
+		return err
+	}
+	return s.refreshLastTS(ctx, chats)
 }
 
 // deleteChat deletes the chat's messages sent at or before upTo (unix
@@ -1074,9 +1100,17 @@ func (s *msgStore) deleteChatEvery(ctx context.Context, chats []string, upTo int
 	args := append([]any{upTo}, stringsToAny(chats)...)
 	in := numbered(len(chats), 2)
 	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat IN (`+in+`) AND (?1 = 0 OR ts <= ?1);
-		DELETE FROM wz_chats WHERE jid IN (`+in+`) AND NOT EXISTS (SELECT 1 FROM wz_messages WHERE chat = wz_chats.jid);
-		DELETE FROM wz_list_chats WHERE chat IN (`+in+`) AND NOT EXISTS (SELECT 1 FROM wz_chats WHERE jid = wz_list_chats.chat);
 		`+orphanEditsFor("chat IN ("+in+")"), args...)
+	if err != nil {
+		return err
+	}
+	// Before the chat itself may go, so one that keeps messages sinks to
+	// them; one with none left is removed below anyway.
+	if err := s.refreshLastTS(ctx, chats); err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `DELETE FROM wz_chats WHERE jid IN (`+in+`) AND NOT EXISTS (SELECT 1 FROM wz_messages WHERE chat = wz_chats.jid);
+		DELETE FROM wz_list_chats WHERE chat IN (`+in+`) AND NOT EXISTS (SELECT 1 FROM wz_chats WHERE jid = wz_list_chats.chat)`, args...)
 	return err
 }
 
