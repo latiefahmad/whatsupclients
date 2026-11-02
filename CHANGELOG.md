@@ -9,6 +9,22 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.8] - 2026-10-30
+
+### 🐛 Fixes
+
+- **A bot no longer shows up as two chats** — a business bot sometimes opens
+  its message under an ID this device was never told of, while the message
+  itself says which number sent it. The same message was then filed under
+  both, so the same bot appeared twice in the list — one entry with its name
+  and one as "Someone" — and every message notified twice. Such a message
+  now goes to the chat its number already had.
+- **Chats already split this way are joined back** — the app folds them into
+  the right chat once on first start, keeping each message a single time. On
+  a real store this reunited 15 messages that had been duplicated.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.7...v1.9.8
+
 ## [v1.9.7] - 2026-10-30
 
 ### 🐛 Fixes

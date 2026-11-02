@@ -335,6 +335,14 @@ func (b *Backend) parse(ctx context.Context, evt *events.Message) (p parsed, ok 
 	if skipChat(chat) {
 		return p, false
 	}
+	// A bot may open a chat under a LID nothing maps, while its message says
+	// which number sent it. Filing it under that number's LID keeps it in the
+	// one chat the conversation already lives in (see senderLID).
+	if !evt.Info.IsFromMe {
+		if lid, ok := b.senderLID(ctx, chat, evt.Info.Sender); ok {
+			chat = lid
+		}
+	}
 	p.msg.Message = &model.Message{ChatID: chat.String()}
 
 	// The copy of an HD photo or video is the same picture the original

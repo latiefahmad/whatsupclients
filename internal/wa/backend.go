@@ -185,6 +185,9 @@ func Open(dataDir string, debug bool) (*Backend, error) {
 		b.db.Close()
 		return nil, fmt.Errorf("init message store: %w", err)
 	}
+	if err := b.store.mergeSenderLIDChats(b.ctx, b.log); err != nil {
+		b.log.Warnf("merge chats a bot opened under an unknown LID: %v", err)
+	}
 
 	// How this client shows up under "Linked devices" on the phone.
 	store.SetOSInfo("WhatsUp Clients", [3]uint32{0, 1, 0})

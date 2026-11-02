@@ -67,6 +67,32 @@ func (b *Backend) canonical(ctx context.Context, j types.JID) types.JID {
 	return j
 }
 
+// senderLID resolves the LID a message's sender is known by, when the chat it
+// arrived in is a LID this device has no mapping for.
+//
+// A business bot sometimes opens its message under a LID that was never
+// announced, while the message itself says who sent it: the phone number the
+// conversation is already stored under. Without this the same message landed
+// in two chats — one under the number's LID, one under the unknown LID — and
+// notified twice.
+func (b *Backend) senderLID(ctx context.Context, chat, sender types.JID) (types.JID, bool) {
+	if chat.Server != types.HiddenUserServer || sender.Server != types.DefaultUserServer {
+		return types.JID{}, false
+	}
+	cli := b.client()
+	if cli == nil {
+		return types.JID{}, false
+	}
+	if pn, err := cli.Store.LIDs.GetPNForLID(ctx, chat.ToNonAD()); err == nil && !pn.IsEmpty() {
+		return types.JID{}, false // this LID is mapped: it is an identity of its own
+	}
+	lid, err := cli.Store.LIDs.GetLIDForPN(ctx, sender.ToNonAD())
+	if err != nil || lid.IsEmpty() || lid == chat.ToNonAD() {
+		return types.JID{}, false
+	}
+	return lid.ToNonAD(), true
+}
+
 // chatKeys returns every key a chat's messages may be stored under: the JID
 // as the event named it, its canonical LID, and the phone number it maps
 // to. A deletion that arrives under one identity must reach messages stored
