@@ -553,13 +553,20 @@ func (b *Backend) sendAppState(patch appstate.PatchInfo) {
 func (b *Backend) sendAppStateNow(cli *whatsmeow.Client, patch appstate.PatchInfo) {
 	if err := cli.SendAppState(b.ctx, patch); err != nil {
 		b.log.Warnf("send app state %s: %v", patch.Type, err)
+		// The change stays here until it reaches the phone: a delete the
+		// phone never hears of is one this device alone forgot.
+		b.enqueuePatch(patch)
 		if errors.Is(err, appstate.ErrMismatchingLTHash) {
 			// requestAppStateRecovery is on it (AppStateSyncError).
 			b.emit(model.NoticeEvent{Text: "Your phone is repairing sync. Try again in a minute."})
 			return
 		}
-		b.emit(model.NoticeEvent{Text: "Couldn't sync the change to your phone."})
+		b.emit(model.NoticeEvent{Text: "Couldn't sync the change to your phone. It'll be sent when the connection is back."})
+		return
 	}
+	// It reached the phone, so it must not be sent again by a drain or by
+	// the next connection.
+	b.forgetPatch(patch)
 }
 
 // Star implements model.Backend.

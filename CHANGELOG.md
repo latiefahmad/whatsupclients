@@ -9,6 +9,22 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.9] - 2026-11-06
+
+### 🐛 Fixes
+
+- **A delete that couldn't reach your phone is no longer lost** — deleting
+  messages here changed this device at once, then told the phone. When that
+  message was refused — WhatsApp says "your phone is repairing sync" while
+  one of its settings channels is being repaired — the change was dropped:
+  the messages stayed deleted on this computer and stayed on the phone, and
+  nothing ever told the phone again. Both sides drifted apart, and the same
+  happened in reverse for deletes made on the phone. A change that can't go
+  out yet is now kept, and sent as soon as the connection or the channel is
+  back, so the two agree again.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.8...v1.9.9
+
 ## [v1.9.8] - 2026-10-30
 
 ### 🐛 Fixes

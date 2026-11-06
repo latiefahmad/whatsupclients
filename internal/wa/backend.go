@@ -49,6 +49,7 @@ type Backend struct {
 	db        *sql.DB
 	store     msgStore
 	container *sqlstore.Container
+	patches   patchQueue // app state changes a send refused, sent again later
 
 	cliMu  sync.Mutex
 	cli    *whatsmeow.Client
@@ -188,6 +189,7 @@ func Open(dataDir string, debug bool) (*Backend, error) {
 	if err := b.store.mergeSenderLIDChats(b.ctx, b.log); err != nil {
 		b.log.Warnf("merge chats a bot opened under an unknown LID: %v", err)
 	}
+	b.loadPatches()
 
 	// How this client shows up under "Linked devices" on the phone.
 	store.SetOSInfo("WhatsUp Clients", [3]uint32{0, 1, 0})
@@ -696,6 +698,11 @@ func (b *Backend) handle(evt any) {
 			b.refreshGroupNames()
 			b.resyncAppStateOnce()
 			b.refreshChannels()
+			// A change kept from an earlier attempt goes out as soon as the
+			// connection is back; the collection needn't sync first.
+			for _, name := range appstate.AllPatchNames {
+				b.drainPatches(name)
+			}
 		}()
 	case *events.Disconnected, *events.KeepAliveTimeout:
 		b.emit(model.ConnEvent{State: model.StateOffline})
@@ -867,6 +874,9 @@ func (b *Backend) handle(evt any) {
 			b.log.Infof("app state %s repaired by the phone (v%d)", e.Name, e.Version)
 			_ = b.store.setMetaValue(ctx, appStateResyncKey+":"+string(e.Name), time.Now().Format(time.RFC3339))
 		}
+		// The collection syncs again, so the changes it refused earlier go
+		// out now.
+		b.drainPatches(e.Name)
 		// Contact names arrive through app state; re-title chats once they're in.
 		b.names.clear()
 		b.refreshChatNames()

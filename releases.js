@@ -1,10 +1,9 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.9.8",
-  "date": "2026-10-30",
+  "ver": "v1.9.9",
+  "date": "2026-11-06",
   "items": [
-    "**A bot no longer shows up as two chats** — a business bot sometimes opens its message under an ID this device was never told of, while the message itself says which number sent it. The same message was then filed under both, so the same bot appeared twice in the list — one entry with its name and one as \"Someone\" — and every message notified twice. Such a message now goes to the chat its number already had.",
-    "**Chats already split this way are joined back** — the app folds them into the right chat once on first start, keeping each message a single time. On a real store this reunited 15 messages that had been duplicated."
+    "**A delete that couldn't reach your phone is no longer lost** — deleting messages here changed this device at once, then told the phone. When that message was refused — WhatsApp says \"your phone is repairing sync\" while one of its settings channels is being repaired — the change was dropped: the messages stayed deleted on this computer and stayed on the phone, and nothing ever told the phone again. Both sides drifted apart, and the same happened in reverse for deletes made on the phone. A change that can't go out yet is now kept, and sent as soon as the connection or the channel is back, so the two agree again."
   ]
 };
