@@ -9,6 +9,18 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.17] - 2026-11-06
+
+### 🔍 Diagnostics
+
+- **The snapshot blob is fetched once and analysed offline** — fetching it
+  needs the media connection, which refreshes slowly and drops with the
+  socket, so the diagnostic kept failing before it could report anything.
+  The blob is now kept in the data directory and read from there on later
+  attempts, so the analysis runs even when the media server can't be reached.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.16...v1.9.17
+
 ## [v1.9.16] - 2026-11-06
 
 ### 🔍 Diagnostics

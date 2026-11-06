@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/polymorfa/hypermeow/appstate"
 	"github.com/polymorfa/hypermeow/appstate/lthash"
@@ -93,24 +92,18 @@ func (b *Backend) noteAppStateSnapshot(_ context.Context, node *waBinary.Node) {
 	b.inspectSnapshotBlob(name, snapRef, patchNodes)
 }
 
-// inspectSnapshotBlob downloads the snapshot's blob and counts what it holds.
-// A snapshot carries records only, all of them SET, so updateHash adds one
-// value MAC per record and subtracts nothing: the hash is decided entirely by
-// these records and the version. The count and version tell a truncated
-// download (fewer entries than the MAC was made from) from a mismatched key.
+// inspectSnapshotBlob reads the snapshot's blob once and analyses it offline
+// from then on. Downloading needs the media connection, which is slow to
+// refresh and drops with the socket: doing that on every sync attempt meant
+// the diagnostic never ran. The blob is keyed by its handle, so the second
+// attempt reads the file and the network is left alone.
 func (b *Backend) inspectSnapshotBlob(name appstate.WAPatchName, ref *waServerSync.ExternalBlobReference, patchNodes []waBinary.Node) {
 	if ref == nil {
 		return
 	}
-	cli := b.client()
-	if cli == nil {
-		return
-	}
-	ctx, cancel := context.WithTimeout(b.ctx, 30*time.Second)
-	defer cancel()
-	raw, err := cli.Download(ctx, ref)
+	raw, err := b.snapshotBlob(ref)
 	if err != nil {
-		b.log.Warnf("app state diag: snapshot %s: blob download failed: %v", name, err)
+		b.log.Warnf("app state diag: snapshot %s: blob unavailable: %v", name, err)
 		return
 	}
 	var ss waServerSync.SyncdSnapshot
@@ -133,7 +126,11 @@ func (b *Backend) inspectSnapshotBlob(name appstate.WAPatchName, ref *waServerSy
 	// the hash over exactly its records says whether the mismatch comes from
 	// the key or from the hash hypermeow builds. The value MAC of a SET is the
 	// last 32 bytes of its blob, and a snapshot subtracts nothing.
-	key, err := cli.Store.AppStateKeys.GetAppStateSyncKey(ctx, ss.GetKeyID().GetID())
+	cli := b.client()
+	if cli == nil {
+		return
+	}
+	key, err := cli.Store.AppStateKeys.GetAppStateSyncKey(b.ctx, ss.GetKeyID().GetID())
 	if err != nil || key == nil {
 		b.log.Warnf("app state diag: snapshot %s: key %s not held: %v", name, shortBytes(ss.GetKeyID().GetID()), err)
 		return
