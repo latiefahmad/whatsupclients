@@ -2,12 +2,18 @@ package wa
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/polymorfa/hypermeow/appstate"
+	"github.com/polymorfa/hypermeow/appstate/lthash"
 	waBinary "github.com/polymorfa/hypermeow/binary"
 	waServerSync "github.com/polymorfa/hypermeow/proto/waServerSync"
+	"github.com/polymorfa/hypermeow/util/hkdfutil"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -54,11 +60,13 @@ func (b *Backend) noteAppStateSnapshot(_ context.Context, node *waBinary.Node) {
 	name := appstate.WAPatchName(collection.AttrGetter().OptionalString("name"))
 	snapNode := collection.GetChildByTag("snapshot")
 	raw, hasSnap := snapNode.Content.([]byte)
+	var snapRef *waServerSync.ExternalBlobReference
 	if hasSnap {
 		var ref waServerSync.ExternalBlobReference
 		if err := proto.Unmarshal(raw, &ref); err != nil {
 			b.log.Warnf("app state diag: collection %s: snapshot reference unreadable: %v", name, err)
 		} else {
+			snapRef = &ref
 			b.log.Warnf("app state diag: snapshot %s: ref bytes=%d handle=%s filesize=%d sha256=%s",
 				name, len(raw), ref.GetHandle(), ref.GetFileSizeBytes(), shortBytes(ref.GetFileSHA256()))
 		}
@@ -82,6 +90,87 @@ func (b *Backend) noteAppStateSnapshot(_ context.Context, node *waBinary.Node) {
 		}
 	}
 	b.log.Infof("app state diag: collection %s: %d patch(es)", name, len(patchNodes))
+	b.inspectSnapshotBlob(name, snapRef)
+}
+
+// inspectSnapshotBlob downloads the snapshot's blob and counts what it holds.
+// A snapshot carries records only, all of them SET, so updateHash adds one
+// value MAC per record and subtracts nothing: the hash is decided entirely by
+// these records and the version. The count and version tell a truncated
+// download (fewer entries than the MAC was made from) from a mismatched key.
+func (b *Backend) inspectSnapshotBlob(name appstate.WAPatchName, ref *waServerSync.ExternalBlobReference) {
+	if ref == nil {
+		return
+	}
+	cli := b.client()
+	if cli == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(b.ctx, 30*time.Second)
+	defer cancel()
+	raw, err := cli.Download(ctx, ref)
+	if err != nil {
+		b.log.Warnf("app state diag: snapshot %s: blob download failed: %v", name, err)
+		return
+	}
+	var ss waServerSync.SyncdSnapshot
+	if err := proto.Unmarshal(raw, &ss); err != nil {
+		b.log.Warnf("app state diag: snapshot %s: blob has %d bytes, unreadable: %v", name, len(raw), err)
+		return
+	}
+	records := ss.GetRecords()
+	shortValues := 0
+	for _, rec := range records {
+		if len(rec.GetValue().GetBlob()) < 32 {
+			shortValues++
+		}
+	}
+	b.log.Warnf("app state diag: snapshot %s: blob %d bytes, v%d records=%d short_values=%d keyid=%s expected_filesize=%d",
+		name, len(raw), ss.GetVersion().GetVersion(), len(records), shortValues,
+		shortBytes(ss.GetKeyID().GetID()), ref.GetFileSizeBytes())
+
+	// The decisive number: the snapshot carries its own MAC, so recomputing
+	// the hash over exactly its records says whether the mismatch comes from
+	// the key or from the hash hypermeow builds. The value MAC of a SET is the
+	// last 32 bytes of its blob, and a snapshot subtracts nothing.
+	key, err := cli.Store.AppStateKeys.GetAppStateSyncKey(ctx, ss.GetKeyID().GetID())
+	if err != nil || key == nil {
+		b.log.Warnf("app state diag: snapshot %s: key %s not held: %v", name, shortBytes(ss.GetKeyID().GetID()), err)
+		return
+	}
+	var added [][]byte
+	for _, rec := range records {
+		if value := rec.GetValue().GetBlob(); len(value) >= 32 {
+			added = append(added, value[len(value)-32:])
+		}
+	}
+	var hash [128]byte
+	lthash.WAPatchIntegrity.SubtractThenAddInPlace(hash[:], nil, added)
+
+	expanded := expandKey(key.Data)
+	want := snapshotMAC(hash, ss.GetVersion().GetVersion(), name, expanded)
+	b.log.Warnf("app state diag: snapshot %s: hash=%s v%d, computed mac=%s snapshot mac=%s match=%v",
+		name, shortHash(hash), ss.GetVersion().GetVersion(), shortBytes(want), shortBytes(ss.GetMac()),
+		hmac.Equal(want, ss.GetMac()))
+}
+
+// expandKey turns stored key data into the five subkeys a collection uses, the
+// way hypermeow does ("WhatsApp Mutation Keys", 160 bytes).
+func expandKey(data []byte) []byte {
+	return hkdfutil.SHA256(data, nil, []byte("WhatsApp Mutation Keys"), 160)
+}
+
+// snapshotMAC is the HMAC a snapshot's MAC is checked against: the state hash,
+// the version, then the collection's name, under the snapshot key.
+func snapshotMAC(hash [128]byte, version uint64, name appstate.WAPatchName, expanded []byte) []byte {
+	snapshotKey := expanded[96:128]
+	m := hmac.New(sha256.New, snapshotKey)
+	m.Write(hash[:])
+	var v [8]byte
+	binary.BigEndian.PutUint64(v[:], version)
+	m.Write(v[:])
+	m.Write([]byte(name))
+	return m.Sum(nil)
 }
 
 // appStateStamp reads the local version and hash of a collection.

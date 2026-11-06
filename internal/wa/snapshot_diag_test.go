@@ -1,10 +1,12 @@
 package wa
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"testing"
 
+	appstate "github.com/polymorfa/hypermeow/appstate"
 	waBinary "github.com/polymorfa/hypermeow/binary"
 	waServerSync "github.com/polymorfa/hypermeow/proto/waServerSync"
 	waLog "github.com/polymorfa/hypermeow/util/log"
@@ -139,6 +141,39 @@ func TestSnapshotDiagSaysWhenThereIsNone(t *testing.T) {
 	}
 	if !sawMissing {
 		t.Errorf("a collection with no snapshot wasn't reported: %q", log.lines)
+	}
+}
+
+// TestSnapshotMACFollowsTheVersionAndName checks the MAC is bound to both,
+// which is what makes a mismatch meaningful: a snapshot sealed for another
+// version or collection can't verify here even with the right key.
+func TestSnapshotMACFollowsTheVersionAndName(t *testing.T) {
+	expanded := expandKey(bytes.Repeat([]byte{7}, 32))
+	var hash [128]byte
+	base := snapshotMAC(hash, 305, appstate.WAPatchRegularHigh, expanded)
+
+	if other := snapshotMAC(hash, 306, appstate.WAPatchRegularHigh, expanded); bytes.Equal(base, other) {
+		t.Error("the same hash signed at two versions gave one MAC")
+	}
+	if other := snapshotMAC(hash, 305, appstate.WAPatchRegularLow, expanded); bytes.Equal(base, other) {
+		t.Error("the same hash signed for two collections gave one MAC")
+	}
+	if len(base) != 32 {
+		t.Errorf("a snapshot MAC is 32 bytes, got %d", len(base))
+	}
+}
+
+// TestExpandKeyLayout pins the subkey split the MAC is taken from. The
+// snapshot key is the fourth of five 32-byte subkeys; taking another one
+// silently produced a MAC that never matches.
+func TestExpandKeyLayout(t *testing.T) {
+	expanded := expandKey(bytes.Repeat([]byte{7}, 32))
+	if len(expanded) != 160 {
+		t.Fatalf("five 32-byte subkeys, got %d bytes", len(expanded))
+	}
+	other := expandKey(bytes.Repeat([]byte{8}, 32))
+	if bytes.Equal(expanded[96:128], other[96:128]) {
+		t.Error("the snapshot key doesn't depend on the key data")
 	}
 }
 

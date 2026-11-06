@@ -9,6 +9,20 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.15] - 2026-11-06
+
+### 🔍 Diagnostics
+
+- **A refused snapshot now reports whether its MAC can be reproduced** — the
+  log lines from v1.9.14 showed the snapshot is a 495 KB blob with 26 patches,
+  so it isn't missing or truncated. The diagnostic now downloads that blob,
+  counts its records, recomputes the state hash over exactly those records,
+  and prints the MAC it derives next to the one the snapshot carries. A
+  `match=true` means the hash was rebuilt correctly and the key differs; a
+  `match=false` points at the records themselves.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.14...v1.9.15
+
 ## [v1.9.14] - 2026-11-06
 
 ### 🔍 Diagnostics
