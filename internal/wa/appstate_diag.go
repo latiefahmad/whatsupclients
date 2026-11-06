@@ -90,7 +90,7 @@ func (b *Backend) noteAppStateSnapshot(_ context.Context, node *waBinary.Node) {
 		}
 	}
 	b.log.Infof("app state diag: collection %s: %d patch(es)", name, len(patchNodes))
-	b.inspectSnapshotBlob(name, snapRef)
+	b.inspectSnapshotBlob(name, snapRef, patchNodes)
 }
 
 // inspectSnapshotBlob downloads the snapshot's blob and counts what it holds.
@@ -98,7 +98,7 @@ func (b *Backend) noteAppStateSnapshot(_ context.Context, node *waBinary.Node) {
 // value MAC per record and subtracts nothing: the hash is decided entirely by
 // these records and the version. The count and version tell a truncated
 // download (fewer entries than the MAC was made from) from a mismatched key.
-func (b *Backend) inspectSnapshotBlob(name appstate.WAPatchName, ref *waServerSync.ExternalBlobReference) {
+func (b *Backend) inspectSnapshotBlob(name appstate.WAPatchName, ref *waServerSync.ExternalBlobReference, patchNodes []waBinary.Node) {
 	if ref == nil {
 		return
 	}
@@ -152,6 +152,54 @@ func (b *Backend) inspectSnapshotBlob(name appstate.WAPatchName, ref *waServerSy
 	b.log.Warnf("app state diag: snapshot %s: hash=%s v%d, computed mac=%s snapshot mac=%s match=%v",
 		name, shortHash(hash), ss.GetVersion().GetVersion(), shortBytes(want), shortBytes(ss.GetMac()),
 		hmac.Equal(want, ss.GetMac()))
+
+	// If none of the five subkeys reproduces the MAC, the hash itself is wrong
+	// and no key can explain the mismatch. Trying each one is the only way to
+	// say that without assuming which subkey the server signed with.
+	for _, sub := range []struct {
+		name string
+		at   int
+	}{
+		{"index", 0}, {"value_encryption", 32}, {"value_mac", 64}, {"snapshot_mac", 96}, {"patch_mac", 128},
+	} {
+		got := snapshotMACKeyed(hash, ss.GetVersion().GetVersion(), name, expanded[sub.at:sub.at+32])
+		if hmac.Equal(got, ss.GetMac()) {
+			b.log.Warnf("app state diag: snapshot %s: the MAC matches the %s subkey", name, sub.name)
+		}
+	}
+
+	// A snapshot's version is what it was sealed at, and the MAC covers it, so
+	// a MAC made at another version can't verify. If one of these nearby
+	// versions matches, the records are fine and only the version is off.
+	for _, v := range []uint64{ss.GetVersion().GetVersion() - 1, ss.GetVersion().GetVersion() + 1} {
+		if hmac.Equal(snapshotMACKeyed(hash, v, name, expanded[96:128]), ss.GetMac()) {
+			b.log.Warnf("app state diag: snapshot %s: the MAC matches at v%d, not v%d",
+				name, v, ss.GetVersion().GetVersion())
+		}
+	}
+
+	// The same MAC with the version taken from the patches rather than the
+	// snapshot, in case the two disagree about which version was sealed.
+	if len(patchNodes) > 0 {
+		if raw, ok := patchNodes[len(patchNodes)-1].Content.([]byte); ok {
+			var last waServerSync.SyncdPatch
+			if proto.Unmarshal(raw, &last) == nil {
+				b.log.Warnf("app state diag: snapshot %s: newest patch is v%d (snapshot claims v%d)",
+					name, last.GetVersion().GetVersion(), ss.GetVersion().GetVersion())
+			}
+		}
+	}
+}
+
+// snapshotMACKeyed signs a state hash with one specific subkey.
+func snapshotMACKeyed(hash [128]byte, version uint64, name appstate.WAPatchName, key []byte) []byte {
+	m := hmac.New(sha256.New, key)
+	m.Write(hash[:])
+	var v [8]byte
+	binary.BigEndian.PutUint64(v[:], version)
+	m.Write(v[:])
+	m.Write([]byte(name))
+	return m.Sum(nil)
 }
 
 // expandKey turns stored key data into the five subkeys a collection uses, the
@@ -163,14 +211,7 @@ func expandKey(data []byte) []byte {
 // snapshotMAC is the HMAC a snapshot's MAC is checked against: the state hash,
 // the version, then the collection's name, under the snapshot key.
 func snapshotMAC(hash [128]byte, version uint64, name appstate.WAPatchName, expanded []byte) []byte {
-	snapshotKey := expanded[96:128]
-	m := hmac.New(sha256.New, snapshotKey)
-	m.Write(hash[:])
-	var v [8]byte
-	binary.BigEndian.PutUint64(v[:], version)
-	m.Write(v[:])
-	m.Write([]byte(name))
-	return m.Sum(nil)
+	return snapshotMACKeyed(hash, version, name, expanded[96:128])
 }
 
 // appStateStamp reads the local version and hash of a collection.

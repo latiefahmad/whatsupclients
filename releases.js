@@ -1,9 +1,9 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.9.15",
+  "ver": "v1.9.16",
   "date": "2026-11-06",
   "items": [
-    "**A refused snapshot now reports whether its MAC can be reproduced** — the log lines from v1.9.14 showed the snapshot is a 495 KB blob with 26 patches, so it isn't missing or truncated. The diagnostic now downloads that blob, counts its records, recomputes the state hash over exactly those records, and prints the MAC it derives next to the one the snapshot carries. A `match=true` means the hash was rebuilt correctly and the key differs; a `match=false` points at the records themselves."
+    "**The snapshot diagnostic now rules out the key and the version** — v1.9.15 showed the blob is complete (495277 bytes, 2260 records, no short values) yet its MAC still doesn't reproduce. The log now tries the MAC against each of the key's five subkeys and against the versions either side of the one the snapshot claims, and says which one matches if any does. No match means the records and the MAC themselves disagree, which no local key change fixes."
   ]
 };
