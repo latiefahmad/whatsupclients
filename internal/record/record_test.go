@@ -9,6 +9,20 @@ import (
 	"time"
 )
 
+// waitFor waits until cond holds, failing the test if it doesn't within a
+// few seconds. A recorder thread on a loaded CI runner can lag well past
+// the short sleeps a fixed wait would allow.
+func waitFor(t *testing.T, cond func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for !cond() {
+		if time.Now().After(deadline) {
+			t.Fatal("condition never held within 5s")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func TestDemoSession(t *testing.T) {
 	Demo = true
 	defer func() { Demo = false }()
@@ -16,7 +30,12 @@ func TestDemoSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(300 * time.Millisecond)
+	// Wait for it to record rather than sleeping a fixed time: on a loaded
+	// CI runner the recorder thread hadn't run in 300ms, and the test failed
+	// over timing rather than behaviour. The cap keeps the clip in the same
+	// second it was in before (the length is checked below).
+	waitFor(t, func() bool { return s.Elapsed() > 0 })
+	time.Sleep(250 * time.Millisecond)
 	if err := s.Pause(); err != nil {
 		t.Fatal(err)
 	}
@@ -31,10 +50,7 @@ func TestDemoSession(t *testing.T) {
 	if err := s.Resume(); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(200 * time.Millisecond)
-	if s.Elapsed() <= first {
-		t.Fatalf("resumed recording didn't grow: %v", s.Elapsed())
-	}
+	waitFor(t, func() bool { return s.Elapsed() > first })
 	lv := make([]float32, 100)
 	if n := s.Levels(lv); n == 0 || lv[len(lv)-1] == 0 {
 		t.Fatalf("no levels: %d %v", n, lv[len(lv)-5:])
