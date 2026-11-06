@@ -79,7 +79,7 @@ func TestGroupStatusPayloads(t *testing.T) {
 
 func TestGroupStatusSeparationAndExpiry(t *testing.T) {
 	b := testBackend(t)
-	now := time.Now()
+	now := b.now()
 	for _, st := range []storedStatus{
 		{id: "personal", sender: "1@lid", ts: now, c: content{text: "personal"}},
 		{id: "a", group: "123@g.us", sender: "1@lid", ts: now, c: content{text: "a"}},
@@ -114,6 +114,10 @@ func TestGroupStatusSeparationAndExpiry(t *testing.T) {
 			t.Fatalf("own group update not seen once watched: %+v", thread.Updates[1])
 		}
 	}
+	// The sweep that removes an expired update's cache runs in the
+	// background, so wait for it: checking the file first raced it and made
+	// this test fail on CI, where it happened to lose the race.
+	b.work.Wait()
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatal("expired audio cache retained")
 	}

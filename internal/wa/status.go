@@ -273,15 +273,18 @@ func (b *Backend) onStatus(e *events.Message) {
 	b.emit(model.StatusEvent{})
 }
 
-// Statuses implements model.Backend.
-func (b *Backend) Statuses() []*model.StatusThread {
-	ctx := b.ctx
-	since := time.Now().Add(-statusTTL)
-	// Old updates go, with their downloaded pictures and videos.
-	// Old updates go, with their downloaded pictures and videos, in the
-	// background: this runs on the UI goroutine at every StatusEvent, and a
-	// sweep's deletes and file removals would hitch the frames.
-	go func(ids []string) {
+// sweepStatuses removes the updates older than since, with the pictures and
+// videos downloaded for them, in the background: it runs on the UI goroutine
+// at every StatusEvent, and its deletes and file removals would hitch the
+// frames there.
+func (b *Backend) sweepStatuses(since time.Time) {
+	ids := b.store.dropStatuses(b.ctx, since)
+	if len(ids) == 0 {
+		return
+	}
+	b.work.Add(1)
+	go func() {
+		defer b.work.Done()
 		for _, id := range ids {
 			path := b.mediaPath(statusChat, id)
 			files, _ := filepath.Glob(path + ".*") // hashed cache key, including audio extensions
@@ -289,7 +292,17 @@ func (b *Backend) Statuses() []*model.StatusThread {
 				_ = os.Remove(p)
 			}
 		}
-	}(b.store.dropStatuses(ctx, since))
+	}()
+}
+
+// Statuses implements model.Backend.
+func (b *Backend) Statuses() []*model.StatusThread {
+	ctx := b.ctx
+	since := b.now().Add(-statusTTL)
+	// Old updates go, with their downloaded pictures and videos, in the
+	// background: this runs on the UI goroutine at every StatusEvent, and a
+	// sweep's deletes and file removals would hitch the frames.
+	b.sweepStatuses(since)
 	rows, err := b.store.recentStatuses(ctx, since)
 	if err != nil {
 		b.log.Errorf("load statuses: %v", err)

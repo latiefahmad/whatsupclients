@@ -22,6 +22,9 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
   answers every send 409 and can't apply its conflicting patches either, so
   the change was lost and the send never had a chance. It's kept and sent
   once the channel has a state again, instead of being pushed into that.
+- **Statuses age by the app's own clock** — the sweep that expires an update
+  24 hours after it was posted read the system clock directly, not the one
+  the rest of the app uses.
 
 **Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.10...v1.9.11
 
