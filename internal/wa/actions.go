@@ -558,6 +558,13 @@ func (b *Backend) sendAppStateNow(cli *whatsmeow.Client, patch appstate.PatchInf
 	// of sending it into that.
 	if cli.Store != nil && cli.Store.AppState != nil {
 		if v, hash, err := cli.Store.AppState.GetAppStateVersion(b.ctx, string(patch.Type)); err == nil && v == 0 && hash == ([128]byte{}) {
+			// Asking again can't help while the collection has no state, so
+			// once the queue is full the resend is skipped and no notice is
+			// repeated: the user was told, and the phone is the one holding
+			// this collection's only copy.
+			if b.queueFull(string(patch.Type)) {
+				return
+			}
 			b.enqueuePatch(patch)
 			b.log.Warnf("app state %s has no state; kept %d change(s) instead of sending", patch.Type, len(patch.Mutations))
 			return

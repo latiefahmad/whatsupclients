@@ -3,6 +3,7 @@ package wa
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -37,6 +38,70 @@ func TestPatchKeptWhenSendFails(t *testing.T) {
 	if n := b.pendingLen(); n != 1 {
 		t.Fatalf("pending: %d, want 1", n)
 	}
+}
+
+// TestQueueStopsGrowingAtTheLimit checks the bound that keeps a collection
+// which can never accept a patch from growing for the whole session. The
+// newest changes are the ones kept: they match what the chat shows now.
+func TestQueueStopsGrowingAtTheLimit(t *testing.T) {
+	b := newQueueTestBackend(t)
+	for i := 0; i < maxPendingPerCollection+25; i++ {
+		b.enqueuePatch(deletePatch("c@s.whatsapp.net", fmt.Sprintf("m%d", i)))
+	}
+	if n := b.pendingLen(); n != maxPendingPerCollection {
+		t.Fatalf("pending: %d, want the limit %d", n, maxPendingPerCollection)
+	}
+	// The oldest went, the newest stayed.
+	b.patches.mu.Lock()
+	first := b.patches.pending[0].Index[2]
+	last := b.patches.pending[len(b.patches.pending)-1].Index[2]
+	b.patches.mu.Unlock()
+	if first == "m0" {
+		t.Error("the oldest change was kept instead of dropped")
+	}
+	if want := fmt.Sprintf("m%d", maxPendingPerCollection+24); last != want {
+		t.Errorf("newest kept is %s, want %s", last, want)
+	}
+}
+
+// TestQueueFullStopsTheRetry checks the signal the send path uses to stop
+// asking: once a collection is full, nothing more can be done for it, so a
+// resend would only log the same warning again.
+func TestQueueFullStopsTheRetry(t *testing.T) {
+	b := newQueueTestBackend(t)
+	if b.queueFull(string(appstate.WAPatchRegularHigh)) {
+		t.Fatal("an empty queue reported full")
+	}
+	for i := 0; i < maxPendingPerCollection; i++ {
+		b.enqueuePatch(deletePatch("c@s.whatsapp.net", fmt.Sprintf("m%d", i)))
+	}
+	if !b.queueFull(string(appstate.WAPatchRegularHigh)) {
+		t.Fatal("a full queue didn't report full")
+	}
+	// Another collection is unaffected.
+	if b.queueFull(string(appstate.WAPatchRegularLow)) {
+		t.Fatal("a different collection reported full")
+	}
+}
+
+// TestTrimLeavesOtherCollectionsAlone checks the bound is per collection, so a
+// stuck one can't push out the changes of a healthy one.
+func TestTrimLeavesOtherCollectionsAlone(t *testing.T) {
+	b := newQueueTestBackend(t)
+	low := deletePatch("c@s.whatsapp.net", "low1")
+	low.Type = appstate.WAPatchRegularLow
+	b.enqueuePatch(low)
+	for i := 0; i < maxPendingPerCollection+5; i++ {
+		b.enqueuePatch(deletePatch("c@s.whatsapp.net", fmt.Sprintf("m%d", i)))
+	}
+	b.patches.mu.Lock()
+	defer b.patches.mu.Unlock()
+	for _, q := range b.patches.pending {
+		if q.Name == string(appstate.WAPatchRegularLow) && q.Index[2] == "low1" {
+			return
+		}
+	}
+	t.Fatal("a healthy collection's change was dropped")
 }
 
 // TestPatchDroppedWhenSent checks that a change that reached the phone isn't

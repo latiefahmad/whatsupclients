@@ -28,6 +28,12 @@ type pendingPatch struct {
 	Value []byte `json:"value,omitempty"`
 }
 
+// maxPendingPerCollection bounds what one collection may keep. A collection
+// whose snapshot never verifies can't accept a single patch, so without a
+// bound every delete and edit piles up for as long as the app runs, and the
+// queue is rewritten in full each time.
+const maxPendingPerCollection = 200
+
 // patchQueue keeps the changes a send refused, oldest first, and sends them
 // once their collection syncs again.
 type patchQueue struct {
@@ -61,10 +67,56 @@ func (b *Backend) enqueuePatch(p appstate.PatchInfo) {
 		}
 		b.patches.pending = append(b.patches.pending, q)
 	}
-	n := len(b.patches.pending)
+	trimmed := trimCollection(b.patches.pending, string(p.Type), maxPendingPerCollection)
+	b.patches.pending = trimmed
+	n := 0
+	for _, q := range trimmed {
+		if q.Name == string(p.Type) {
+			n++
+		}
+	}
 	b.patches.mu.Unlock()
 	b.savePatches()
 	b.log.Infof("kept app state change for later: %s (%d waiting)", p.Type, n)
+}
+
+// queueFull reports whether a collection already holds as many changes as it
+// may keep, which means nothing more can be done for it until it syncs.
+func (b *Backend) queueFull(name string) bool {
+	b.patches.mu.Lock()
+	defer b.patches.mu.Unlock()
+	n := 0
+	for _, q := range b.patches.pending {
+		if q.Name == name {
+			n++
+		}
+	}
+	return n >= maxPendingPerCollection
+}
+
+// trimCollection drops the oldest changes of one collection past a limit,
+// leaving the others alone. A collection that can't be sent keeps the newest
+// changes, which are the ones whose order still matches what the chat shows.
+func trimCollection(all []pendingPatch, name string, limit int) []pendingPatch {
+	count := 0
+	for _, q := range all {
+		if q.Name == name {
+			count++
+		}
+	}
+	if count <= limit {
+		return all
+	}
+	drop := count - limit
+	out := all[:0]
+	for _, q := range all {
+		if q.Name == name && drop > 0 {
+			drop--
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
 }
 
 // forgetPatch drops the mutations of a patch that reached the phone, so a

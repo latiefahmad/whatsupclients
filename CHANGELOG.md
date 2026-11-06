@@ -9,6 +9,19 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.18] - 2026-11-06
+
+### 🐛 Fixes
+
+- **A collection that can't sync no longer grows without bound** — a
+  collection whose snapshot never verifies can never accept a patch, so every
+  delete and edit piled up for as long as the app ran and the queue was
+  rewritten in full each time. Each collection now keeps at most 200 changes,
+  dropping the oldest, and once it is full the app stops retrying it instead
+  of repeating the same warning. Other collections are untouched.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.17...v1.9.18
+
 ## [v1.9.17] - 2026-11-06
 
 ### 🔍 Diagnostics
