@@ -551,7 +551,14 @@ func (b *Backend) sendAppState(patch appstate.PatchInfo) {
 // sendAppStateNow sends a patch and waits for it, so several patches go
 // one after the other.
 func (b *Backend) sendAppStateNow(cli *whatsmeow.Client, patch appstate.PatchInfo) {
-	if err := cli.SendAppState(b.ctx, patch); err != nil {
+	before := ""
+	if b.debugLog {
+		before = b.appStateStamp(patch.Type)
+		b.noteAppStateSend(patch.Type, len(patch.Mutations))
+	}
+	err := cli.SendAppState(b.ctx, patch)
+	b.noteAppStateResult(patch.Type, before, err)
+	if err != nil {
 		b.log.Warnf("send app state %s: %v", patch.Type, err)
 		// The change stays here until it reaches the phone: a delete the
 		// phone never hears of is one this device alone forgot.

@@ -45,6 +45,7 @@ type Backend struct {
 	cancel       context.CancelFunc
 	log          waLog.Logger
 	logf         *os.File
+	debugLog     bool // -debug: also record app state diagnostics
 
 	db        *sql.DB
 	store     msgStore
@@ -162,6 +163,7 @@ func Open(dataDir string, debug bool) (*Backend, error) {
 		dataDir:     dataDir,
 		log:         newLogger(logf, debug),
 		logf:        logf,
+		debugLog:    debug,
 		avatars:     newFetcher(),
 		downloads:   newFetcher(),
 		subtitles:   make(map[string]string),
@@ -857,6 +859,7 @@ func (b *Backend) handle(evt any) {
 		if !errors.Is(e.Error, appstate.ErrMismatchingLTHash) {
 			break
 		}
+		b.noteAppStateSyncError(e.Name, e.Error)
 		// hypermeow ignores the phone's repair copy when its version is
 		// older than this device's â€” which the broken local state inflates
 		// by counting its refused patches â€” and says so only in the log.
@@ -872,6 +875,9 @@ func (b *Backend) handle(evt any) {
 	case *events.AppStateSyncComplete:
 		if e.Recovery {
 			b.log.Infof("app state %s repaired by the phone (v%d)", e.Name, e.Version)
+			if b.debugLog {
+				b.log.Infof("app state diag: repaired %s, local %s", e.Name, b.appStateStamp(e.Name))
+			}
 			_ = b.store.setMetaValue(ctx, appStateResyncKey+":"+string(e.Name), time.Now().Format(time.RFC3339))
 		}
 		// The collection syncs again, so the changes it refused earlier go
@@ -1022,6 +1028,7 @@ func (b *Backend) requestAppStateRecovery(name appstate.WAPatchName) {
 		return
 	}
 	_ = b.store.setMetaValue(b.ctx, key, time.Now().Format(time.RFC3339))
+	b.noteRecoveryRefused(name)
 	go func() {
 		// hypermeow ignores the phone's copy unless it's newer than the
 		// version this device has, but the hash can break at the phone's

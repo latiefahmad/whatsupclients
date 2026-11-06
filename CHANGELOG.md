@@ -9,6 +9,20 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.10] - 2026-11-06
+
+### 🔍 Diagnostics
+
+- **App state sync diagnostics under `-debug`** — a settings channel whose
+  hash stops verifying makes WhatsApp answer "your phone is repairing sync"
+  and refuse changes, so this device and the phone drift apart. The log now
+  records the version and hash before and after every send, every failed
+  verify, and what a repair request will meet, so the next occurrence shows
+  what breaks the hash instead of only that it broke. Nothing changes when
+  `-debug` isn't on.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.9...v1.9.10
+
 ## [v1.9.9] - 2026-11-06
 
 ### 🐛 Fixes
