@@ -1,10 +1,14 @@
 package wa
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 
 	"github.com/polymorfa/hypermeow/appstate"
+	waBinary "github.com/polymorfa/hypermeow/binary"
+	waServerSync "github.com/polymorfa/hypermeow/proto/waServerSync"
+	"google.golang.org/protobuf/proto"
 )
 
 // Diagnostics for app state hash breakage. A collection whose LTHash stops
@@ -17,6 +21,75 @@ import (
 // for being older than this device.
 //
 // They are logged only with -debug, and never change behaviour.
+
+// noteSnapshotShapes explains a refused snapshot. A snapshot's MAC covers its
+// own records and version under its own key, so a mismatch on a collection
+// this device holds no state for means one of: the key it was sealed with
+// isn't the one we hold, it holds a different set of records than its MAC was
+// made from, or the hash hypermeow computes over it is wrong. It logs every
+// snapshot's shape before hypermeow verifies it, so a refusal is followed by
+// the numbers that tell these apart, instead of only "mismatching LTHash".
+func (b *Backend) noteSnapshotShapes(name appstate.WAPatchName, list *appstate.PatchList) {
+	if !b.debugLog || list == nil {
+		return
+	}
+	if list.Snapshot == nil {
+		// No snapshot at all: the server answered with patches only, which
+		// can't seed a collection this device holds no state for.
+		b.log.Warnf("app state diag: collection %s: no snapshot, %d patch(es), has_more=%v",
+			name, len(list.Patches), list.HasMorePatches)
+		return
+	}
+	ss := list.Snapshot
+	b.log.Warnf("app state diag: snapshot %s: v%d keyid=%s records=%d bytes=%d mac=%s patches=%d",
+		name, ss.GetVersion().GetVersion(), shortBytes(ss.GetKeyID().GetID()),
+		len(ss.GetRecords()), proto.Size(ss), shortBytes(ss.GetMac()), len(list.Patches))
+
+	// A snapshot should stand alone: no patches follow it. Ones that do mean
+	// the server answered a snapshot request with a version to patch up.
+	for i, p := range list.Patches {
+		if i >= 5 {
+			b.log.Warnf("app state diag: snapshot %s: ... and %d more patch(es)", name, len(list.Patches)-i)
+			break
+		}
+		b.log.Warnf("app state diag: snapshot %s: patch v%d, %d mutation(s), mac=%s",
+			name, p.GetVersion().GetVersion(), len(p.GetMutations()), shortBytes(p.GetPatchMAC()))
+	}
+}
+
+// shortBytes names a short blob by its first and last bytes.
+func shortBytes(v []byte) string {
+	if len(v) == 0 {
+		return "(none)"
+	}
+	if len(v) <= 8 {
+		return hex.EncodeToString(v)
+	}
+	return hex.EncodeToString(v[:4]) + ".." + hex.EncodeToString(v[len(v)-4:])
+}
+
+// noteAppStateSnapshot reads the shape of an app state collection the server
+// answered with. It runs on hypermeow's dispatch goroutine, so it only parses
+// and logs: the node goes on untouched and hypermeow still verifies and
+// decodes it as usual.
+func (b *Backend) noteAppStateSnapshot(ctx context.Context, node *waBinary.Node) {
+	if !b.debugLog || node.Tag != "iq" {
+		return
+	}
+	collection, ok := node.GetOptionalChildByTag("sync", "collection")
+	if !ok {
+		return
+	}
+	list, err := appstate.ParsePatchList(ctx, &collection, func(context.Context, *waServerSync.ExternalBlobReference) ([]byte, error) {
+		return nil, fmt.Errorf("diagnostics does not download blobs")
+	})
+	if err != nil {
+		b.log.Warnf("app state diag: collection %s: unreadable: %v",
+			collection.AttrGetter().OptionalString("name"), err)
+		return
+	}
+	b.noteSnapshotShapes(list.Name, list)
+}
 
 // appStateStamp reads the local version and hash of a collection.
 func (b *Backend) appStateStamp(name appstate.WAPatchName) string {

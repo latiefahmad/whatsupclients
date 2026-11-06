@@ -9,6 +9,19 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.13] - 2026-11-06
+
+### 🔍 Diagnostics
+
+- **A refused app state snapshot now says what it held** — when WhatsApp
+  answers a snapshot request, the log records the version it claims, the key
+  it was sealed with, how many records it carries, and whether it came with
+  patches after it. A refused snapshot used to leave only "mismatching
+  LTHash", which can't tell a wrong key from an incomplete snapshot. Nothing
+  changes when `-debug` isn't on.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.12...v1.9.13
+
 ## [v1.9.12] - 2026-11-06
 
 ### 🐛 Fixes

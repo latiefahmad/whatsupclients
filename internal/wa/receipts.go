@@ -85,7 +85,8 @@ type userReceipt struct {
 // own type, so their receipts were stored under no message at all, and
 // Message info missed most of a big group. The node goes on to hypermeow
 // without its users, which it still acks.
-func (b *Backend) groupedReceipts(_ context.Context, node *waBinary.Node) (*waBinary.Node, bool) {
+func (b *Backend) groupedReceipts(ctx context.Context, node *waBinary.Node) (*waBinary.Node, bool) {
+	b.noteAppStateSnapshot(ctx, node)
 	if node.Tag != "receipt" {
 		return nil, false
 	}
