@@ -1134,8 +1134,12 @@ func (b *Backend) resyncAppStateOnce() {
 			continue
 		}
 		if err := cli.FetchAppState(b.ctx, name, true, false); err != nil {
+			// One broken collection must not hold up the rest: resyncAgain
+			// keeps regular_high, and returning here left it, then every
+			// collection after it, unfetched on every connect.
 			b.log.Warnf("resync app state %s: %v", name, err)
-			return
+			_ = b.store.setMetaValue(b.ctx, done, "")
+			continue
 		}
 		// FetchAppState returns nil whether or not the collection ended up
 		// with any state. Sealing one that stored nothing (its version stays

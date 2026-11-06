@@ -551,6 +551,18 @@ func (b *Backend) sendAppState(patch appstate.PatchInfo) {
 // sendAppStateNow sends a patch and waits for it, so several patches go
 // one after the other.
 func (b *Backend) sendAppStateNow(cli *whatsmeow.Client, patch appstate.PatchInfo) {
+	// A collection with no state can't take a patch: the server starts one
+	// from a version whose records this device never had, so every send is
+	// answered 409 and its conflicting patches can't be applied either —
+	// "missing value MAC of previous SET operation". Keep the change instead
+	// of sending it into that.
+	if cli.Store != nil && cli.Store.AppState != nil {
+		if v, hash, err := cli.Store.AppState.GetAppStateVersion(b.ctx, string(patch.Type)); err == nil && v == 0 && hash == ([128]byte{}) {
+			b.enqueuePatch(patch)
+			b.log.Warnf("app state %s has no state; kept %d change(s) instead of sending", patch.Type, len(patch.Mutations))
+			return
+		}
+	}
 	before := ""
 	if b.debugLog {
 		before = b.appStateStamp(patch.Type)

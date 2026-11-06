@@ -1,9 +1,10 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.9.10",
+  "ver": "v1.9.11",
   "date": "2026-11-06",
   "items": [
-    "**App state sync diagnostics under `-debug`** — a settings channel whose hash stops verifying makes WhatsApp answer \"your phone is repairing sync\" and refuse changes, so this device and the phone drift apart. The log now records the version and hash before and after every send, every failed verify, and what a repair request will meet, so the next occurrence shows what breaks the hash instead of only that it broke. Nothing changes when `-debug` isn't on."
+    "**One broken settings channel no longer blocks the others** — when a channel failed to sync, the reconnect gave up and skipped every channel after it, so their changes (a message deleted for me, a cleared chat) never arrived either. Each one is tried on its own now.",
+    "**A change is no longer sent into a channel with no local state** — a channel this computer holds no state for can't take a change: WhatsApp answers every send 409 and can't apply its conflicting patches either, so the change was lost and the send never had a chance. It's kept and sent once the channel has a state again, instead of being pushed into that."
   ]
 };
