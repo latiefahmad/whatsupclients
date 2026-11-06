@@ -22,41 +22,6 @@ import (
 //
 // They are logged only with -debug, and never change behaviour.
 
-// noteSnapshotShapes explains a refused snapshot. A snapshot's MAC covers its
-// own records and version under its own key, so a mismatch on a collection
-// this device holds no state for means one of: the key it was sealed with
-// isn't the one we hold, it holds a different set of records than its MAC was
-// made from, or the hash hypermeow computes over it is wrong. It logs every
-// snapshot's shape before hypermeow verifies it, so a refusal is followed by
-// the numbers that tell these apart, instead of only "mismatching LTHash".
-func (b *Backend) noteSnapshotShapes(name appstate.WAPatchName, list *appstate.PatchList) {
-	if !b.debugLog || list == nil {
-		return
-	}
-	if list.Snapshot == nil {
-		// No snapshot at all: the server answered with patches only, which
-		// can't seed a collection this device holds no state for.
-		b.log.Warnf("app state diag: collection %s: no snapshot, %d patch(es), has_more=%v",
-			name, len(list.Patches), list.HasMorePatches)
-		return
-	}
-	ss := list.Snapshot
-	b.log.Warnf("app state diag: snapshot %s: v%d keyid=%s records=%d bytes=%d mac=%s patches=%d",
-		name, ss.GetVersion().GetVersion(), shortBytes(ss.GetKeyID().GetID()),
-		len(ss.GetRecords()), proto.Size(ss), shortBytes(ss.GetMac()), len(list.Patches))
-
-	// A snapshot should stand alone: no patches follow it. Ones that do mean
-	// the server answered a snapshot request with a version to patch up.
-	for i, p := range list.Patches {
-		if i >= 5 {
-			b.log.Warnf("app state diag: snapshot %s: ... and %d more patch(es)", name, len(list.Patches)-i)
-			break
-		}
-		b.log.Warnf("app state diag: snapshot %s: patch v%d, %d mutation(s), mac=%s",
-			name, p.GetVersion().GetVersion(), len(p.GetMutations()), shortBytes(p.GetPatchMAC()))
-	}
-}
-
 // shortBytes names a short blob by its first and last bytes.
 func shortBytes(v []byte) string {
 	if len(v) == 0 {
@@ -72,7 +37,13 @@ func shortBytes(v []byte) string {
 // answered with. It runs on hypermeow's dispatch goroutine, so it only parses
 // and logs: the node goes on untouched and hypermeow still verifies and
 // decodes it as usual.
-func (b *Backend) noteAppStateSnapshot(ctx context.Context, node *waBinary.Node) {
+//
+// A snapshot travels as an ExternalBlobReference (308 bytes in the case this
+// was added for) pointing at a blob fetched separately, so the reference's
+// size says nothing about the state it holds. It logs the reference and the
+// patches that came with it; the blob itself is left to hypermeow, which
+// downloads it as part of the verification this line explains.
+func (b *Backend) noteAppStateSnapshot(_ context.Context, node *waBinary.Node) {
 	if !b.debugLog || node.Tag != "iq" {
 		return
 	}
@@ -80,15 +51,37 @@ func (b *Backend) noteAppStateSnapshot(ctx context.Context, node *waBinary.Node)
 	if !ok {
 		return
 	}
-	list, err := appstate.ParsePatchList(ctx, &collection, func(context.Context, *waServerSync.ExternalBlobReference) ([]byte, error) {
-		return nil, fmt.Errorf("diagnostics does not download blobs")
-	})
-	if err != nil {
-		b.log.Warnf("app state diag: collection %s: unreadable: %v",
-			collection.AttrGetter().OptionalString("name"), err)
-		return
+	name := appstate.WAPatchName(collection.AttrGetter().OptionalString("name"))
+	snapNode := collection.GetChildByTag("snapshot")
+	raw, hasSnap := snapNode.Content.([]byte)
+	if hasSnap {
+		var ref waServerSync.ExternalBlobReference
+		if err := proto.Unmarshal(raw, &ref); err != nil {
+			b.log.Warnf("app state diag: collection %s: snapshot reference unreadable: %v", name, err)
+		} else {
+			b.log.Warnf("app state diag: snapshot %s: ref bytes=%d handle=%s filesize=%d sha256=%s",
+				name, len(raw), ref.GetHandle(), ref.GetFileSizeBytes(), shortBytes(ref.GetFileSHA256()))
+		}
+	} else {
+		b.log.Warnf("app state diag: collection %s: no snapshot at all", name)
 	}
-	b.noteSnapshotShapes(list.Name, list)
+	patchesNode := collection.GetChildByTag("patches")
+	patchNodes := patchesNode.GetChildren()
+	for i, pn := range patchNodes {
+		raw, ok := pn.Content.([]byte)
+		if !ok || pn.Tag != "patch" {
+			continue
+		}
+		var p waServerSync.SyncdPatch
+		if err := proto.Unmarshal(raw, &p); err != nil {
+			continue
+		}
+		if i < 8 {
+			b.log.Warnf("app state diag: snapshot %s: patch v%d mutations=%d external=%v",
+				name, p.GetVersion().GetVersion(), len(p.GetMutations()), p.GetExternalMutations() != nil)
+		}
+	}
+	b.log.Infof("app state diag: collection %s: %d patch(es)", name, len(patchNodes))
 }
 
 // appStateStamp reads the local version and hash of a collection.

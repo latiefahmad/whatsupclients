@@ -9,6 +9,18 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.14] - 2026-11-06
+
+### 🔍 Diagnostics
+
+- **The snapshot diagnostic reads the blob reference** — v1.9.13 tried to
+  parse the snapshot itself and failed on every answer, because a snapshot
+  arrives as a reference to a blob fetched separately. The log now records
+  that reference (handle, file size, hash) and the patches that follow it,
+  and says plainly when an answer carries no snapshot at all.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.13...v1.9.14
+
 ## [v1.9.13] - 2026-11-06
 
 ### 🔍 Diagnostics
