@@ -1000,6 +1000,31 @@ const prevResyncKey = "appstate_resynced_v5"
 
 var resyncAgain = []appstate.WAPatchName{appstate.WAPatchRegularHigh}
 
+// resyncVerdict says what a pass should do about one collection, from its
+// per-collection mark and whether it holds any local state.
+type resyncVerdict int
+
+const (
+	resyncSealed   resyncVerdict = iota // done before, has state: leave it
+	resyncReopen                        // no state: the pass must run again
+	resyncDropMark                      // marked done, yet has no state
+)
+
+// resyncVerdictFor decides one collection's fate. A collection with no state
+// has nothing to apply the server's patches from, so every send into it is
+// refused; one that was never marked is the same, however the overall marker
+// reads.
+func resyncVerdictFor(marked, hasState bool) resyncVerdict {
+	switch {
+	case marked && hasState:
+		return resyncSealed
+	case marked && !hasState:
+		return resyncDropMark
+	default:
+		return resyncReopen
+	}
+}
+
 // recoveryGap is how long to wait before asking the phone again to repair
 // the same app state collection.
 const recoveryGap = time.Hour
@@ -1092,22 +1117,28 @@ func (b *Backend) takeResyncSlot(key string) bool {
 // events were enabled never received their pins and mutes.
 func (b *Backend) resyncAppStateOnce() {
 	key := appStateResyncKey
-	// A collection marked done whose version is still 0 was sealed by an
-	// earlier pass that stored nothing (FetchAppState reports success
-	// either way). Drop that mark so a later connect fetches it again,
-	// whatever the overall marker says: this account's regular_high stayed
-	// sealed for two days that way, and every message deleted for me in it
-	// was never applied.
+	// A collection with no per-collection mark was never finished, whatever
+	// the overall marker says: an earlier pass returned at the first failure
+	// (regular_high), sealing every collection after it unsynced. One of
+	// those has to reopen the whole pass, or nothing ever fetches it again —
+	// regular_high stayed at version 0 that way and every change to it was
+	// kept and never sent.
+	//
+	// A collection marked done whose version is still 0 was sealed by a pass
+	// that stored nothing (FetchAppState reports success either way). Its
+	// mark is dropped, so a later connect fetches it again.
 	reopened := false
 	if cli := b.client(); cli != nil {
 		for _, name := range appstate.AllPatchNames {
 			done := key + ":" + string(name)
-			if b.store.meta(b.ctx, done) == "" {
-				continue
-			}
-			if v, _, err := cli.Store.AppState.GetAppStateVersion(b.ctx, string(name)); err == nil && v == 0 {
+			v, _, verr := cli.Store.AppState.GetAppStateVersion(b.ctx, string(name))
+			switch resyncVerdictFor(b.store.meta(b.ctx, done) != "", verr == nil && v != 0) {
+			case resyncSealed:
+			case resyncDropMark:
 				b.log.Warnf("app state %s was marked synced but has no state; resyncing it", name)
 				_ = b.store.setMetaValue(b.ctx, done, "")
+				reopened = true
+			case resyncReopen:
 				reopened = true
 			}
 		}

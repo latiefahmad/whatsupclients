@@ -9,6 +9,20 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.12] - 2026-11-06
+
+### 🐛 Fixes
+
+- **A settings channel that never synced is fetched again on connect** — a
+  channel with no local state was skipped when the reconnect ran, because
+  the pass only looked at channels it had marked done. WhatsApp can't apply
+  changes to a channel the computer holds no state for, so those changes
+  (a message deleted for me, a cleared chat) stayed queued and never
+  arrived. It's fetched again now, and the queued changes go out once it
+  has a state.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.11...v1.9.12
+
 ## [v1.9.11] - 2026-11-06
 
 ### 🐛 Fixes
