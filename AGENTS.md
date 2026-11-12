@@ -13,7 +13,9 @@ WhatsUpClients is a lightweight, native WhatsApp desktop client written in Go.
 - **WhatsApp protocol:** [`github.com/polymorfa/hypermeow`](https://github.com/polymorfa/hypermeow),
   branch `main`. It is a performance-focused fork of `tulir/whatsmeow` that keeps the
   upstream package names. Install it with `go get github.com/polymorfa/hypermeow@main`
-  (tagged versions are retracted on purpose). Do **not** use upstream `go.mau.fi/whatsmeow`.
+  (tagged versions are retracted on purpose), then run `patches/apply.sh`: it's patched
+  too (`patches/hypermeow.patch`, into `third_party/hypermeow`). Do **not** use upstream
+  `go.mau.fi/whatsmeow`.
 - **Goal:** look and feel as close to the official WhatsApp Desktop app as possible, while
   using a small fraction of its memory (no WebView, no Electron).
 
@@ -173,6 +175,11 @@ Gotchas already found in the pinned version (v0.10.x):
   `markGeneralChats` (`internal/wa/communities.go`) asks for the joined groups again
   through `DangerousInternals().SendGroupIQ` on connect and reads it from the raw nodes.
   Run the app with `-debug` to see raw nodes in `whatsup.log` when something is missing.
+- Since November 2026 WhatsApp delivers status updates as `<status from="status@broadcast">`
+  stanzas, encrypted like a `<message>` (some phones still send `<message>`). hypermeow
+  acked and dropped them without a log line: `patches/hypermeow.patch` decrypts them.
+  When statuses stop arriving, run with `-debug` and grep `whatsup.log` for
+  `status@broadcast` to see whether stanzas come at all.
 - WhatsApp now sends most message edits as a `secretEncryptedMessage` (MESSAGE_EDIT),
   decrypted with `DecryptSecretEncryptedMessage`, not as a `protocolMessage`. History
   sync (`ParseWebMessage`) hands an edit out as the new content under the original's
@@ -233,6 +240,13 @@ Gotchas already found in the pinned version (v0.10.x):
   labels close friends and custom audiences (`ContextInfo.statusAudienceMetadata`,
   which viewers show as a chip on the picture). WhatsApp shows the statuses of
   saved contacts only (`savedContact`).
+- After sleep the connection is dead, but the kernel keeps the socket for minutes and
+  hypermeow's keepalive runs on the monotonic clock, which stood still: it took three
+  minutes awake to reconnect. `watchSleep` (`internal/wa/backend.go`) sees the wall
+  clock jump and calls `ResetConnection`; `KeepAliveMaxFailTime` is 15 s, so one
+  unanswered ping reconnects; `InitialAutoReconnect` retries a first connect that
+  failed; and `AutoReconnectHook` caps hypermeow's wait between tries (2 s more
+  each time, without end) at 10 s.
 - Files dropped on the window come through an OLE drop target (`desktop.EnableDrop`).
   OLE wants it registered on the window's own thread, so the window is subclassed and
   the registration posted to it; the callbacks run on that thread and only queue.
@@ -422,7 +436,7 @@ internal/update/   updates from GitHub releases when the user asks (Settings > H
 internal/accounts/ the WhatsApp accounts linked on this computer (accounts.json), each with
                    a data directory of its own: the first is the data directory itself,
                    the ones added later are accounts/<n>
-patches/           go-text memory patch and apply.sh, which builds third_party/ (gitignored)
+patches/           go-text and hypermeow patches and apply.sh, which builds third_party/ (gitignored)
 ```
 
 ## Window lifecycle and notifications
@@ -537,7 +551,7 @@ from `gtx.Now`; a moving one asks for the next frame, and nothing asks at rest
 ## Commands
 
 ```sh
-sh patches/apply.sh            # once after cloning: builds the patched go-text
+sh patches/apply.sh            # once after cloning: builds the patched go-text and hypermeow
 go run ./cmd/whatsup            # run the app (links to WhatsApp via QR code)
 go run ./cmd/whatsup -demo      # run with fake chats, no network
 go run ./cmd/whatsup -background  # start in the tray, without a window

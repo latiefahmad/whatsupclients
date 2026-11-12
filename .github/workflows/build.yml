@@ -71,7 +71,7 @@ jobs:
             libxfixes-dev \
             libvulkan-dev
 
-      # go.mod replaces go-text with the patched copy this builds.
+      # go.mod replaces go-text and hypermeow with the patched copies this builds.
       - name: Apply dependency patches
         run: sh patches/apply.sh
 
