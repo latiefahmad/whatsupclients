@@ -3,6 +3,7 @@ package wa
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -574,11 +575,17 @@ func (b *Backend) sendAppStateNow(cli *whatsmeow.Client, patch appstate.PatchInf
 	if b.debugLog {
 		before = b.appStateStamp(patch.Type)
 		b.noteAppStateSend(patch.Type, len(patch.Mutations))
+	} else if v, _, err := cli.Store.AppState.GetAppStateVersion(b.ctx, string(patch.Type)); err == nil {
+		// The phone's copy of the message doesn't move when a delete from here
+		// doesn't reach it, so every app state send says where it started and
+		// where it ended. Without this a send that fails silently looks like
+		// a send that succeeded.
+		before = fmt.Sprintf("v%d", v)
 	}
 	err := cli.SendAppState(b.ctx, patch)
 	b.noteAppStateResult(patch.Type, before, err)
 	if err != nil {
-		b.log.Warnf("send app state %s: %v", patch.Type, err)
+		b.log.Warnf("send app state %s: %v (from %s)", patch.Type, err, before)
 		// The change stays here until it reaches the phone: a delete the
 		// phone never hears of is one this device alone forgot.
 		b.enqueuePatch(patch)
@@ -589,6 +596,9 @@ func (b *Backend) sendAppStateNow(cli *whatsmeow.Client, patch appstate.PatchInf
 		}
 		b.emit(model.NoticeEvent{Text: "Couldn't sync the change to your phone. It'll be sent when the connection is back."})
 		return
+	}
+	if v, _, verr := cli.Store.AppState.GetAppStateVersion(b.ctx, string(patch.Type)); verr == nil {
+		b.log.Infof("app state %s: %d mutation(s) sent, %s -> v%d", patch.Type, len(patch.Mutations), before, v)
 	}
 	// It reached the phone, so it must not be sent again by a drain or by
 	// the next connection.

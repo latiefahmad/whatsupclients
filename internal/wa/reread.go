@@ -2,19 +2,12 @@ package wa
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/polymorfa/hypermeow/proto/waE2E"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/latiefahmad/whatsupclients/internal/model"
 )
-
-// RereadRichResponsesForTest runs the reread on an opened database, for the
-// one-off check of a real store outside the package's tests.
-func RereadRichResponsesForTest(db *sql.DB) error {
-	return (&msgStore{db: db}).rereadRichResponses(context.Background())
-}
 
 // rereadRichResponses gives bot replies that were stored as unreadable their
 // text, once. A rich response had no reader, so it was kept as
