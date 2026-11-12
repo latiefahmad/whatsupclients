@@ -23,6 +23,7 @@ import (
 	"github.com/polymorfa/hypermeow/proto/waHistorySync"
 	"github.com/polymorfa/hypermeow/proto/waSyncAction"
 	"github.com/polymorfa/hypermeow/proto/waWeb"
+	"github.com/polymorfa/hypermeow/socket"
 	"github.com/polymorfa/hypermeow/store"
 	"github.com/polymorfa/hypermeow/store/sqlstore"
 	"github.com/polymorfa/hypermeow/types"
@@ -270,6 +271,10 @@ func (b *Backend) goWork(f func()) {
 func (b *Backend) useDevice(device *store.Device) {
 	cli := whatsmeow.NewClient(device, b.log.Sub("Client"))
 	cli.EnableAutoReconnect = true
+	// WhatsApp Web opens both chat endpoints on every connect and keeps
+	// whichever answers first: some networks block or throttle 443 for
+	// long-lived upgrades, which otherwise stalls message delivery.
+	cli.SocketConfig = &whatsmeow.SocketConfig{RaceURLs: socket.RaceURLs}
 	// Pins, mutes and archives only arrive through app state; the initial
 	// full sync must emit them too.
 	cli.EmitAppStateEventsOnFullSync = true
