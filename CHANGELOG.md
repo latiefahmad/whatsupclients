@@ -9,6 +9,23 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.20] - 2026-11-12
+
+### 🐛 Fixes
+
+- **Status updates arrive again** — since early November WhatsApp delivers
+  status updates in a new form that the app received but silently dropped,
+  so statuses showed up from only a few contacts, or from nobody. They're
+  received and shown again. Statuses missed in the meantime can't be
+  fetched again; new ones arrive as usual.
+- **The app reconnects as soon as your computer wakes from sleep** — after
+  sleep the dead connection took up to three minutes to be noticed, so
+  messages sent to you sat unseen meanwhile. It now reconnects at once,
+  and the wait between reconnection tries no longer grows beyond ten
+  seconds.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.19...v1.9.20
+
 ## [v1.9.19] - 2026-11-12
 
 ### 🐛 Fixes
