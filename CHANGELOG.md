@@ -9,6 +9,25 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.19] - 2026-11-12
+
+### 🐛 Fixes
+
+- **Messages no longer get stuck on networks that slow down port 443** —
+  WhatsApp Web opens two connection endpoints at once on every connect and
+  keeps whichever answers first, because some networks throttle or block
+  long-lived connections on 443. The app now does the same, so delivery
+  keeps working where it used to stall until a manual reconnect.
+
+### 🔍 Diagnostics
+
+- **Every settings sync names the version it starts from** — a change that
+  silently fails to reach your phone used to look like one that succeeded
+  in the log; now each send records where it started and where it ended,
+  without needing debug mode.
+
+**Full Changelog**: https://github.com/latiefahmad/whatsupclients/compare/v1.9.18...v1.9.19
+
 ## [v1.9.18] - 2026-11-06
 
 ### 🐛 Fixes
