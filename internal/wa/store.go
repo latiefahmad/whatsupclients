@@ -190,6 +190,9 @@ var migrations = []string{
 	// A status's poster as it came (a LID or a phone number), which its
 	// read receipt names; sender is canonical.
 	`ALTER TABLE wz_status ADD COLUMN participant TEXT NOT NULL DEFAULT ''`,
+	// A channel's description and the code of its link (channels.go).
+	`ALTER TABLE wz_channels ADD COLUMN description TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE wz_channels ADD COLUMN invite TEXT NOT NULL DEFAULT ''`,
 }
 
 func (s *msgStore) init(ctx context.Context) error {
@@ -197,7 +200,7 @@ func (s *msgStore) init(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("drop old messages: %w", err)
 	}
-	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+stickerSchema+votesSchema+reactionsSchema+snippetSchema); err != nil {
+	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+stickerSchema+votesSchema+reactionsSchema+snippetSchema+channelPostsSchema); err != nil {
 		return err
 	}
 	for _, m := range migrations {
@@ -269,7 +272,7 @@ func (s *msgStore) failStale(ctx context.Context) error {
 
 func (s *msgStore) wipe(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages; DELETE FROM wz_chats; DELETE FROM wz_meta;
-		DELETE FROM wz_status; DELETE FROM wz_channels; DELETE FROM wz_lists; DELETE FROM wz_list_chats; DELETE FROM wz_stickers;
+		DELETE FROM wz_status; DELETE FROM wz_channels; DELETE FROM wz_channel_posts; DELETE FROM wz_lists; DELETE FROM wz_list_chats; DELETE FROM wz_stickers;
 		DELETE FROM wz_edits; DELETE FROM wz_votes; DELETE FROM wz_reactions; DELETE FROM wz_snippets;`)
 	return err
 }

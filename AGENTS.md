@@ -309,7 +309,11 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    picker (emoji.go, data in the generated emojidata.go, skin tones
                    in skintone.go from the generated emojitones.go table), media viewer
                    (viewer.go) and the volume slider of videos, statuses and voice
-                   messages (volume.go, an app preference); the send view for picked, pasted and dropped files
+                   messages (volume.go, an app preference); channels (channels.go: the
+                   list, suggestions that open as a preview, Discover more) and what you
+                   do with one (channelinfo.go: its menus, info panel, the Follow bar,
+                   Create channel; mute, unfollow, delete, reacting to updates, posting
+                   in your own); the send view for picked, pasted and dropped files
                    (sendview.go), its photo editor (mediaedit.go) and the rendering of
                    edits and the send queue (editrender.go); replies, @mentions and
                    select mode live in compose.go; editing your messages (in the composer)
@@ -400,6 +404,8 @@ internal/wa/       hypermeow backend: pairing, events, SQLite message store, nam
                    payload and worded when read, in system.go;
                    each person's receipts of your messages (wz_receipts, for Message info;
                    a group message's ticks wait for every member) in receipts.go;
+                   channels' details and suggestions (wz_channels) in channels.go, their
+                   posts, reaction counts, live updates and actions in channelposts.go;
                    contacts' abouts (cached in wz_meta for the forward picker, with when
                    each was set from a raw usync) and a chat's Advanced chat privacy
                    (LIMIT_SHARING, kept with its info; it can't be set) in about.go;
@@ -495,10 +501,25 @@ while the window is minimized and Gio draws no frames.
   message is in `u.msgs`; `jumpTo` loads the messages around one that isn't.
 - One-to-one chats are keyed by LID when a mapping is known (`canonical`), because
   hypermeow treats the LID as the stable identity.
-- Channels (newsletters) are stored like chats in `wz_chats`/`wz_messages`, plus their
-  metadata in `wz_channels`, and are left out of the chat list. Status updates live in
-  `wz_status`. Community structure is in the `parent`, `community` and `announce_sub`
-  columns of `wz_chats`, filled from `GetJoinedGroups` on connect.
+- A channel (newsletter) is stored like a chat in `wz_chats`/`wz_messages` and is left out
+  of the chat list, but it is nothing like a chat on the wire (`internal/wa/channelposts.go`).
+  Its posts come unencrypted, as `<message>` stanzas while you follow it and in pages from
+  `GetNewsletterMessages`, and are named by a server ID (kept in `wz_channel_posts`) for
+  reactions, view receipts and paging. Nobody sees who reacted: the server sends counts per
+  emoji (with fetched posts, and in `NewsletterLiveUpdate`s, granted a minute or two at a
+  time, so `liveUpdates` renews them while the channel is opened last), and the message's
+  reaction column is made from them plus your own reaction (`postSummary`), never by
+  `putReaction`. An edit comes as the new content under the post's ID with
+  `NewsletterMeta.EditTS`, a delete as `edit="8"` with an empty body (`onChannelMessage`).
+  The server keeps about a month of updates and answers an older page with nothing;
+  `olderPosts` pages back while the list nears its top (an `OlderEvent`). Files are
+  uploaded as they are (`UploadNewsletter`, its handle sent as `MediaHandle`), so a
+  forward between a channel and a chat uploads the file again (`reupload`). The list of
+  followed channels has no follower counts: `refreshChannel` asks for each. In the UI
+  `channelByID` also finds suggested channels (they open as a preview with a Follow bar);
+  use `followedChannel` where it must be one you follow. Status updates
+  live in `wz_status`. Community structure is in the `parent`, `community` and
+  `announce_sub` columns of `wz_chats`, filled from `GetJoinedGroups` on connect.
 - Measure against real WhatsApp Desktop screenshots instead of guessing sizes. Use
   `cmd/screenshot -compare`, which renders the same view at the screenshot's scale next to
   it (see Commands). Full-window screenshots at 2000px wide are 1.22 px/dp; native
@@ -585,6 +606,9 @@ go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -rig
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with
 # WHATSUP_DEMO_PHOTO=<a photo> to edit) into <out>/overlay-<name>.png:
 go run ./cmd/screenshot -overlay msgmenu -at 700,300 -out /tmp/shots
+# channels: channelinfo (-ochat techdaily@newsletter, or whatsupnews@newsletter for one of
+# your own, bola@newsletter for a suggestion's preview; convmenu and msgmenu work there
+# too), channelnew (Create channel), channeladd (the ⊕ menu);
 # Film an animation into <out>/film-<name>.png: frames -step apart, opening on top and
 # closing (Esc) below. Also info, message, reorder, typing, typists (a second person
 # typing in a group, then the first stopping: -ochat work), ghost (on, then off), privacy (on, then off),
