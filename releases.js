@@ -1,11 +1,12 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.9.22",
+  "ver": "v1.9.23",
   "date": "2026-11-13",
   "items": [
-    "**Lottie stickers play** - WhatsApp's newer animated stickers (the `.was` kind, which used to show as a grey square) now play in the chat, drawn from their own vector animation: shapes, gradients, masks, strokes and the rest. They stay crisp at any size.",
-    "**Premium stickers show their effect** - a premium sticker's effect (the sparkle animation around it) plays once when you first see the sticker, and again whenever you click it.",
-    "**Click an animated sticker to replay it** - clicking any animated sticker starts it over, even when other stickers are already playing: it stops the others until it has enough memory, then they resume when they leave the screen."
+    "**Sticker packs** - open a sticker pack someone shares in a chat (or a `wa.me/stickerpack/...` link) with its \"View sticker pack\" button: browse its stickers, send them to the open chat, and add the pack to your sticker picker, where it gets a tab of its own.",
+    "**Your stickers** - the sticker picker's last tab lists the packs you added: remove one with its trash button, or drag one by its handle to change the order of the picker's tabs. Sticker settings live under Settings > Performance > Advanced > Stickers.",
+    "**Every favourite sticker shows** - all of your favourite stickers are listed now, not only the newest few, and a sticker whose link expired on WhatsApp's servers is fetched again from your phone.",
+    "**Sticker picker** - it remembers the tab you opened last, animated stickers can play in the picker (on hover, or all at once), and it can stay open after you send a sticker so you can send another. The frame rate of WhatsApp's own animated stickers is a setting too."
   ]
 };
