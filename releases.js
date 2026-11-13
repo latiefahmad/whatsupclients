@@ -1,10 +1,12 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.9.20",
-  "date": "2026-11-12",
+  "ver": "v1.9.21",
+  "date": "2026-11-13",
   "items": [
-    "**Status updates arrive again** — since early November WhatsApp delivers status updates in a new form that the app received but silently dropped, so statuses showed up from only a few contacts, or from nobody. They're received and shown again. Statuses missed in the meantime can't be fetched again; new ones arrive as usual.",
-    "**The app reconnects as soon as your computer wakes from sleep** — after sleep the dead connection took up to three minutes to be noticed, so messages sent to you sat unseen meanwhile. It now reconnects at once, and the wait between reconnection tries no longer grows beyond ten seconds."
+    "**Channels work** - the Channels page now talks to WhatsApp: follow a suggested channel from its preview or its link, react to its updates (with the live reaction counts everyone sees), mute it, and unfollow it. Channel notifications follow the follow.",
+    "**Older updates load as you scroll up** - opening a channel fetches its newest posts from the server, and the ones before it load in pages while you scroll, going back about a month.",
+    "**Create and run your own channel** - the ⊕ menu's Create channel makes one: post updates (text, photos, videos, documents, polls), edit and delete them, and see its description, follower count, creation date and link in its info panel.",
+    "**Files a channel sends go up as they are** - and a forward between a channel and a chat uploads the file again, the way its new chat stores it."
   ]
 };
