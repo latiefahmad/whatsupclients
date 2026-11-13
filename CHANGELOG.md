@@ -9,6 +9,29 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.24] - 2026-11-13
+
+### ✨ New
+
+- **Extended mentions** - one switch under *Settings > Extra features* turns
+  on `@admin`, custom mentions and mentions in private chats. Type `@` to
+  mention people by name instead of their number.
+
+- **Custom mentions** - name a set of people in a group (`@Tim frontend`,
+  from the group's ⋮ menu or its info) and mention them all at once. Each
+  group keeps its own.
+
+- **Names look like WhatsApp's** - a chat gives its members their own
+  colors, and placeholders take the color WhatsApp uses, so people look
+  the same as on your phone.
+
+### 🚀 Improved
+
+- **Members and quotes by name** - members you haven't saved show the name
+  they gave themselves (with their number beside it) in the member list,
+  Message info and the group's header, the superadmin is labeled as such,
+  and a reply or forward of a group mention writes its name in the text.
+
 ## [v1.9.23] - 2026-11-13
 
 ### ✨ New

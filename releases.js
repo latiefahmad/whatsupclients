@@ -1,12 +1,12 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.9.23",
+  "ver": "v1.9.24",
   "date": "2026-11-13",
   "items": [
-    "**Sticker packs** - open a sticker pack someone shares in a chat (or a `wa.me/stickerpack/...` link) with its \"View sticker pack\" button: browse its stickers, send them to the open chat, and add the pack to your sticker picker, where it gets a tab of its own.",
-    "**Your stickers** - the sticker picker's last tab lists the packs you added: remove one with its trash button, or drag one by its handle to change the order of the picker's tabs. Sticker settings live under Settings > Performance > Advanced > Stickers.",
-    "**Every favourite sticker shows** - all of your favourite stickers are listed now, not only the newest few, and a sticker whose link expired on WhatsApp's servers is fetched again from your phone.",
-    "**Sticker picker** - it remembers the tab you opened last, animated stickers can play in the picker (on hover, or all at once), and it can stay open after you send a sticker so you can send another. The frame rate of WhatsApp's own animated stickers is a setting too."
+    "**Extended mentions** - one switch under *Settings > Extra features* turns on `@admin`, custom mentions and mentions in private chats. Type `@` to mention people by name instead of their number.",
+    "**Custom mentions** - name a set of people in a group (`@Tim frontend`, from the group's ⋮ menu or its info) and mention them all at once. Each group keeps its own.",
+    "**Names look like WhatsApp's** - a chat gives its members their own colors, and placeholders take the color WhatsApp uses, so people look the same as on your phone.",
+    "**Members and quotes by name** - members you haven't saved show the name they gave themselves (with their number beside it) in the member list, Message info and the group's header, the superadmin is labeled as such, and a reply or forward of a group mention writes its name in the text."
   ]
 };
