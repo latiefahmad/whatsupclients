@@ -118,6 +118,25 @@ Gotchas already found in the pinned version (v0.10.x):
   (`stickerfx.go`): on its first play (`sticker_fx_seen` pref) and on each click.
   Clicking any animated sticker plays it past the players' cap; `makeRoom` stops
   others (benched while on screen) until it fits `playerBudget`.
+- Media links expire: the CDN signs a direct path until its `oe` (hex unix time) and
+  answers 403 after it. A favourite sticker keeps the link it had when it was
+  favourited, so most old ones are dead. Only the phone brings media back: a media
+  retry receipt (`SendMediaRetryReceipt`, sent to your own phone whoever sent the
+  message) asks it to upload a message's media again, and `events.MediaRetry` brings
+  the new path. A synced sticker asks through a chat message with its file, yours
+  first (`internal/wa/reupload.go`). Its `.gone` marker names the link that failed,
+  so a sync or send that brings another link lets it download again. In practice
+  the phone answers with a file encrypted under a fresh key it doesn't send (the
+  answer's `messageSecret` is empty, and no copy's key opens it), so a sticker asks
+  once and is marked gone when the file fails its hash check.
+- A sticker app's pack is a `stickerPackMessage`: a zip ("WhatsApp Sticker Pack Keys",
+  mms type `sticker-pack`) of its stickers, named in the message, and the tray icon,
+  plus a picture ("WhatsApp Sticker Pack Thumbnail Keys", `thumbnail-sticker-pack`).
+  WhatsApp's own packs are `wa.me/stickerpack/<id>` links; their stickers, with media
+  keys, come from `static.whatsapp.net/sticker?cat=sticker_pack_data&id=<id>`, which
+  leaves the Lottie packs (Flump, Chomp...) out unless asked with `lottie=1`. No app
+  state action syncs installed packs between devices (`internal/wa/packs.go`). A
+  zip's stickers have no link: the first send uploads them.
 - Videos use the OS's decoder, never a bundled codec (`internal/video`). The Windows
   backend calls COM through `syscall.SyscallN` without cgo: convert pointers to
   `uintptr` inside the `SyscallN` argument list, and read `double` results from `r2`
@@ -383,7 +402,9 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    changes) in infopages.go; the Media panel (the rail's Media button:
                    media, docs and links from every chat, or one chat's) in gallery.go; the list column's
                    draggable edge and hiding it (the open page's rail button, Ctrl+Shift+L) in split.go; a sender's run of stickers, side by side as many to a
-                   line as fit, in stickerrow.go; a text of one to three emojis
+                   line as fit, in stickerrow.go; sticker packs (a shared pack's card, the
+                   "View sticker pack" dialog, which sends its stickers and adds the pack to
+                   the picker, and the picker's tabs of added packs) in stickerpack.go; a text of one to three emojis
                    alone, drawn big without a bubble like a sticker, in jumbo.go; the New chat panel and the
                    New group flow (also "Create a similar group") in newchat.go; the settings
                    pages (profile, account, privacy, chats, media, storage, shortcuts, help) in
@@ -427,7 +448,9 @@ internal/wa/       hypermeow backend: pairing, events, SQLite message store, nam
                    hidden statuses (userStatusMute) and the check that a status reaches only
                    the chosen audience in statusprivacy.go;
                    snippets (wz_snippets, their media copied to snippet-media/) in snippets.go
-                   and snippetmedia.go
+                   and snippetmedia.go; sticker packs (wz_sticker_packs, their stickers in
+                   wz_pack_stickers) in packs.go; media retry requests (the phone uploading
+                   expired stickers again) in reupload.go
 internal/mock/     demo Backend with fake chats (used by -demo and cmd/screenshot)
 internal/photo/    scales and compresses photos to send (Standard, HD, Raw) and Shrink
 internal/webpanim/ animated WebP (animated stickers), decoded one frame at a time
@@ -617,7 +640,7 @@ go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -rig
 # Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, scheduled, ghost (/ghost; open a
 #                     group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, forwardpick, reply, replyphoto, linkpreview, invite, groupedit (a group's info being edited: -ochat fams, groupname/groupdesc/groupphoto), picview, linkbar (the WhatsApp links bar), channellink,
 # delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
-# privacystatus, privacycommunities); the Media panel:
+# privacystatus, privacycommunities), pack and packtab (a sticker pack's dialog, and the picker with the chat's packs added: -ochat ririiiin); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with
 # WHATSUP_DEMO_PHOTO=<a photo> to edit) into <out>/overlay-<name>.png:

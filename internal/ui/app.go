@@ -1330,6 +1330,9 @@ func (u *UI) applyEvents() {
 			u.statusPrivacyEvent()
 		case model.StickersEvent:
 			u.picker.stickersOK = [3]bool{} // reloaded when next drawn
+			u.picker.packsOK = false
+		case model.StickerPackEvent:
+			u.packLoaded(e)
 		case model.ChannelsEvent:
 			u.channels = u.backend.Channels()
 			u.suggested = u.backend.SuggestedChannels()
@@ -1531,7 +1534,9 @@ func (u *UI) applyReceipt(e model.ReceiptEvent) {
 // message and the AFK bar without their notes "scheduled", or ghost mode
 // turned on with /ghost "ghost". The chat list's Select chats "selectchats"; App lock's
 // dialog "applock" (setting it up) or "applockon", and its lock screen "lockscreen".
-// "graywarning" opens the acknowledgment for Keep deleted messages.
+// "graywarning" opens the acknowledgment for Keep deleted messages. "pack" opens
+// the last sticker pack the chat shares (-ochat ririiiin), and "packtab" the
+// sticker picker with the chat's packs added.
 // Menus open at (x, y) px in content coordinates.
 func (u *UI) ShowOverlay(name string, x, y int) {
 	u.applyEvents()
@@ -1646,6 +1651,18 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 	case "sticker":
 		u.picker.composerTab = tabSticker // as if the sticker tab was used last
 		u.openPicker(pickComposer, nil)
+	case "packtab":
+		// The chat's sticker packs added to the picker, the last one open.
+		for _, m := range u.msgs {
+			if m.Pack != nil {
+				u.backend.OpenStickerPack(m)
+				u.backend.AddStickerPack(m.Pack.ID, true)
+			}
+		}
+		u.applyEvents()
+		u.picker.composerTab = tabSticker
+		u.openPicker(pickComposer, nil)
+		u.picker.stickerSet = model.StickerSet(len(stickerSets) + len(u.pickerPacks()) - 1)
 	case "viewer":
 		if img != nil {
 			u.openViewer(img)
@@ -1677,6 +1694,14 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		u.conv.link.url = link
 		u.conv.link.got = &linkResult{url: link, prev: &linkpreview.Preview{Title: "Villa Kayu Â· Ubud, Bali",
 			Description: "A private pool villa among the rice fields, 10 minutes from Ubud center."}}
+	case "pack":
+		// The last sticker pack the chat shares, open.
+		for i := len(u.msgs) - 1; i >= 0; i-- {
+			if m := u.msgs[i]; m.Pack != nil {
+				u.openPackView(m)
+				break
+			}
+		}
 	case "delete":
 		if lastOut != nil {
 			u.confirmDelete([]*model.Message{lastOut})

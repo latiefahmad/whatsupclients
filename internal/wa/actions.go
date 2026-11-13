@@ -149,6 +149,9 @@ func mediaMessage(media model.Media, blob []byte) *waE2E.Message {
 	case model.MediaDocument:
 		m.DocumentMessage = &waE2E.DocumentMessage{}
 		err = proto.Unmarshal(blob, m.DocumentMessage)
+	case model.MediaStickerPack:
+		m.StickerPackMessage = &waE2E.StickerPackMessage{}
+		err = proto.Unmarshal(blob, m.StickerPackMessage)
 	default:
 		return nil
 	}
@@ -434,7 +437,7 @@ func (b *Backend) sendCopy(src *model.Message, chatID string, forwarded bool, re
 		// needs the file uploaded again, the way its new chat takes it.
 		id := m.ID
 		go func() {
-			handle, err := b.reupload(ctx, cli, part, isChannel(jid))
+			handle, err := b.reuploadFile(ctx, cli, part, isChannel(jid))
 			if err != nil {
 				b.log.Warnf("upload the copy of %s again: %v", src.ID, err)
 				b.sendFailed(chatID, id, "Couldn't send the file.")
@@ -472,10 +475,10 @@ func mediaPart(m *waE2E.Message) whatsmeow.DownloadableMessage {
 	return nil
 }
 
-// reupload downloads the file part names and uploads it again, for a
+// reuploadFile downloads the file part names and uploads it again, for a
 // channel (as it is) or a chat (encrypted), and points part at the new
 // upload. It returns the upload's handle, which a channel's post names.
-func (b *Backend) reupload(ctx context.Context, cli *whatsmeow.Client, part whatsmeow.DownloadableMessage, channel bool) (string, error) {
+func (b *Backend) reuploadFile(ctx context.Context, cli *whatsmeow.Client, part whatsmeow.DownloadableMessage, channel bool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 	data, err := cli.Download(ctx, part)
@@ -521,6 +524,25 @@ func (b *Backend) SendSticker(chatID string, sticker, reply *model.Message) {
 		// Its plaintext hash, which a sent sticker carries, is known only
 		// once it has downloaded and been re-keyed (rehashSticker).
 		b.emit(model.NoticeEvent{Text: "This sticker is still loading."})
+		return
+	}
+	if s := b.unuploaded(sticker.ID); sticker.ChatID == stickerChat && s != nil {
+		// A sticker from a pack's zip: uploaded as it is first sent, after
+		// which it is a recent sticker with a link (sendStickerData).
+		cli := b.connected()
+		jid, err := types.ParseJID(chatID)
+		data, _ := os.ReadFile(b.mediaPath(stickerChat, sticker.ID))
+		switch {
+		case cli == nil || err != nil:
+		case len(data) == 0:
+			b.emit(model.NoticeEvent{Text: "This sticker is still loading."})
+		default:
+			e := &waE2E.StickerMessage{Mimetype: s.Mimetype, Width: s.Width, Height: s.Height, IsAnimated: s.IsAnimated,
+				IsLottie: s.IsLottie, AccessibilityLabel: s.AccessibilityLabel, Emojis: s.Emojis}
+			if m := b.sendStickerData(chatID, jid, cli, data, e, reply); m != nil {
+				b.emit(model.MessageEvent{Msg: m})
+			}
+		}
 		return
 	}
 	if b.connected() == nil || !b.sendCopy(sticker, chatID, false, reply) {

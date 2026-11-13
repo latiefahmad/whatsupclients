@@ -200,7 +200,7 @@ func (s *msgStore) init(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("drop old messages: %w", err)
 	}
-	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+stickerSchema+votesSchema+reactionsSchema+snippetSchema+channelPostsSchema); err != nil {
+	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+stickerSchema+packSchema+votesSchema+reactionsSchema+snippetSchema+channelPostsSchema); err != nil {
 		return err
 	}
 	for _, m := range migrations {
@@ -213,6 +213,9 @@ func (s *msgStore) init(ctx context.Context) error {
 	}
 	if err := s.rereadRichResponses(ctx); err != nil {
 		return fmt.Errorf("reread rich responses: %w", err)
+	}
+	if err := s.rescanUnsupported(ctx); err != nil {
+		return fmt.Errorf("rescan unsupported messages: %w", err)
 	}
 	if dropped {
 		s.vacuum(ctx)
@@ -273,6 +276,7 @@ func (s *msgStore) failStale(ctx context.Context) error {
 func (s *msgStore) wipe(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages; DELETE FROM wz_chats; DELETE FROM wz_meta;
 		DELETE FROM wz_status; DELETE FROM wz_channels; DELETE FROM wz_channel_posts; DELETE FROM wz_lists; DELETE FROM wz_list_chats; DELETE FROM wz_stickers;
+		DELETE FROM wz_sticker_packs; DELETE FROM wz_pack_stickers;
 		DELETE FROM wz_edits; DELETE FROM wz_votes; DELETE FROM wz_reactions; DELETE FROM wz_snippets;`)
 	return err
 }

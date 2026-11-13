@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/latiefahmad/whatsupclients/internal/model"
+	"github.com/latiefahmad/whatsupclients/internal/webpanim"
 )
 
 // participantChanges maps member actions to hypermeow's.
@@ -234,12 +235,20 @@ func (b *Backend) SendNewSticker(chatID string, webp []byte, reply *model.Messag
 	if err != nil || cli == nil {
 		return nil
 	}
+	e := &waE2E.StickerMessage{Mimetype: proto.String("image/webp"), Width: proto.Uint32(512), Height: proto.Uint32(512)}
+	if webpanim.IsAnimated(webp) {
+		e.IsAnimated = proto.Bool(true)
+	}
+	return b.sendStickerData(chatID, jid, cli, webp, e, reply)
+}
+
+// sendStickerData uploads a sticker's file and sends it, e saying what it
+// is (its type and size); the upload fills in where it is.
+func (b *Backend) sendStickerData(chatID string, jid types.JID, cli *whatsmeow.Client, webp []byte, e *waE2E.StickerMessage, reply *model.Message) *model.Message {
 	m := &model.Message{ID: cli.GenerateMessageID(), ChatID: chatID, FromMe: true, Kind: model.KindSticker,
-		Media: model.MediaSticker, Time: b.sendTime(), Receipt: model.Pending}
-	ci := b.draftContext(chatID, model.Draft{Reply: reply}, m)
-	// The upload fills in where it is.
-	e := &waE2E.StickerMessage{Mimetype: proto.String("image/webp"), Width: proto.Uint32(512), Height: proto.Uint32(512),
-		FileLength: proto.Uint64(uint64(len(webp))), ContextInfo: ci}
+		Media: model.MediaSticker, Time: b.sendTime(), Receipt: model.Pending, Lottie: e.GetIsLottie()}
+	e.FileLength = proto.Uint64(uint64(len(webp)))
+	e.ContextInfo = b.draftContext(chatID, model.Draft{Reply: reply}, m)
 	msg := &waE2E.Message{StickerMessage: e}
 	sm := storedMsg{Message: m, rawPayload: marshal(msg)}
 	// Keep the picture, so it shows at once and without a download.
