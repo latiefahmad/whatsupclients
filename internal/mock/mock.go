@@ -84,6 +84,7 @@ func New() *Backend {
 	b.demoVotes()
 	b.demoReactions()
 	b.seedReactors()
+	b.demoLottie()
 	// Citra's edited message says what it said before each edit.
 	for _, m := range b.msgs["citra"] {
 		if !m.Edited.IsZero() {

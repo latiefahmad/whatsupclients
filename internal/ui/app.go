@@ -93,6 +93,7 @@ type UI struct {
 	images    *imageCache
 	emojiImgs *imageCache // the emoji picker's, see layoutEmojiImage
 	players   players     // animated stickers on screen
+	fx        stickerFX   // premium stickers' effects (stickerfx.go)
 	bars      map[*widget.List]*scrollbar
 
 	page         page

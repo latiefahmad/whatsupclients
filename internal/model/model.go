@@ -126,10 +126,14 @@ type Quote struct {
 
 // Message is a single conversation entry.
 type Message struct {
-	ID       string
-	ChatID   string
-	Kind     Kind
-	Media    Media
+	ID     string
+	ChatID string
+	Kind   Kind
+	Media  Media
+	// Lottie marks a Lottie sticker (application/was): its media is a zip
+	// of animations, and a premium one's second animation is an effect
+	// played around it.
+	Lottie   bool
 	Duration int // seconds, for voice messages
 	FromMe   bool
 	Sender   string // display name; group chats only
