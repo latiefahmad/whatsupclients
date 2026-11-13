@@ -37,7 +37,7 @@ func (u *UI) startEdit(m *model.Message) {
 	c.edit.msg, c.edit.orig = m, text
 	c.reply, c.mentions = nil, nil
 	for _, r := range refs {
-		c.mentions = append(c.mentions, mentionRef{name: r.Name, jid: r.ID})
+		c.mentions = append(c.mentions, mentionRef{name: r.Name, jid: r.ID, people: r.People})
 	}
 	setComposer(&c.composer, text)
 	u.requestFocus(&c.composer)
@@ -105,7 +105,7 @@ func (u *UI) layoutEditPreview(gtx C, m *model.Message) D {
 						})
 					}),
 					layout.Rigid(func(gtx C) D {
-						return u.layoutQuote(gtx, q, p.QuoteIn, p.TextSecondary, gtx.Constraints.Max.X, m)
+						return u.layoutQuote(gtx, m.ChatID, q, p.QuoteIn, p.TextSecondary, gtx.Constraints.Max.X, m)
 					}),
 				)
 			}),

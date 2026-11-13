@@ -506,9 +506,12 @@ func referenceExtras(at func(daysAgo, h, m int) time.Time) extras {
 				ID: "test@g.us", Name: "test", IsGroup: true,
 				About: "This group is dedicated for testing WhatsApp bot, specifically WazzapAgents",
 				Members: []model.Member{
-					{ID: "me@lid", Name: "You", Admin: true, Me: true},
+					{ID: "me@lid", Name: "You", Admin: true, SuperAdmin: true, Me: true},
 					{ID: "agus@lid", Name: "Gusti Kebab", Admin: true},
 					{ID: "vivy@lid", Name: "Vivian", Admin: true},
+					{ID: "alazka@lid", Name: "~Alazka", Push: "Alazka", Phone: "+62 812-5550-0301"},
+					{ID: "bima@lid", Name: "~Bima", Push: "Bima", Phone: "+62 812-5550-0302"},
+					{ID: "6281255500303@s.whatsapp.net", Name: "+62 812-5550-0303", Phone: "+62 812-5550-0303"},
 				},
 				Created: time.Date(2024, 8, 2, 8, 28, 0, 0, time.Local), CreatedBy: "you",
 			},

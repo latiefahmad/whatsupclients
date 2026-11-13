@@ -66,6 +66,8 @@ type UI struct {
 	winWidth int
 
 	backend model.Backend
+	// memberColors are the colors of the names in each chat (sendercolor.go).
+	memberColors memberColors
 	// lists are the custom chat lists (lists.go); listsStale asks for
 	// them again.
 	lists      []*model.ChatList
@@ -209,7 +211,11 @@ type UI struct {
 	slash   slashState   // slash commands and their notes (slash.go)
 	codes   shortcodes   // :emoji: shortcodes over the composer (shortcode.go)
 	// Extra features turned on (extras.go); slash commands are slash.on.
-	adminMention, rawPhotos, editHistory, keepDeleted, viewOnceReplay bool
+	extendedMentions, rawPhotos, editHistory, keepDeleted, viewOnceReplay bool
+	// Custom mentions (custommention.go): each group's as read from its
+	// preference, and a count of the changes to them.
+	customMentions    map[string][]customMention
+	customMentionsVer int
 	// captureBlocked keeps the window out of screenshots (viewonce.go).
 	captureBlocked bool
 	// privacy is privacy mode (privacy.go), and secret how much of what
@@ -713,6 +719,7 @@ func (u *UI) layoutWindow(gtx C) D {
 	defer u.anims.endFrame()
 	defer u.follows.endFrame()
 	defer u.endFrameClicks()
+	defer u.memberColors.endFrame(u.backend)
 
 	sz := gtx.Constraints.Max
 	u.winWidth = sz.X
@@ -2005,8 +2012,10 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 			set("/ghost ")
 			u.sendComposer()
 		}
-	case "mention", "mentioned":
-		// The mention picker, or a draft with picked mentions.
+	case "mention", "mentioned", "privatemention":
+		// The mention picker (privatemention: with -ochat a private chat, and
+		// its extra feature on), or a draft with picked mentions.
+		u.extendedMentions = u.extendedMentions || name == "privatemention"
 		ed := &u.conv.composer
 		ed.SetText("Hi @")
 		ed.SetCaret(4, 4)
@@ -2020,6 +2029,29 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 				u.pickMention(len(ms.members) - 1)
 			}
 			ed.Insert("see you soon")
+		}
+	case "mentions", "custommention", "newmention", "custompick":
+		// Custom mentions: a group's page, one being edited, a new one, and
+		// the mention picker offering them.
+		u.demoCustomMentions()
+		switch name {
+		case "mentions":
+			u.openInfo(u.selected.ID)
+			u.info.anim.snap(true)
+			u.openInfoSub(infoMentions)
+		case "custommention":
+			u.openCustomMention(u.selected.ID, &u.customMentionsOf(u.selected.ID)[0])
+			u.dialog.anim.snap(true)
+			u.dialog.bar.snap(true)
+		case "newmention":
+			u.openCustomMention(u.selected.ID, nil)
+			u.dialog.listName.SetText("admin")
+			u.dialog.anim.snap(true)
+		case "custompick":
+			ed := &u.conv.composer
+			ed.SetText("Hi @t")
+			ed.SetCaret(ed.Len(), ed.Len())
+			u.requestFocus(ed)
 		}
 	case "listwide", "listnarrow", "listhidden":
 		// The list column dragged wide or narrow, or hidden.

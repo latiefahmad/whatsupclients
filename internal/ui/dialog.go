@@ -73,16 +73,20 @@ type dialogState struct {
 	shareText string
 	// newList makes the picker New list's (lists.go): a name for the
 	// list above the chats that go in it.
-	newList  bool
-	listName widget.Editor
-	picked   []string // chat IDs, in the order they were picked
-	search   widget.Editor
-	list     widget.List
-	rows     []fwdRow          // the list: headers, chats and contacts, a buffer reused every frame
-	people   []*model.Contact  // saved contacts with no chat, read once the picker opens
-	abouts   map[string]string // the contacts' abouts, by ID
-	read     bool              // people was read
-	bar      tween             // the send bar, shown once a chat is picked
+	newList bool
+	// mentionFor makes the picker a custom mention's editor
+	// (custommention.go): the group whose mention is edited, and
+	// mentionEdit the ID of the one being edited ("" for a new one).
+	mentionFor, mentionEdit string
+	listName                widget.Editor
+	picked                  []string // chat IDs, in the order they were picked
+	search                  widget.Editor
+	list                    widget.List
+	rows                    []fwdRow          // the list: headers, chats and contacts, a buffer reused every frame
+	people                  []*model.Contact  // saved contacts with no chat, read once the picker opens
+	abouts                  map[string]string // the contacts' abouts, by ID
+	read                    bool              // people was read
+	bar                     tween             // the send bar, shown once a chat is picked
 
 	poll     pollState
 	listPick listPick
@@ -381,9 +385,14 @@ func (u *UI) forwardPanel(gtx C) D {
 	if u.btn("fwd:close").Clicked(gtx) {
 		u.closeDialog()
 	}
+	if u.btn("fwd:delmention").Clicked(gtx) && d.isOpen() && d.mentionEdit != "" {
+		u.confirmDeleteCustomMention(d.mentionFor, d.mentionEdit)
+	}
 	sent := u.btn("fwd:send").Clicked(gtx) && d.isOpen()
 	if sent && d.newList {
 		u.createList(d)
+	} else if sent && d.mentionFor != "" {
+		u.saveCustomMention(d)
 	} else if sent && len(d.picked) > 0 {
 		if d.addTo != "" {
 			u.addMembers(d.addTo, d.picked)
@@ -412,11 +421,19 @@ func (u *UI) forwardPanel(gtx C) D {
 	if d.newList {
 		ready = trimSpace(d.listName.Text()) != ""
 	}
+	if d.mentionFor != "" {
+		ready = trimSpace(d.listName.Text()) != "" && len(d.picked) > 0
+	}
 	bar := easeOut(d.bar.step(gtx, ready, durGrow))
-	if !d.read {
+	if !d.read && d.mentionFor == "" {
 		u.readForwardPeople(d)
 	}
-	rows := u.forwardRows(d)
+	var rows []fwdRow
+	if d.mentionFor != "" {
+		rows = u.customMentionRows(d)
+	} else {
+		rows = u.forwardRows(d)
+	}
 	for _, r := range rows {
 		if r.header == "" && d.shareText != "" && u.btn("fwd:"+r.id).Clicked(gtx) && d.isOpen() {
 			u.closeDialog()
@@ -433,6 +450,11 @@ func (u *UI) forwardPanel(gtx C) D {
 	}
 	title := "Forward message to"
 	switch {
+	case d.mentionFor != "":
+		title = "@" + trimSpace(d.listName.Text())
+		if d.mentionEdit == "" {
+			title = "New custom mention"
+		}
 	case d.newList:
 		title = "New list"
 	case d.addTo != "":
@@ -461,28 +483,64 @@ func (u *UI) forwardPanel(gtx C) D {
 			})
 		}),
 		layout.Rigid(func(gtx C) D {
-			if !d.newList {
+			if !d.newList && d.mentionFor == "" {
 				return D{}
 			}
+			hint := "List name"
+			if d.mentionFor != "" {
+				hint = "Name, like Tim frontend"
+			}
 			return layout.Inset{Left: 4, Right: 4, Bottom: 14}.Layout(gtx, func(gtx C) D {
-				return u.pollField(gtx, &d.listName, "List name")
+				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Flexed(1, func(gtx C) D { return u.pollField(gtx, &d.listName, hint) }),
+					layout.Rigid(func(gtx C) D {
+						if d.mentionEdit == "" {
+							return D{}
+						}
+						return layout.Inset{Left: 8}.Layout(gtx, func(gtx C) D {
+							return u.iconButton(gtx, u.btn("fwd:delmention"), icDelete, 40, 24, p.Danger)
+						})
+					}),
+				)
 			})
 		}),
 		layout.Rigid(func(gtx C) D {
-			if !d.newList {
+			if d.mentionFor == "" {
 				return D{}
 			}
-			return u.sectionLabel(gtx, "Included", layout.Inset{Left: 24, Right: 24, Bottom: 8}, labelOpts{})
+			if s := u.customMentionProblem(d.mentionFor, d.listName.Text(), d.mentionEdit); s != "" {
+				return layout.Inset{Left: 24, Right: 24, Bottom: 10}.Layout(gtx,
+					u.label(13.5, s, p.Danger).Layout)
+			}
+			return D{}
 		}),
 		layout.Rigid(func(gtx C) D {
+			if !d.newList && d.mentionFor == "" {
+				return D{}
+			}
+			label := "Included"
+			if d.mentionFor != "" {
+				label = "People it mentions"
+			}
+			return u.sectionLabel(gtx, label, layout.Inset{Left: 24, Right: 24, Bottom: 8}, labelOpts{})
+		}),
+		layout.Rigid(func(gtx C) D {
+			hint := "Search name or number"
+			if d.mentionFor != "" {
+				hint = "Search members"
+			}
 			return layout.Inset{Left: 16, Right: 16, Bottom: 8}.Layout(gtx, func(gtx C) D {
-				return u.searchField(gtx, &d.search, "Search name or number")
+				return u.searchField(gtx, &d.search, hint)
 			})
 		}),
 		layout.Flexed(1, func(gtx C) D {
 			if len(rows) == 0 {
+				empty := "No chats or contacts found"
+				if d.mentionFor != "" {
+					empty = "No members found"
+				}
 				return layout.Inset{Top: 32}.Layout(gtx, func(gtx C) D {
-					return layout.N.Layout(gtx, u.label(15, "No chats or contacts found", p.TextSecondary).Layout)
+					return layout.N.Layout(gtx, u.label(15, empty, p.TextSecondary).Layout)
 				})
 			}
 			return u.scrollList(gtx, &d.list, len(rows), func(gtx C, i int) D {
@@ -631,7 +689,8 @@ func digitsOf(phone string) string {
 	return d
 }
 
-// forwardName is the name of a chat or contact in the forward picker.
+// forwardName is the name of a chat or contact in the forward picker, or of
+// a member picked in a custom mention's editor.
 func (u *UI) forwardName(d *dialogState, id string) string {
 	if c := u.chatByID(id); c != nil {
 		return c.Name
@@ -640,6 +699,9 @@ func (u *UI) forwardName(d *dialogState, id string) string {
 		if ct.ID == id {
 			return ct.Name
 		}
+	}
+	if d.mentionFor != "" {
+		return u.customMentionMember(d.mentionFor, id)
 	}
 	return ""
 }
@@ -658,6 +720,12 @@ func (u *UI) forwardBar(gtx C, d *dialogState) D {
 		send = icTick
 		if len(names) == 0 {
 			names = append(names, "No chats yet")
+		}
+	}
+	if d.mentionFor != "" {
+		send = icTick
+		if len(names) == 0 {
+			names = append(names, "No one picked yet")
 		}
 	}
 	gtx.Constraints.Min.X = gtx.Constraints.Max.X

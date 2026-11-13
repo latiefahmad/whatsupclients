@@ -387,8 +387,19 @@ func (b *Backend) showMentions(chatID string, d model.Draft) string {
 	if d.MentionAll {
 		txt = strings.ReplaceAll(txt, "@all", "⁨"+string(model.MentionNotifies)+"@all⁩")
 	}
+	// Before the chat's own: demo IDs have no server, so "@work" starts "@work-1@".
+	for i, name := range d.GroupNames {
+		mark := model.MentionGroup
+		if name == "admin" {
+			mark = model.MentionAdmins
+		}
+		txt = strings.ReplaceAll(txt, "@"+model.GroupNameJID(chatID, i+1), "⁨"+string(mark)+"@"+name+"⁩")
+	}
 	if d.MentionAdmins {
 		txt = strings.ReplaceAll(txt, "@"+chatID, "⁨"+string(model.MentionAdmins)+"@admin⁩")
+	}
+	if d.MentionChat != "" {
+		txt = strings.ReplaceAll(txt, "@"+chatID, "⁨"+string(model.MentionGroup)+"@"+d.MentionChat+"⁩")
 	}
 	if info := b.Info(chatID); info != nil {
 		for _, m := range info.Members {
@@ -435,11 +446,14 @@ func (b *Backend) EditText(m *model.Message) (string, []model.MentionRef) {
 			break
 		}
 		sb.WriteString(rest[:i])
-		name := strings.TrimLeft(rest[i+len("⁨"):j], string([]rune{model.MentionNotifies, model.MentionAdmins}))
+		raw := rest[i+len("⁨") : j]
+		name := strings.TrimLeft(raw, string([]rune{model.MentionNotifies, model.MentionAdmins, model.MentionGroup}))
 		sb.WriteString(name)
 		name = strings.TrimPrefix(name, "@")
 		id := "@" + name
-		if info := b.Info(m.ChatID); info != nil && name != "all" && name != "admin" {
+		if strings.ContainsRune(raw, model.MentionGroup) {
+			id = "@custom"
+		} else if info := b.Info(m.ChatID); info != nil && name != "all" && name != "admin" {
 			for _, mb := range info.Members {
 				if mb.Name == name {
 					id = mb.ID

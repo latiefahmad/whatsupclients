@@ -144,6 +144,14 @@ Save the messages you send over and over in *Settings > Snippets*, then send one
 when you send: `{name}`, `{first}`, `{mention}`, `{chat}`, `{me}`, `{quote}`, `{greeting}`,
 `{date}`, `{time}` and `{day}`. Unknown `{...}` stays as it is; `\{name}` sends it literally.
 
+### Extended mentions
+
+Type `@` to mention people by name instead of their number. **`@admin`** mentions every
+admin of a group at once. **Custom mentions** name a set of people you pick in a group
+(`@Tim frontend`, from the group's ⋮ menu or its info) and mention them all at once. In a
+private chat, `@` mentions the person you're talking to. Names, quote bars and placeholders
+take WhatsApp's own colors, so everything looks the way it does on your phone.
+
 ### Privacy, for when someone's looking
 
 <table>

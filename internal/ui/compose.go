@@ -27,13 +27,15 @@ import (
 // "@Name", the message carries "@<user>" plus the JID.
 type mentionRef struct {
 	name, jid string
+	people    []string // whom a custom mention notifies (custommention.go)
 }
 
 // Picker entries that aren't members: "@all" notifies everyone, "@admin"
-// the group's admins.
+// the group's admins, and "@custom" the people picked for a custom mention.
 const (
-	mentionAllID   = "@all"
-	mentionAdminID = "@admin"
+	mentionAllID    = "@all"
+	mentionAdminID  = "@admin"
+	mentionCustomID = "@custom"
 )
 
 // requestFocus focuses tag (an editor), or clears focus when nil, on the
@@ -298,6 +300,18 @@ func (u *UI) draftWith(txt string, mentions []mentionRef, chat string) model.Dra
 			d.Mentions = append(d.Mentions, jid)
 		}
 	}
+	// A message shows one name for each group JID it mentions: the first
+	// name gets "@<chat JID>", the others JIDs made up from it.
+	named := 0
+	nameChat := func(at, name string) bool {
+		d.Text = strings.ReplaceAll(d.Text, at, "@"+model.GroupNameJID(chat, named))
+		named++
+		if named == 1 {
+			return true
+		}
+		d.GroupNames = append(d.GroupNames, name)
+		return false
+	}
 	for _, mr := range refs {
 		at := "@" + mr.name
 		if !strings.Contains(d.Text, at) {
@@ -308,14 +322,21 @@ func (u *UI) draftWith(txt string, mentions []mentionRef, chat string) model.Dra
 			d.MentionAll = true // the text keeps "@all"
 			continue
 		case mentionAdminID:
-			d.MentionAdmins = true
-			d.Text = strings.ReplaceAll(d.Text, at, "@"+chat)
+			d.MentionAdmins = nameChat(at, mr.name)
 			if info := u.chatMembers(chat); info != nil {
 				for _, m := range info.Members {
 					if m.Admin && !m.Me {
 						addJID(m.ID)
 					}
 				}
+			}
+			continue
+		case mentionCustomID:
+			if nameChat(at, mr.name) {
+				d.MentionChat = mr.name
+			}
+			for _, id := range u.customMentionPeople(chat, mr.people) {
+				addJID(id)
 			}
 			continue
 		}
@@ -336,10 +357,58 @@ type mentionState struct {
 	members    []model.Member
 }
 
-// mentionQuery returns the mention being typed in a group chat, or nil.
+// mentionsHere reports whether the composer of c offers mentions: in a group,
+// or in a private chat with Extended mentions on. Not in your own chat,
+// where there's no one else to mention.
+func (u *UI) mentionsHere(c *model.Chat) bool {
+	return c.IsGroup || u.extendedMentions && !c.Self && !isChannelID(c.ID)
+}
+
+// mentionTarget is the person a private chat is with, as a member.
+func (u *UI) mentionTarget(c *model.Chat) model.Member {
+	m := model.Member{ID: c.ID, Name: c.Name}
+	info := u.chatMembers(c.ID)
+	if info != nil {
+		m.Phone, m.Push = info.Phone, info.Push
+	}
+	if m.Push == "" && c.Name != m.Phone {
+		m.Contact = c.Name
+	}
+	return m
+}
+
+// mentionMembers is who c's mentions can name: a group's members, or the
+// other person of a private chat.
+func (u *UI) mentionMembers(c *model.Chat) []model.Member {
+	if !c.IsGroup {
+		return []model.Member{u.mentionTarget(c)}
+	}
+	if info := u.chatMembers(c.ID); info != nil {
+		return info.Members
+	}
+	return nil
+}
+
+// mentionCandidates is what the picker offers in c for query: in a private
+// chat, only the other person.
+func (u *UI) mentionCandidates(c *model.Chat, query string) []model.Member {
+	if c.IsGroup {
+		if info := u.chatMembers(c.ID); info != nil {
+			return u.mentionHits(info, query)
+		}
+		return nil
+	}
+	m := u.mentionTarget(c)
+	if memberTitle(m) == "" || query != "" && memberScore(m, query) == 0 {
+		return nil
+	}
+	return []model.Member{m}
+}
+
+// mentionQuery returns the mention being typed, or nil.
 func (u *UI) mentionQuery() *mentionState {
 	c := u.selected
-	if c == nil || !c.IsGroup || u.postingStatus() || !u.slashTakesMentions() {
+	if c == nil || !u.mentionsHere(c) || u.postingStatus() || !u.slashTakesMentions() {
 		return nil // a command's picker offers members itself
 	}
 	ed := &u.conv.composer
@@ -368,11 +437,7 @@ func (u *UI) mentionQuery() *mentionState {
 					return nil
 				}
 			}
-			info := u.chatMembers(c.ID)
-			if info == nil {
-				return nil
-			}
-			hits := u.mentionHits(info, q)
+			hits := u.mentionCandidates(c, q)
 			if len(hits) == 0 {
 				return nil
 			}
@@ -391,15 +456,16 @@ func (u *UI) mentionQuery() *mentionState {
 type mentionHitsKey struct {
 	query, me string
 	info      *model.ChatInfo
-	admin     bool
+	extended  bool // @admin and custom mentions are on
+	custom    int  // customMentionsVer
 }
 
-// mentionHits lists what the mention picker offers for query: "@all" and
-// "@admin", then the members it finds (see fuzzy.go), best first, saved
-// contacts before the rest, yourself last.
+// mentionHits lists what the mention picker offers for query: "@all",
+// "@admin" and custom mentions, then the members it finds (see fuzzy.go),
+// best first, saved contacts before the rest, yourself last.
 func (u *UI) mentionHits(info *model.ChatInfo, query string) []model.Member {
 	c := &u.conv
-	k := mentionHitsKey{query: query, me: u.meName(), info: info, admin: u.adminMention}
+	k := mentionHitsKey{query: query, me: u.meName(), info: info, extended: u.extendedMentions, custom: u.customMentionsVer}
 	if c.hitsOK && c.hitsKey == k {
 		return c.hits
 	}
@@ -440,12 +506,15 @@ func (u *UI) mentionHits(info *model.ChatInfo, query string) []model.Member {
 	})
 	var out []model.Member
 	for _, id := range []string{mentionAllID, mentionAdminID} {
-		if id == mentionAdminID && !u.adminMention {
+		if id == mentionAdminID && !u.extendedMentions {
 			continue // an extra feature
 		}
 		if strings.HasPrefix(id[1:], query) {
 			out = append(out, model.Member{ID: id, Name: id[1:]})
 		}
+	}
+	if u.extendedMentions {
+		out = append(out, u.customMentionHits(info, query)...)
 	}
 	for _, h := range hits {
 		out = append(out, h.m)
@@ -477,7 +546,14 @@ func (u *UI) pickMention(i int) {
 	ed := &u.conv.composer
 	ed.SetCaret(ms.start, ms.end)
 	ed.Insert("@" + name + " ")
-	u.conv.mentions = append(u.conv.mentions, mentionRef{name: name, jid: m.ID})
+	ref := mentionRef{name: name, jid: m.ID}
+	if id, ok := strings.CutPrefix(m.ID, mentionCustomPrefix); ok {
+		ref.jid = mentionCustomID
+		if cm := u.customMentionByID(u.selected.ID, id); cm != nil {
+			ref.people = cm.Members
+		}
+	}
+	u.conv.mentions = append(u.conv.mentions, ref)
 	u.requestFocus(ed)
 }
 
@@ -633,11 +709,13 @@ func (u *UI) layoutMentionPicker(gtx C, ms *mentionState) D {
 			// A member's name, with their phone number when you haven't
 			// saved them.
 			name, sub, size, many := memberTitle(m), memberSub(m), unit.Sp(15.5), true
-			switch m.ID {
-			case mentionAllID:
+			switch {
+			case m.ID == mentionAllID:
 				sub, size = "Mention all members in this chat", 16
-			case mentionAdminID:
+			case m.ID == mentionAdminID:
 				sub, size = "Mention all admins in this chat", 16
+			case strings.HasPrefix(m.ID, mentionCustomPrefix):
+				size = 16 // memberSub says who's in it (customMentionHits)
 			default:
 				many = false
 			}
@@ -647,7 +725,7 @@ func (u *UI) layoutMentionPicker(gtx C, ms *mentionState) D {
 					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 						layout.Rigid(func(gtx C) D {
 							if !many {
-								return u.avatar(gtx, m.ID, m.Name, false, 36)
+								return u.avatar(gtx, m.ID, memberTitle(m), false, 36)
 							}
 							d := gtx.Dp(36)
 							fillCircle(gtx, image.Pt(d/2, d/2), d/2, p.PopupBorder)
@@ -695,7 +773,7 @@ func (u *UI) layoutReplyPreview(gtx C, m *model.Message) D {
 	return layout.Inset{Left: 8, Right: 8, Top: 8}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 			layout.Flexed(1, func(gtx C) D {
-				return u.layoutQuote(gtx, q, p.QuoteIn, p.TextSecondary, gtx.Constraints.Max.X, m)
+				return u.layoutQuote(gtx, m.ChatID, q, p.QuoteIn, p.TextSecondary, gtx.Constraints.Max.X, m)
 			}),
 			layout.Rigid(layout.Spacer{Width: 8}.Layout),
 			layout.Rigid(func(gtx C) D { return u.iconButton(gtx, u.btn("reply:close"), icClose, 40, 24, p.Icon) }),

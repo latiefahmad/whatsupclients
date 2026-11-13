@@ -58,6 +58,14 @@ Gotchas already found in the pinned version (v0.10.x):
   `go mod verify`. The module cache was once modified locally (probably by an IDE
   auto-import); delete that module version from `GOMODCACHE`, re-download it, and
   `go clean -cache`.
+- A name in a chat (and a quote of it) takes one of 17 colors that chat gives its
+  members, like WhatsApp Web's `WAWebChatParticipantColor`: each new author gets the
+  first color nobody there has, then the one fewest have, so a person's color differs
+  per group. The colors are the device's own, kept in the prefs (`memberColors`,
+  `sendercolor.go`). WhatsApp's newer scheme, the last digit of the LID
+  (`useWAWebDefaultProfileColors`, behind the `wa_web_default_profile_pics` A/B flag,
+  off on the accounts we compared with), still colors initials and a group's placeholder
+  (`personTint`).
 - Text rendering supports bitmap color-emoji fonts (CBDT/sbix) but not COLR fonts such as
   Windows' Segoe UI Emoji, which renders monochrome.
 - The shaper never switches fonts for a space, so a space after an emoji takes the emoji
@@ -202,6 +210,16 @@ Gotchas already found in the pinned version (v0.10.x):
   moves its caret with them as usual. In a command's text that takes @mentions
   (`Option.Mentions`, /schedule's message) the mention picker shows instead, and it
   takes Enter first (`slashTakesMentions`).
+- `@admin` and custom mentions are the group mentioning itself: the text holds
+  `@<group JID>`, a `GroupMention` in `ContextInfo` gives that its name, `MentionedJID` says
+  who's notified, and the message goes in a `GroupMentionedMessage`. All of a message's
+  `@<group JID>` show the same name (WhatsApp Web maps names by JID), so further names
+  go under JIDs made up from the group's: its digits with `<n>` after them
+  (`model.GroupNameJID`, `Draft.GroupNames`). Phones show a group mention only for a
+  JID WhatsApp takes (`WAWebWidValidator`: up to 20 digits, no leading zero; a dash only
+  before a 10-digit timestamp). The name and the group a tap opens both come from the
+  JID, so tapping a made-up one says you aren't in that group; no spelling of the
+  group's own JID gets a second name.
 - hypermeow doesn't parse a group's `<general_chat/>` (a community's General chat).
   `markGeneralChats` (`internal/wa/communities.go`) asks for the joined groups again
   through `DangerousInternals().SendGroupIQ` on connect and reads it from the raw nodes.
@@ -373,7 +391,8 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    Snippets, the snippets /snippet send offers in the slash picker, their {variables}
                    and /catch's payload dialog) in snippets.go; and
                    the Extra features settings page in extras.go (the app's own features,
-                   such as slash commands, @admin, the Privacy mode toggle, Block screen
+                   such as slash commands, Extended mentions (one switch for @admin, custom mentions, @Tim frontend: people you
+                   pick in a group, named and mentioned like @admin, in custommention.go, and mentions in private chats, of the other person only), the Privacy mode toggle, Block screen
                    recording and Raw photos: each off until turned on), and
                    its Ethically gray features page (Edit history, Keep deleted messages, Replay view
                    once, and commands marked Gray, like /ghost, each with a switch of its own);
@@ -646,7 +665,10 @@ go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -rig
 # delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
 # privacystatus, privacycommunities), pack and packtab (a sticker pack's dialog, and the picker with the chat's packs added: -ochat ririiiin), mypacks and mypacksdrag (Your stickers with them, and its first pack dragged); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
-# encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with
+# encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes;
+# custom mentions: mentions (a group's page), custommention, newmention (its name's error), custompick (the picker offering them);
+# privatemention (the picker in a private chat: -ochat ririiiin);
+# the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with
 # WHATSUP_DEMO_PHOTO=<a photo> to edit) into <out>/overlay-<name>.png:
 go run ./cmd/screenshot -overlay msgmenu -at 700,300 -out /tmp/shots
 # channels: channelinfo (-ochat techdaily@newsletter, or whatsupnews@newsletter for one of

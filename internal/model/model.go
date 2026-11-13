@@ -414,9 +414,11 @@ type Version struct {
 }
 
 // MentionRef is an @mention in text to edit: the text shows "@" + Name,
-// and ID is who it notifies (a JID, or "@all" or "@admin").
+// and ID is who it notifies (a JID, or "@all", "@admin" or "@custom").
 type MentionRef struct {
 	Name, ID string
+	// People are whom a "@custom" mention notifies.
+	People []string
 }
 
 // Chat is a one-to-one or group conversation. Messages are not part of it:
@@ -487,6 +489,9 @@ const (
 	MentionNotifies = '\u2063'
 	// MentionAdmins marks "@admin", which notifies the group's admins.
 	MentionAdmins = '\u2062'
+	// MentionGroup marks a name for people picked by hand ("@Tim frontend")
+	// that notifies others. One that notifies you is MentionNotifies.
+	MentionGroup = '\u2061'
 )
 
 // ForMe reports whether m, as a backend resolved it, mentions you (or
@@ -514,9 +519,13 @@ type Draft struct {
 	// Mentions then lists the group's admins.
 	MentionAdmins bool
 	// MentionChat, when set, means Text contains "@<chat JID>", shown as
-	// "@" + MentionChat (a snippet's {mention} without a reply). It
-	// notifies no one.
+	// "@" + MentionChat: a snippet's {mention} without a reply, which
+	// notifies no one, or a custom mention, which notifies those in Mentions.
 	MentionChat string
+	// GroupNames are the names of further custom mentions (or "admin"),
+	// when the group's own JID already shows another: Text shows the i-th
+	// as "@" + GroupNameJID(chat, i+1), and Mentions lists whom they notify.
+	GroupNames []string
 	// Link is the preview of a link in Text to send with it, or nil, and
 	// LinkThumb its picture (a small JPEG).
 	Link      *LinkPreview
@@ -524,6 +533,48 @@ type Draft struct {
 	// LinkImage is the picture big, for the wide card WhatsApp shows above
 	// the title, or empty.
 	LinkImage LinkImage
+}
+
+// GroupNameJID is the JID that a message's text mentions, as "@<JID>", for
+// the n-th name it gives a group (@admin, custom mentions): the group's own
+// for n = 0, and one made up from it for the others, since WhatsApp shows
+// one name for each JID. A made-up one is the group's digits with n after
+// them: WhatsApp takes a group ID of up to 20 digits without a leading zero
+// (an old group's "<digits>-<10 digits>" only with that timestamp), and
+// today's groups have 18, so it's no one's group. Tapping it says you aren't
+// in it: WhatsApp opens the group a mention's JID names, and these can't
+// name the group itself.
+func GroupNameJID(chat string, n int) string {
+	if n <= 0 {
+		return chat
+	}
+	user, server, _ := strings.Cut(chat, "@")
+	suffix := strconv.Itoa(n)
+	base := strings.ReplaceAll(user, "-", "")
+	if over := len(base) + len(suffix) - maxGroupDigits; over > 0 {
+		base = base[min(over, len(base)):]
+	}
+	return strings.TrimLeft(base+suffix, "0") + "@" + server
+}
+
+// maxGroupDigits is the most digits WhatsApp takes in a group's ID.
+const maxGroupDigits = 20
+
+// maxGroupNames bounds the names one message gives a group, for
+// IsGroupNameJID.
+const maxGroupNames = 100
+
+// IsGroupNameJID reports whether jid is one of chat's GroupNameJIDs.
+func IsGroupNameJID(jid, chat string) bool {
+	if jid == chat {
+		return true
+	}
+	for n := 1; n < maxGroupNames; n++ {
+		if jid == GroupNameJID(chat, n) {
+			return true
+		}
+	}
+	return false
 }
 
 // LinkImage is a link preview's big picture: a JPEG, W x H.
@@ -600,11 +651,13 @@ type Member struct {
 	Name string
 	// Contact is the name you saved them under (or their business's name),
 	// Push the name they gave themselves, and Phone their formatted phone
-	// number, each when known. Name is the first of Contact, Phone and
-	// "~Push". The pickers that find people as you type use them.
+	// number, each when known. Name is the first of Contact, "~Push" and
+	// Phone. The member list and the pickers that find people as you type
+	// use them.
 	Contact, Push, Phone string
-	Admin                bool
-	Me                   bool
+	// Admin is set for SuperAdmin too, who is usually who made the group.
+	Admin, SuperAdmin bool
+	Me                bool
 }
 
 // ChatInfo is what the contact or group info panel shows.
@@ -618,6 +671,8 @@ type ChatInfo struct {
 	AboutSet time.Time
 	// Phone is a contact's formatted phone number.
 	Phone string
+	// Push is the name a contact you haven't saved gave themselves, when known.
+	Push string
 	// Members lists group participants: you first, then admins, then the rest.
 	Members []Member
 	// Created and CreatedBy describe who made a group and when ("you" or a name).
@@ -1656,7 +1711,7 @@ func SearchKey(s string) string {
 	b.Grow(len(s))
 	for _, r := range s {
 		switch r {
-		case '*', '_', '~', '`', '\u2068', '\u2069', MentionNotifies, MentionAdmins:
+		case '*', '_', '~', '`', '\u2068', '\u2069', MentionNotifies, MentionAdmins, MentionGroup:
 			continue
 		}
 		b.WriteRune(FoldRune(r))
