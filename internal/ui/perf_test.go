@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -26,19 +27,19 @@ func TestReadPerf(t *testing.T) {
 	for k, v := range map[string]string{
 		prefAnimations: "off", prefSmoothScroll: "off", prefAutoplay: "hover",
 		prefImageCache: "64", prefLoadedMsgs: "800", prefGCPercent: "200",
-		prefTrimAfter: "never", prefPlaying: "1", prefCPUs: "1",
+		prefTrimAfter: "never", prefStickersPlaying: "2", prefPickerAnim: "hover", prefCPUs: "1", prefLottieFPS: "60",
 	} {
 		b.SetPref(k, v)
 	}
 	p := readPerf(b)
-	want := perfSettings{autoplay: "hover", imageCache: 64 << 20, loadedMsgs: 800, gcPercent: 200, gifs: 1, cpus: 1}
+	want := perfSettings{autoplay: "hover", imageCache: 64 << 20, loadedMsgs: 800, gcPercent: 200, stickers: 2, pickerAnim: "hover", cpus: 1, lottieFPS: 60}
 	if p != want {
 		t.Fatalf("got %+v, want %+v", p, want)
 	}
 	// Values that don't parse, or are out of range, are the defaults.
 	for k, v := range map[string]string{
 		prefAutoplay: "sometimes", prefImageCache: "lots", prefLoadedMsgs: "50",
-		prefGCPercent: "-1", prefTrimAfter: "0", prefPlaying: "99", prefCPUs: "100000",
+		prefGCPercent: "-1", prefTrimAfter: "0", prefStickersPlaying: "99", prefPickerAnim: "sometimes", prefCPUs: "100000", prefLottieFPS: "0",
 	} {
 		b.SetPref(k, v)
 	}
@@ -154,5 +155,23 @@ func TestWheelWithoutSmoothScroll(t *testing.T) {
 	st.frame()
 	if moved := sb.Position.Offset - start.Offset; sb.Position.First == start.First && moved != 120 || st.u.wheels[sb] != nil {
 		t.Fatalf("a notch moved the list from %+v to %+v, left to ease: %+v", start, sb.Position, st.u.wheels[sb])
+	}
+}
+
+// Unlimited stickers playing at once lifts the count and the memory cap.
+func TestUnlimitedStickers(t *testing.T) {
+	b := mock.New()
+	b.SetPref(prefStickersPlaying, "unlimited")
+	defer loadPerf(mock.New())
+	loadPerf(b)
+	if perf.stickers != 0 || playerBudget.Load() < 1<<40 {
+		t.Fatalf("stickers %d, budget %d", perf.stickers, playerBudget.Load())
+	}
+	u := New(b)
+	for i := range 40 {
+		u.stickerFrame(fmt.Sprint("m:x/", i), 64, func() []byte { return nil })
+	}
+	if n := len(u.players.m); n != 40 {
+		t.Fatalf("%d of 40 play", n)
 	}
 }

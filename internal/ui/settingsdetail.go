@@ -101,6 +101,7 @@ var settingsViews = map[string]struct {
 	"shortcuts":     {settingShortcuts, ""},
 	"performance":   {settingPerformance, ""},
 	"advanced":      {settingPerformance, "advanced"},
+	"stickers":      {settingPerformance, "stickers"},
 	"extras":        {settingExtras, ""},
 	"snippets":      {settingSnippets, ""},
 	"afklist":       {settingAFKList, ""},
@@ -154,7 +155,7 @@ func (u *UI) settingsBack() {
 	switch {
 	case s.editing != 0:
 		s.editing = 0
-	case strings.HasPrefix(s.sub, "knob:"): // a knob of the Advanced page
+	case strings.HasPrefix(s.sub, "knob:"), s.sub == "stickers": // a page of the Advanced page
 		u.openSettingsSub("advanced")
 	case s.sub != "":
 		u.openSettingsSub("")
@@ -201,6 +202,8 @@ func (u *UI) settingsTitle() string {
 		return "Ethically gray features"
 	case "advanced":
 		return "Advanced"
+	case "stickers":
+		return "Stickers"
 	}
 	if k := knobNamed(strings.TrimPrefix(s.sub, "knob:")); k != nil {
 		return k.title
@@ -225,6 +228,8 @@ func (u *UI) settingsPage() []settingsSection {
 		return u.graySettings()
 	case "advanced":
 		return u.advancedSettings()
+	case "stickers":
+		return u.stickerSettings()
 	case "theme":
 		t := u.backend.Pref(prefTheme)
 		return []settingsSection{{title: "Choose a theme", rows: []settingRow{

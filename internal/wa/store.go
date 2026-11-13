@@ -193,6 +193,7 @@ var migrations = []string{
 	// A channel's description and the code of its link (channels.go).
 	`ALTER TABLE wz_channels ADD COLUMN description TEXT NOT NULL DEFAULT ''`,
 	`ALTER TABLE wz_channels ADD COLUMN invite TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE wz_sticker_packs ADD COLUMN ord INTEGER NOT NULL DEFAULT 0`, // packs.go
 }
 
 func (s *msgStore) init(ctx context.Context) error {

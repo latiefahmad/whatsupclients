@@ -109,7 +109,7 @@ Gotchas already found in the pinned version (v0.10.x):
 - Lottie stickers (`isLottie`, mimetype `application/was`) are a zip holding
   `animation/animation.json`; WhatsApp Web plays them with lottie-web 5.12.2's SVG
   renderer. `internal/lottie` draws them in Go, a frame at a time at the size shown
-  (`runLottie`, at most 30 a second), with no allocations per frame. Match lottie-web,
+  (`runLottie`, at most 30 a second unless Settings > Performance > Advanced > Stickers says otherwise, `lottieFPS`), with no allocations per frame. Match lottie-web,
   not rlottie: rlottie applies a masked solid's opacity twice, among others. Keyframe
   times are the composition's (not less the layer's `st`); a precomp's layers play
   at its time less its `st`, stretched. `TestGolden` compares frames with references
@@ -404,7 +404,11 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    draggable edge and hiding it (the open page's rail button, Ctrl+Shift+L) in split.go; a sender's run of stickers, side by side as many to a
                    line as fit, in stickerrow.go; sticker packs (a shared pack's card, the
                    "View sticker pack" dialog, which sends its stickers and adds the pack to
-                   the picker, and the picker's tabs of added packs) in stickerpack.go; a text of one to three emojis
+                   the picker, and the picker's tabs of added packs) in stickerpack.go, and Your stickers (the
+                   picker's last tab: the added packs, removed or dragged by a handle into
+                   the order of their tabs) in stickermanage.go, and Settings > Performance > Advanced > Stickers (Your stickers, the
+                   picker's animation and keeping it open, stickers playing at once, the Lottie
+                   frame rate; app prefs read into `perf`) in stickers.go; a text of one to three emojis
                    alone, drawn big without a bubble like a sticker, in jumbo.go; the New chat panel and the
                    New group flow (also "Create a similar group") in newchat.go; the settings
                    pages (profile, account, privacy, chats, media, storage, shortcuts, help) in
@@ -631,7 +635,7 @@ go vet ./... && go build ./...
 # Side by side with a WhatsApp screenshot (writes compare.png and ours.png).
 # -view: chats, archived, status, channels, communities, settings, general, profile,
 # account, privacy, lastseen, blocked, chatsettings, notifications, shortcuts, extras, help,
-# info, statusviewer, contact (a group member's contact info:
+# stickers, info, statusviewer, contact (a group member's contact info:
 # -contact <id>, default the demo business vivy@lid)
 go run ./cmd/screenshot -compare shot.webp -crop 0,0,2000,1250 -scale 1.22 -view status
 # A crop of the right edge of a 2560x1600 window, with the info panel scrolled:
@@ -640,7 +644,7 @@ go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -rig
 # Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, scheduled, ghost (/ghost; open a
 #                     group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, forwardpick, reply, replyphoto, linkpreview, invite, groupedit (a group's info being edited: -ochat fams, groupname/groupdesc/groupphoto), picview, linkbar (the WhatsApp links bar), channellink,
 # delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
-# privacystatus, privacycommunities), pack and packtab (a sticker pack's dialog, and the picker with the chat's packs added: -ochat ririiiin); the Media panel:
+# privacystatus, privacycommunities), pack and packtab (a sticker pack's dialog, and the picker with the chat's packs added: -ochat ririiiin), mypacks and mypacksdrag (Your stickers with them, and its first pack dragged); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes; the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with
 # WHATSUP_DEMO_PHOTO=<a photo> to edit) into <out>/overlay-<name>.png:

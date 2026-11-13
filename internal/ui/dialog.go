@@ -30,6 +30,7 @@ const (
 	dialogPayload // a message's payload (/catch, snippets.go)
 	dialogAppLock // App lock's password and auto-lock (applock.go)
 	dialogPack    // a sticker pack (stickerpack.go)
+	dialogMyPacks // Your stickers: the packs added to the picker (stickermanage.go)
 	dialogList    // a bot's list of choices (listpick.go)
 	dialogEvent   // the attach menu's Create event (eventnew.go)
 	dialogChannel // Create channel (channelinfo.go)
@@ -86,6 +87,7 @@ type dialogState struct {
 	poll     pollState
 	listPick listPick
 	pack     packView
+	myPacks  myPacks
 	invite   inviteState
 	event    newEventState
 
@@ -210,6 +212,8 @@ func (u *UI) layoutDialog(gtx C) {
 		panel = record(gtx, u.appLockPanel)
 	case dialogPack:
 		panel = record(gtx, u.packPanel)
+	case dialogMyPacks:
+		panel = record(gtx, u.myPacksPanel)
 	case dialogChannel:
 		panel = record(gtx, u.createChannelPanel)
 	}
