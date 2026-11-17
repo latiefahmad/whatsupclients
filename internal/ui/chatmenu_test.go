@@ -63,13 +63,82 @@ func TestDisappearingAndTheme(t *testing.T) {
 	if info := u.backend.Info("fams"); info.Disappearing != uint32(7*24*time.Hour/time.Second) {
 		t.Errorf("timer = %d s, want 7 days", info.Disappearing)
 	}
-	u.setChatTheme("fams", 2)
+	u.setChatTheme("fams", 3)
 	u.themes = nil // read back from the prefs
-	if got := u.chatThemeOf("fams"); got != 2 {
-		t.Errorf("theme = %d, want 2", got)
+	if got := u.chatThemeOf("fams"); got != 3 {
+		t.Errorf("theme = %d, want 3", got)
 	}
 	if u.chatPalette(u.selected).BubbleOut == u.pal.BubbleOut {
 		t.Error("the theme didn't change your bubbles")
+	}
+}
+
+// TestOldChatTheme reads a theme kept before WhatsApp's themes as the one
+// it became.
+func TestOldChatTheme(t *testing.T) {
+	u := New(mock.New())
+	u.backend.SetPref(prefChatTheme+"fams", "Teal")
+	if got := chatThemes[u.chatThemeOf("fams")].id; got != "Emerald" {
+		t.Errorf("Teal became %q, want Emerald", got)
+	}
+}
+
+// TestChatLook sets the look of every chat, then one chat's bubbles and
+// wallpaper apart from it.
+func TestChatLook(t *testing.T) {
+	u := New(mock.New())
+	u.Start(func() {})
+	u.SetDark(true)
+	pink := schemeIndex("Pink")
+	u.setChatTheme(lookAll, pink)
+	if got := u.chatThemeOf("fams"); got != pink {
+		t.Fatalf("fams's scheme = %d, want every chat's %d", got, pink)
+	}
+	// Its bubbles alone: the wallpaper stays Pink's.
+	red := schemeIndex("Red@Tonal")
+	u.setBubbles("fams", red)
+	l := u.lookOf("fams")
+	if l.scheme != red || l.wall != "theme:Pink" {
+		t.Errorf("look = %+v, want Red@Tonal on Pink's wallpaper", l)
+	}
+	if p := u.lookPalette(l); p.BubbleOut != rgb(chatThemes[red].dark.out) || p.ChatBg != rgb(chatThemes[pink].dark.wall) {
+		t.Errorf("palette has bubbles %v on %v", p.BubbleOut, p.ChatBg)
+	}
+	// A plain color, read back from the prefs.
+	u.setWall("fams", "color:3")
+	u.themes = nil
+	if p := u.lookPalette(u.lookOf("fams")); p.ChatBg != solidLook(solidWalls[3], true).bg {
+		t.Errorf("wallpaper = %v, want %s", p.ChatBg, solidWalls[3].name)
+	}
+	// Default for one chat while every chat has Pink.
+	u.setChatTheme("fams", 0)
+	if got := u.chatThemeOf("fams"); got != 0 {
+		t.Errorf("fams's scheme = %d, want the app's own", got)
+	}
+	if got := u.chatThemeOf("citra"); got != pink {
+		t.Errorf("citra's scheme = %d, want every chat's %d", got, pink)
+	}
+}
+
+// TestAppAccent picks an App theme color and goes back to WhatsApp's green.
+func TestAppAccent(t *testing.T) {
+	u := New(mock.New())
+	u.Start(func() {})
+	u.SetDark(true)
+	u.setAccent("Red")
+	if u.pal.Green != rgb(0xef3345) || u.pal.ChipActive != rgb(0xa71136) {
+		t.Errorf("dark Red accent = %v, chip %v", u.pal.Green, u.pal.ChipActive)
+	}
+	u.SetDark(false)
+	if u.pal.Green != rgb(0xea0038) {
+		t.Errorf("light Red accent = %v", u.pal.Green)
+	}
+	if u.backend.Pref(prefAccent) != "Red" {
+		t.Errorf("pref = %q", u.backend.Pref(prefAccent))
+	}
+	u.setAccent("WhatsApp-Green")
+	if u.pal != &lightPalette {
+		t.Error("WhatsApp's green isn't the plain palette")
 	}
 }
 

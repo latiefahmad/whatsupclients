@@ -115,12 +115,13 @@ func main() {
 			// The UI draws its own WhatsApp-style title bar.
 			app.Decorated(false),
 		},
-		Hidden:    *background || *embedding,
-		NotifyDir: filepath.Join(*dataDir, "notifications"),
-		LinkFile:  linkFile,
-		Accounts:  list,
-		Open:      open,
-		Version:   version,
+		Hidden:       *background || *embedding,
+		NotifyDir:    filepath.Join(*dataDir, "notifications"),
+		WallpaperDir: filepath.Join(*dataDir, "wallpapers"),
+		LinkFile:     linkFile,
+		Accounts:     list,
+		Open:         open,
+		Version:      version,
 	}
 	if *demo {
 		opts.NotifyDir = demoDir

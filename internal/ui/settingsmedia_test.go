@@ -16,15 +16,15 @@ func TestSettingsSearch(t *testing.T) {
 	st.frame()
 	var found *settingsHit
 	for i, h := range u.settings.hits {
-		if h.title == "Wallpaper doodles" && h.category == settingChats {
+		if h.title == "Wallpaper doodles" && h.category == settingAppearance {
 			found = &u.settings.hits[i]
 		}
 	}
-	if found == nil || u.settings.hits[0].key != "" || u.settings.hits[0].category != settingChats {
+	if found == nil || found.category != settingAppearance {
 		t.Fatalf("hits for wallpaper: %+v", u.settings.hits)
 	}
-	if u.settings.hits[0].key != "" || u.settings.hits[0].category != settingChats {
-		t.Fatalf("Chats (by its description) should come first: %+v", u.settings.hits)
+	if u.settings.hits[0].key != "" || u.settings.hits[0].category != settingAppearance {
+		t.Fatalf("Appearance (by its description) should come first: %+v", u.settings.hits)
 	}
 	u.settings.search.SetText("microphone")
 	st.frame()

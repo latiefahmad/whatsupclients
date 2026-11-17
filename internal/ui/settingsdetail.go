@@ -95,6 +95,8 @@ var settingsViews = map[string]struct {
 	"lastseen":      {settingPrivacy, "lastseen"},
 	"blocked":       {settingPrivacy, "blocked"},
 	"chatsettings":  {settingChats, ""},
+	"appearance":    {settingAppearance, ""},
+	"apptheme":      {settingAppearance, "theme"},
 	"media":         {settingMedia, ""},
 	"notifications": {settingNotifications, ""},
 	"storage":       {settingStorage, ""},
@@ -189,7 +191,7 @@ func (u *UI) settingsTitle() string {
 	case "blocked":
 		return "Blocked contacts"
 	case "theme":
-		return "Theme"
+		return "App theme"
 	case "avatars":
 		return "Profile pictures"
 	case "camera":
@@ -232,11 +234,11 @@ func (u *UI) settingsPage() []settingsSection {
 		return u.stickerSettings()
 	case "theme":
 		t := u.backend.Pref(prefTheme)
-		return []settingsSection{{title: "Choose a theme", rows: []settingRow{
+		return []settingsSection{{title: "Dark mode", rows: []settingRow{
 			{key: "system", kind: setRadio, title: "System default", on: t != "light" && t != "dark", run: func() { u.setTheme("") }},
 			{key: "light", kind: setRadio, title: "Light", on: t == "light", run: func() { u.setTheme("light") }},
 			{key: "dark", kind: setRadio, title: "Dark", on: t == "dark", run: func() { u.setTheme("dark") }},
-		}}}
+		}}, {title: "Color", rows: []settingRow{{key: "accent", kind: setCustom, w: u.accentRows()}}}}
 	case "avatars":
 		v := u.backend.Pref(model.PrefAvatars)
 		set := func(value, title, sub string) settingRow {
@@ -313,10 +315,6 @@ func (u *UI) categoryPage(k int) []settingsSection {
 	case settingChats:
 		return []settingsSection{
 			{title: "Display", rows: []settingRow{
-				{key: "theme", ic: icPalette, title: "Theme", sub: themeNames[u.backend.Pref(prefTheme)],
-					trailing: icChevronRight, run: func() { u.openSettingsSub("theme") }},
-				{key: prefDoodles, kind: setToggle, title: "Wallpaper doodles", sub: "Draw doodles on the chat background",
-					on: u.doodles, run: func() { u.doodles = !u.doodles; setPref(b, prefDoodles, u.doodles) }},
 				{key: "avatars", ic: icAccount, title: "Profile pictures", sub: avatarNames[u.backend.Pref(model.PrefAvatars)],
 					trailing: icChevronRight, run: func() { u.openSettingsSub("avatars") }},
 			}},
@@ -325,6 +323,15 @@ func (u *UI) categoryPage(k int) []settingsSection {
 					on: prefOn(b, prefEnterSend), run: func() { u.setEnterSend(!prefOn(b, prefEnterSend)) }},
 			}},
 		}
+	case settingAppearance:
+		return []settingsSection{{rows: []settingRow{
+			{key: "chattheme", ic: icWallpaper, title: "Chat theme", sub: "Bubbles and wallpaper of every chat",
+				trailing: icChevronRight, run: func() { u.openChatTheme(nil) }},
+			{key: "theme", ic: icPalette, title: "App theme", sub: themeNames[u.backend.Pref(prefTheme)],
+				trailing: icChevronRight, run: func() { u.openSettingsSub("theme") }},
+			{key: prefDoodles, kind: setToggle, title: "Wallpaper doodles", sub: "Draw doodles on the chat background",
+				on: u.doodles, run: func() { u.doodles = !u.doodles; setPref(b, prefDoodles, u.doodles) }},
+		}}}
 	case settingShortcuts:
 		return shortcutSettings(prefOn(b, prefEnterSend))
 	case settingPerformance:
@@ -811,7 +818,8 @@ func (u *UI) applyTheme() {
 			dark = d
 		}
 	}
-	if dark != u.dark || u.pal == nil {
+	if a := u.backend.Pref(prefAccent); dark != u.dark || u.pal == nil || a != u.accent {
+		u.accent = a
 		u.SetDark(dark)
 	}
 }

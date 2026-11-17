@@ -416,7 +416,14 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    chat actions shared by menus and info panels (mute choices, lists,
                    clear/exit/delete confirms) in chatactions.go; the open chat's ⋮ menu and
                    the settings it shares with the info panel (disappearing timer, chat
-                   theme, encryption code, Add member, invite link) in chatmenu.go; the
+                   theme, encryption code, Add member, invite link) in chatmenu.go; chat
+                   themes (WhatsApp's color schemes, vibrant, tonal and minimal, and the
+                   wallpaper: a theme's, a plain color or a photo of yours; per chat or for
+                   every chat) and the Chat theme dialog's pages in chattheme.go, a photo
+                   wallpaper (cropped around a point you pick on its Photo position page,
+                   only the part that shows decoded) in wallphoto.go, their tables
+                   read from WhatsApp Web's modules in chatthemes.go, and the App theme color
+                   (Settings > Appearance > App theme, the accent across the app) in apptheme.go; the
                    info panel's own pages (starred messages, group permissions, member
                    changes) in infopages.go; the Media panel (the rail's Media button:
                    media, docs and links from every chat, or one chat's) in gallery.go; the list column's
@@ -653,7 +660,7 @@ go vet ./... && go build ./...
 
 # Side by side with a WhatsApp screenshot (writes compare.png and ours.png).
 # -view: chats, archived, status, channels, communities, settings, general, profile,
-# account, privacy, lastseen, blocked, chatsettings, notifications, shortcuts, extras, help,
+# account, privacy, lastseen, blocked, chatsettings, appearance, apptheme, notifications, shortcuts, extras, help,
 # stickers, info, statusviewer, contact (a group member's contact info:
 # -contact <id>, default the demo business vivy@lid)
 go run ./cmd/screenshot -compare shot.webp -crop 0,0,2000,1250 -scale 1.22 -view status
@@ -666,6 +673,7 @@ go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -rig
 # privacystatus, privacycommunities), pack and packtab (a sticker pack's dialog, and the picker with the chat's packs added: -ochat ririiiin), mypacks and mypacksdrag (Your stickers with them, and its first pack dragged); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes;
+# the Chat theme dialog's pages theme, themebubble, themewall, themecolor, and accent (the App theme color Red);
 # custom mentions: mentions (a group's page), custommention, newmention (its name's error), custompick (the picker offering them);
 # privatemention (the picker in a private chat: -ochat ririiiin);
 # the list column listwide, listnarrow, listhidden; the send view: tray, sendedit, sendcrop, sendfilter, senddoc, sendslash (the command picker over the caption), with

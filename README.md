@@ -90,6 +90,7 @@ exactly as WhatsApp's other linked devices do.
 - **View once** messages that open once, with screenshots blocked while one is on screen.
 - **Several accounts**, with only the open one connected, to keep memory honest.
 - **Light and dark themes**, WhatsApp's doodle wallpaper, System default that follows the OS.
+- **Chat themes and wallpapers** per chat or for every chat: WhatsApp's color schemes (vibrant, tonal and minimal), plain colors and photo wallpapers, with an App theme accent.
 - **Font size** from 70% to 200%, with Ctrl + `+` / `-` / `0`.
 - **Updates from signed GitHub releases**, checked automatically and offered as *Update now* or *Later*.
 

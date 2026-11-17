@@ -46,6 +46,8 @@ type Options struct {
 	Relaunch []string
 	// NotifyDir keeps the pictures notifications show.
 	NotifyDir string
+	// WallpaperDir keeps the photos chosen as chat wallpapers.
+	WallpaperDir string
 	// LinkFile holds chat links (wa.me, whatsup://) left by second
 	// launches, one per line; the UI drains it when a window shows.
 	LinkFile string
@@ -73,6 +75,7 @@ type Options struct {
 func Run(b model.Backend, o Options) error {
 	b, _ = withAuto(b)
 	loadPerf(b)
+	wallpaperDir = o.WallpaperDir
 	h := &host{
 		b:       b,
 		o:       o,
