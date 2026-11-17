@@ -1,10 +1,10 @@
 // Generated from CHANGELOG.md by build-releases.js — do not edit by hand.
 // Re-run it whenever CHANGELOG.md gains a release section.
 window.WUC_RELEASE = {
-  "ver": "v1.9.28",
+  "ver": "v1.9.29",
   "date": "2026-11-17",
   "items": [
-    "**Viewed by** - one of your own status updates now shows an eye with its view count. Clicking it opens the people who saw it and when, with anyone's reply to it on top; a click opens their chat.",
-    "**Status view counts** - the eye's count is live: whoever opens your status (with read receipts on) is counted at once, like on your phone, and the count goes when the status expires after 24 hours."
+    "**Lists in the composer** - start a line with `- `, `* ` or `1. ` and it shows as a bullet while you type. Shift+Enter starts the next item (numbered lists count up); on an empty one it ends the list.",
+    "**Delete a word** - Ctrl+Backspace and Ctrl+Delete now delete a word at a time in the composer, like everywhere else."
   ]
 };

@@ -96,6 +96,14 @@ Gotchas already found in the pinned version (v0.10.x):
   are faked (outline drawn twice, slant) so glyphs keep the advances the editor's caret
   and selection use. Color-emoji bitmaps ignore the text color, so the editor still
   paints them. `Editor.Regions` reuses the slice you pass it, so don't use it to append.
+- Gio's editor never deletes a word with Ctrl+Backspace/Delete where the shortcut
+  modifier is also the one that moves by words (everywhere but macOS): its shortcut
+  branch swallows the key. `wordDeleteKeys` (`composertext.go`) reads the keys before
+  the editor and deletes the word itself, so gio stays unpatched.
+- A list in the composer: a line's leading "- " or "* " draws as a bullet
+  (`bulletAt`, `composertext.go`), and `listKeys` reads Shift+Enter (Enter too, when
+  it adds a line) before the editor: it starts the next item, or ends the list on an
+  empty one (`composerNewLine`).
 - Gio makes only its window thread DPI aware on Windows. While a drag holds the mouse
   capture, Windows then reports the pointer in DPI-unaware coordinates (divided by the
   display scale), so every dragged thing lagged the pointer. `dpi_windows.go` makes the

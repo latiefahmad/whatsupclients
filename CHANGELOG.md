@@ -9,6 +9,17 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.29] - 2026-11-17
+
+### ✨ New
+
+- **Lists in the composer** - start a line with `- `, `* ` or `1. ` and
+  it shows as a bullet while you type. Shift+Enter starts the next
+  item (numbered lists count up); on an empty one it ends the list.
+
+- **Delete a word** - Ctrl+Backspace and Ctrl+Delete now delete a word
+  at a time in the composer, like everywhere else.
+
 ## [v1.9.28] - 2026-11-17
 
 ### ✨ New

@@ -1101,6 +1101,8 @@ func (u *UI) update(gtx C) {
 	u.slashKeys(gtx)
 	u.mentionKeys(gtx)
 	u.shortcodeKeys(gtx)
+	u.listKeys(gtx)
+	u.wordDeleteKeys(gtx)
 	for {
 		before := u.conv.composer.Text()
 		ev, ok := u.conv.composer.Update(gtx)
