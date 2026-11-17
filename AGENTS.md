@@ -437,7 +437,8 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    section (contacts you hid) in status.go;
                    who saw one of your own status updates and the replies to it (the eye under
                    it in the viewer, and its "Viewed by" sheet) in statusviews.go;
-                   animation helpers in anim.go; the "N unread messages" divider a chat
+                   animation helpers in anim.go; animations resting while the user
+                   is idle in resting.go; the "N unread messages" divider a chat
                    opens at in unread.go; sticker reactions (a row of stickers along
                    the bubble's bottom edge, the reaction picker's Sticker tab, and their rows in who reacted)
                    in stickerreact.go; the ⌄ button that goes back to the newest message
@@ -659,6 +660,11 @@ from `gtx.Now`; a moving one asks for the next frame, and nothing asks at rest
 - Settings > Performance > Animations (`perf.animations`) makes `tween` and `follower`
   jump to their end. New animations built on them obey it for free; anything that
   steps itself from `gtx.Now` (the typing dots, the jump-to-message glide) checks it.
+- Once the user hasn't touched the keyboard or mouse for `idleAfter` (a minute), GIFs
+  and animated stickers show a still picture until the next input (`u.rest`,
+  `resting.go`): `animFrame` and `gifFrame` refuse, so new things that play on their
+  own should go through them or check `u.rest.on`. A video note playing with sound
+  goes on.
 - `tween` is an on/off progress (a popup opening, a panel sliding) that turns around
   midway without jumping. `follower` glides a number to a new target (tab underlines),
   and `switcher` moves a highlight between items (the open chat, the active rail

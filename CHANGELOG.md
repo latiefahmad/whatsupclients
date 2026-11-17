@@ -9,6 +9,15 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.31] - 2026-11-17
+
+### ✨ New
+
+- **Rest while you're away** - after a minute without touching the
+  keyboard or mouse, GIFs, video notes and animated stickers pause to a
+  still picture until the next input, and the app sits quiet: less CPU
+  and memory while you read or are away.
+
 ## [v1.9.30] - 2026-11-17
 
 ### ✨ New

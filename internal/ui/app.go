@@ -164,6 +164,9 @@ type UI struct {
 	lock    *appLock
 	lockDlg lockDialog
 
+	// rest stops animations while the user is idle (resting.go).
+	rest resting
+
 	// Overlays: context menu, modal dialog, emoji picker, media viewer, toast.
 	ctx                     ctxMenu
 	reacts                  reactionsPopup // who reacted to a message (reactions.go)
@@ -721,6 +724,7 @@ func (u *UI) Layout(gtx C) D {
 // layoutWindow draws the window's contents at the zoom.
 func (u *UI) layoutWindow(gtx C) D {
 	trimShapes()
+	u.updateResting(gtx.Now)
 	u.applyEvents()
 	if a := u.deco.Update(gtx); a != 0 && u.window != nil {
 		u.window.Perform(a)
