@@ -9,6 +9,26 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.26] - 2026-11-17
+
+### ✨ New
+
+- **Color palettes** - swap WhatsApp's colors for Catppuccin, Tokyo Night,
+  Gruvbox, Everforest, Solarized or Ayu under *Settings > Appearance >
+  App theme > Palette*. Each has a flavor for the light and one for the
+  dark theme, so Dark mode goes on working.
+
+- **Palette accents** - the App theme page's Color grid offers the
+  palette's own hues, and a chat theme under a palette takes that
+  palette's hue for its bubbles and wallpaper, never WhatsApp's colors.
+
+- **Theme panel** - a chat's Chat theme now opens as a panel beside the
+  chat, like WhatsApp's, with a reset button; every chat's stays a
+  dialog.
+
+- **Search clear** - the chat list's search gains a clear button, and Esc
+  closes the topmost panel first, then the search, then the open chat.
+
 ## [v1.9.25] - 2026-11-17
 
 ### ✨ New

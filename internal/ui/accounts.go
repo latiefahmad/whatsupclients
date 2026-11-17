@@ -23,7 +23,7 @@ import (
 
 // appPrefs are the preferences that belong to the app rather than to an
 // account: they carry over when another account opens.
-var appPrefs = append([]string{prefTheme, prefAccent, prefDoodles, prefEnterSend, prefBackground, prefListWidth, prefListHidden, prefZoom,
+var appPrefs = append([]string{prefTheme, prefAccent, prefScheme, prefSchemeAccent, prefDoodles, prefEnterSend, prefBackground, prefListWidth, prefListHidden, prefZoom,
 	prefPrivacy, prefPrivacyToggle, prefNoCapture, prefVoiceRate, prefVolume, prefAppLock, prefAppLockAfter}, append(perfPrefs, stickerPrefs...)...)
 
 // accountRow is an account in the switcher.

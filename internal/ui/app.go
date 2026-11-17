@@ -191,17 +191,20 @@ type UI struct {
 		key string
 		at  time.Time
 	}
-	pendingCopy string              // clipboard text waiting for a frame
-	themes      map[string]chatLook // chats' themes and wallpapers, as read from prefs
-	lookPal     lookPal             // the palette of the last chat look drawn
-	accent      string              // the App theme color (prefAccent)
-	themeUI     themeUI             // the Chat theme dialog's page
-	gallery     galleryState        // the Media panel (gallery.go)
-	secCode     secCode             // the security code the encryption dialog shows
-	link        groupLink           // the invite link the link dialog shows
-	textSel     textSelection       // selected message text
-	focus       any                 // editor to focus next frame (see requestFocus)
-	focusReq    bool
+	pendingCopy  string              // clipboard text waiting for a frame
+	themes       map[string]chatLook // chats' themes and wallpapers, as read from prefs
+	lookPal      lookPal             // the palette of the last chat look drawn
+	accent       string              // the App theme color (prefAccent)
+	scheme       string              // the palette (prefScheme, scheme.go) and
+	schemeAccent string              // the hue of it picked as the accent
+	appPal       *Palette            // the app's palette, whatever theme the open chat has
+	themeUI      themeUI             // the Chat theme panel (or dialog) and its page
+	gallery      galleryState        // the Media panel (gallery.go)
+	secCode      secCode             // the security code the encryption dialog shows
+	link         groupLink           // the invite link the link dialog shows
+	textSel      textSelection       // selected message text
+	focus        any                 // editor to focus next frame (see requestFocus)
+	focusReq     bool
 
 	anims    animStore                     // keyed fades: hovers, new messages, reactions
 	follows  followerStore                 // keyed glides: a poll's bars
@@ -557,6 +560,7 @@ func (u *UI) setPage(pg page) {
 	u.hideInfo()
 	u.hideChatSearch()
 	u.hideMsgInfo()
+	u.hideChatTheme()
 	u.status.viewer.close()
 	u.closeStatusText()
 	if u.postingStatus() {
@@ -578,11 +582,8 @@ func (u *UI) SelectName(name string) {
 // SetDark switches between the light and dark palettes.
 func (u *UI) SetDark(dark bool) {
 	u.dark = dark
-	if dark {
-		u.pal = withAccent(&darkPalette, true, u.accent)
-	} else {
-		u.pal = withAccent(&lightPalette, false, u.accent)
-	}
+	u.pal = appPalette(dark, u.scheme, u.accent, u.schemeAccent)
+	u.appPal = u.pal
 	u.th.Palette.Fg = u.pal.Text
 	u.th.Palette.Bg = u.pal.Panel
 	richBlocks.m = nil // spans carry palette colors (mentions, links)
@@ -634,6 +635,7 @@ func (u *UI) open(c *model.Chat) {
 	}
 	u.hideChatSearch()
 	u.hideMsgInfo()
+	u.hideChatTheme()
 	u.selected = c
 	u.loadLatest()
 	unread := c.Unread
@@ -877,7 +879,7 @@ func (u *UI) layoutPageSidebar(gtx C) D {
 // background over the whole pane: the card under it has none.
 func (u *UI) layoutRightPane(gtx C) D {
 	if u.selected != nil && u.selPage == u.page && u.page != pageStatus && u.page != pageSettings {
-		if !u.info.shown() && !u.search.shown() && !u.msgInfo.shown() {
+		if !u.info.shown() && !u.search.shown() && !u.msgInfo.shown() && !u.themeUI.shown() {
 			return u.layoutConversation(gtx)
 		}
 		return u.layoutWithInfo(gtx)
@@ -931,6 +933,9 @@ func (u *UI) layoutWithInfo(gtx C) D {
 	}
 	if u.msgInfo.shown() {
 		open, panel, anim = u.msgInfo.open, u.layoutMsgInfo, &u.msgInfo.anim
+	}
+	if t := &u.themeUI; t.shown() {
+		open, panel, anim = t.open, u.layoutChatTheme, &t.anim
 	}
 	v := easeOut(anim.step(gtx, open, durPanel))
 	infoW := max(gtx.Dp(340), int(float32(u.winWidth)*0.3))
@@ -1194,6 +1199,8 @@ func (u *UI) escape() {
 		u.search.open = false
 	case u.msgInfo.open:
 		u.msgInfo.open = false
+	case u.themeUI.open:
+		u.themeBack()
 	case u.newChat.open():
 		u.newChatEscape()
 	case u.sidebar.pick.on && u.page == pageChats:
@@ -1212,14 +1219,10 @@ func (u *UI) escape() {
 		u.settingsBack()
 	case u.info.open:
 		u.info.open = false
-	case u.selected != nil:
-		u.closeChat()
 	case u.page == pageChats && u.listQuery() != "":
-		// With no chat open, Esc clears the chat list's search, bringing
-		// the whole list back.
-		u.sidebar.search.SetText("")
-		u.runListSearch("")
-		u.sidebar.list.Position = layout.Position{}
+		u.clearListSearch() // before the chat: Esc closes the search alone
+	case u.selected != nil && u.selPage == u.page:
+		u.closeChat() // like WhatsApp Web's Esc
 	}
 }
 
@@ -2115,8 +2118,12 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 		u.openConvMenu()
 	case "accent":
 		u.setAccent("Red") // the App theme color Red
+	case "palette":
+		// The App theme page with the Catppuccin palette.
+		u.setScheme("catppuccin")
+		u.ShowPage("apptheme")
 	case "theme", "themebubble", "themewall", "themecolor":
-		// The Chat theme dialog's pages, the chat in Pearl Indigo.
+		// The Chat theme panel's pages, the chat in Pearl Indigo.
 		u.openChatTheme(u.selected)
 		u.setChatTheme(u.selected.ID, schemeIndex("Pearl-Indigo"))
 		u.themeUI.page = map[string]string{"themebubble": "bubble", "themewall": "wall", "themecolor": "color"}[name]

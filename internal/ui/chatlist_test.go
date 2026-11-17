@@ -132,8 +132,8 @@ func TestListSearch(t *testing.T) {
 	}
 }
 
-// TestListSearchEscape checks that Esc closes the open chat first, then
-// clears the chat list's search, bringing the whole list back.
+// TestListSearchEscape checks that Esc closes the chat list's search first
+// (the whole list shows again), then closes the open chat.
 func TestListSearchEscape(t *testing.T) {
 	u, _, frame, _ := chatListUI(t)
 	u.SelectID("citra")
@@ -142,15 +142,15 @@ func TestListSearchEscape(t *testing.T) {
 		frame()
 	}
 	u.escape()
-	if u.selected != nil {
-		t.Fatal("the first Esc didn't close the chat")
+	if got := u.listQuery(); got != "" {
+		t.Fatal("the first Esc didn't clear the search")
 	}
-	if got := u.listQuery(); got != "anam" {
-		t.Errorf("the first Esc cleared the search too: %q", got)
+	if u.selected == nil {
+		t.Fatal("the first Esc closed the chat too")
 	}
 	u.escape()
-	if got := u.listQuery(); got != "" {
-		t.Errorf("search still holds %q", got)
+	if u.selected != nil {
+		t.Errorf("the second Esc didn't close the chat")
 	}
 	// The whole list is back, not just what matched.
 	if n := len(u.sidebar.find.msgs); n != 0 {

@@ -71,6 +71,7 @@ var (
 	icPalette       = icon.Palette
 	icPhotoLibrary  = icon.PhotoLibrary
 	icWallpaper     = icon.Image
+	icDoodles       = icon.Brush
 	icLockOutline   = icon.Lock
 	icShield        = icon.Security
 	icSettings      = icon.Settings

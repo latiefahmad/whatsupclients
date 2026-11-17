@@ -47,12 +47,13 @@ func main() {
 	infoOffset := flag.Int("infooffset", 0, "with -infoscroll, pixels of that item scrolled out of view")
 	win := flag.String("win", "", "in -compare mode, render a window of this size (W,H px) and crop it like the screenshot")
 	rightAligned := flag.Bool("right", false, "with -win, the screenshot is the window's right edge")
-	overlay := flag.String("overlay", "", "render only this overlay (menu, accounts, loginaccounts, slash, slashkick, slashrun, ghost, chatmenu, mute, lists, msgmenu, stickermenu, emoji, viewer, forward, forwardpick, reply, linkpreview, delete, select, edit, edits, msginfo, reactions (-ochat work), mention, mentioned, attach, poll, contacts, invite, tray, quality, sendedit, sendcrop, sendfilter, senddoc, statusadd, statusmenu, statusprivacy, statuspeople, statusname, statusnew, statushidden, statusrowmenu, statusaudience, statustext, privacy, privacystatus, privacycommunities, statussend, draft, afklist, newchat, newnumber, newmembers, newgroup, search, membersearch, listsearch, listchip, newlist, pack, packtab, mypacks, mypacksdrag (-ochat ririiiin), theme, themebubble, themewall, themecolor, accent) to <out>/overlay-<name>.png")
+	overlay := flag.String("overlay", "", "render only this overlay (menu, accounts, loginaccounts, slash, slashkick, slashrun, ghost, chatmenu, mute, lists, msgmenu, stickermenu, emoji, viewer, forward, forwardpick, reply, linkpreview, delete, select, edit, edits, msginfo, reactions (-ochat work), mention, mentioned, attach, poll, contacts, invite, tray, quality, sendedit, sendcrop, sendfilter, senddoc, statusadd, statusmenu, statusprivacy, statuspeople, statusname, statusnew, statushidden, statusrowmenu, statusaudience, statustext, privacy, privacystatus, privacycommunities, statussend, draft, afklist, newchat, newnumber, newmembers, newgroup, search, membersearch, listsearch, listchip, newlist, pack, packtab, mypacks, mypacksdrag (-ochat ririiiin), theme, themebubble, themewall, themecolor, accent, palette) to <out>/overlay-<name>.png")
 	at := flag.String("at", "600,300", "with -overlay, where menus open (x,y px)")
 	overlayChat := flag.String("ochat", "citra", "with -overlay, the demo chat to open")
 	filmName := flag.String("film", "", "render an animation's frames to <out>/film-<name>.png: an -overlay name, viewer-click (thumbnail at -at), info, message, reorder, hover, scroll (-at over the chat), typing, typists (-ochat work), ghost, privacy, privacyhover or vote (-ochat design)")
 	step := flag.Duration("step", 30*time.Millisecond, "with -film, time between frames")
 	readme := flag.Bool("readme", false, "render every screenshot in README.md into <out> (use -out docs/screenshots -w 1536 -h 841 -scale 1.25)")
+	flag.StringVar(&scheme, "scheme", "", "draw with this palette (catppuccin, catppuccin-macchiato, catppuccin-frappe, tokyonight, tokyonight-storm, tokyonight-moon, gruvbox, everforest, solarized, ayu), or palette:hue for another of its accents")
 	flag.Parse()
 	if *memprofile != "" {
 		defer func() {
@@ -106,6 +107,7 @@ func main() {
 		fmt.Sscanf(*at, "%d,%d", &x, &y)
 		u := ui.New(mock.New())
 		u.Start(func() {})
+		setScheme(u)
 		u.SetDark(true)
 		u.SelectID(*overlayChat)
 		u.ShowOverlay(*overlay, x, y)
@@ -155,6 +157,7 @@ func main() {
 		} else {
 			u.Start(func() {})
 		}
+		setScheme(u)
 		u.SetDark(s.dark)
 		if s.chat != "" {
 			u.SelectID(s.chat)
@@ -211,6 +214,7 @@ func compareShot(path, crop, win string, rightAligned bool, chat, chatName, cont
 		u.Start(func() {})
 		u.SelectID(chat)
 	}
+	setScheme(u)
 	u.SetDark(true)
 	switch view {
 	case "chats":
@@ -303,4 +307,14 @@ func writePNG(path string, img image.Image) error {
 	}
 	defer f.Close()
 	return png.Encode(f, img)
+}
+
+// scheme is the -scheme flag: a palette, or palette:hue.
+var scheme string
+
+// setScheme gives a UI the -scheme flag's palette.
+func setScheme(u *ui.UI) {
+	if id, hue, _ := strings.Cut(scheme, ":"); id != "" {
+		u.SetScheme(id, hue)
+	}
 }
