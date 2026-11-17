@@ -289,6 +289,11 @@ Gotchas already found in the pinned version (v0.10.x):
   labels close friends and custom audiences (`ContextInfo.statusAudienceMetadata`,
   which viewers show as a chip on the picture). WhatsApp shows the statuses of
   saved contacts only (`savedContact`).
+- Who saw your status is their read receipts of it (`from="status@broadcast"`, the
+  viewer as participant), kept in `wz_receipts` under `status@broadcast`
+  (`onStatusView`); a reply is a message in the replier's chat whose quote's
+  `remoteJid` is `status@broadcast`, pointed at from `wz_status_replies` as it arrives
+  (`noteStatusReply`; replies from history sync aren't). Both go when the status expires.
 - After sleep the connection is dead, but the kernel keeps the socket for minutes and
   hypermeow's keepalive runs on the monotonic clock, which stood still: it took three
   minutes awake to reconnect. `watchSleep` (`internal/wa/backend.go`) sees the wall
@@ -419,6 +424,8 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    your own's name and emoji, sliding in over the Status list like New chat) and
                    a contact's Hide/Unhide menu in statusprivacy.go; the Status list's Hidden
                    section (contacts you hid) in status.go;
+                   who saw one of your own status updates and the replies to it (the eye under
+                   it in the viewer, and its "Viewed by" sheet) in statusviews.go;
                    animation helpers in anim.go; the "N unread messages" divider a chat
                    opens at in unread.go; sticker reactions (a row of stickers along
                    the bubble's bottom edge, the reaction picker's Sticker tab, and their rows in who reacted)
@@ -694,7 +701,7 @@ go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -rig
     -scale 1.5616 -view info -infoscroll 7 -infooffset 40
 # Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, scheduled, ghost (/ghost; open a
 #                     group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, forwardpick, reply, replyphoto, linkpreview, invite, groupedit (a group's info being edited: -ochat fams, groupname/groupdesc/groupphoto), picview, linkbar (the WhatsApp links bar), channellink,
-# delete, select, edit, edits, reactions (who reacted: -ochat work), stickerreact (sticker reactions on the chat's last messages), stickerreactors (who gave them), reactpicker (the reaction picker, with its Sticker tab), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
+# delete, select, edit, edits, reactions (who reacted: -ochat work), stickerreact (sticker reactions on the chat's last messages), stickerreactors (who gave them), reactpicker (the reaction picker, with its Sticker tab), statusviews (your status's Viewed by sheet), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
 # privacystatus, privacycommunities), pack and packtab (a sticker pack's dialog, and the picker with the chat's packs added: -ochat ririiiin), mypacks and mypacksdrag (Your stickers with them, and its first pack dragged); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes;

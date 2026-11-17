@@ -1218,6 +1218,8 @@ func (u *UI) escape() {
 		u.cancelEdit()
 	case u.conv.reply != nil:
 		u.conv.reply = nil
+	case u.status.viewer.isOpen() && u.status.viewer.views.open:
+		u.status.viewer.views.close()
 	case u.status.viewer.isOpen():
 		u.status.viewer.close()
 	case u.status.privacy.open():
@@ -1349,6 +1351,7 @@ func (u *UI) applyEvents() {
 		case model.StatusEvent:
 			u.statuses = u.backend.Statuses()
 			u.statusPrivacyEvent()
+			u.statusViewsChanged()
 		case model.StickersEvent:
 			u.picker.stickersOK = [3]bool{} // reloaded when next drawn
 			u.picker.packsOK = false
@@ -1947,7 +1950,7 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 			u.status.viewer.anim.snap(true)
 		}
 	case "statusadd", "statusmenu", "statusprivacy", "statustext", "statussend",
-		"statushidden", "statusrowmenu", "statuspeople", "statusname", "statusnew", "statusaudience":
+		"statushidden", "statusrowmenu", "statuspeople", "statusname", "statusnew", "statusaudience", "statusviews":
 		// Posting a status, from the Status page; the Hidden section open,
 		// a contact's menu (Hide), an update shared with close friends;
 		// Status privacy, an audience's people, its name and emoji, and a
@@ -1962,6 +1965,16 @@ func (u *UI) ShowOverlay(name string, x, y int) {
 			u.status.showHidden = true
 		case "statusrowmenu":
 			u.ctx = ctxMenu{kind: ctxStatusRow, chatID: "arman", at: u.mouse}
+		case "statusviews":
+			for _, t := range u.statuses {
+				if t.Mine {
+					u.status.viewer.show(t)
+					u.status.viewer.paused = true
+					u.status.viewer.anim.snap(true)
+					u.status.viewer.views.open = true
+					u.status.viewer.views.anim.snap(true)
+				}
+			}
 		case "statusaudience":
 			for _, t := range u.statuses {
 				if t.ID == "citra" && len(t.Updates) > 1 {

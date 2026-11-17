@@ -43,6 +43,30 @@ func (b *Backend) ViewStatus(threadID, statusID string) {
 	b.emit(model.StatusEvent{})
 }
 
+// StatusViews returns demo viewers of your own updates, and a reply.
+func (b *Backend) StatusViews(statusID string) model.StatusViews {
+	var v model.StatusViews
+	for _, t := range b.statuses {
+		for _, u := range t.Updates {
+			if !t.Mine || u.ID != statusID || u.Views == 0 {
+				continue
+			}
+			now := b.now()
+			people := []model.StatusViewer{
+				{ID: "citra", Name: "Citra Scholastika", At: now.Add(-2 * time.Minute)},
+				{ID: "arman", Name: "Arman Maulana", At: now.Add(-5 * time.Minute)},
+				{ID: "lintang", Name: "Lintang Kawuryan", At: now.Add(-14 * time.Minute)},
+				{ID: "otter", Name: "Hartanto (Otter)", At: now.Add(-47 * time.Minute)},
+			}
+			v.Viewers = people[:min(u.Views, len(people))]
+			v.Replies = []model.StatusReply{{ID: "citra", Name: "Citra Scholastika", Msg: &model.Message{
+				ID: "status-reply-1", ChatID: "citra", Sender: "Citra Scholastika", SenderID: "citra",
+				Text: "So pretty! Where is this?", Time: now.Add(-90 * time.Second)}}}
+		}
+	}
+	return v
+}
+
 // PostStatus adds the update to your own thread. A photo is its own
 // preview.
 func (b *Backend) PostStatus(p model.StatusPost) {
@@ -323,6 +347,12 @@ func textStatus(id string, t time.Time, viewed bool, text string, bg uint32) *mo
 	return &model.StatusUpdate{ID: id, Text: text, Time: t, Viewed: viewed, Background: bg}
 }
 
+// viewedBy marks one of your own updates seen by n people (StatusViews).
+func viewedBy(n int, u *model.StatusUpdate) *model.StatusUpdate {
+	u.Views = n
+	return u
+}
+
 // closeFriends marks u as shared with its poster's close friends.
 func closeFriends(u *model.StatusUpdate) *model.StatusUpdate {
 	u.Audience, u.AudienceEmoji = "Close friends", "💜"
@@ -338,7 +368,7 @@ func demoDate(y int, mo time.Month, d int) time.Time {
 func demoExtras(at func(daysAgo, h, m int) time.Time) extras {
 	return extras{
 		statuses: []*model.StatusThread{
-			{ID: "me", Mine: true, Updates: []*model.StatusUpdate{status("s-me", at(0, 7, 12), false, 0x2c3e50, 0x4ca1af)}},
+			{ID: "me", Mine: true, Updates: []*model.StatusUpdate{viewedBy(4, status("s-me", at(0, 7, 12), false, 0x2c3e50, 0x4ca1af))}},
 			{ID: "citra", Name: "Citra Scholastika", Updates: []*model.StatusUpdate{
 				status("s-r1", at(0, 9, 2), false, 0xee9ca7, 0xffdde1), closeFriends(status("s-r2", at(0, 9, 5), false, 0x3a7bd5, 0x00d2ff))}},
 			{ID: "arman", Name: "Arman Maulana", Updates: []*model.StatusUpdate{

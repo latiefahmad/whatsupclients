@@ -1459,6 +1459,7 @@ func (b *Backend) apply(info *types.MessageInfo, p parsed) {
 		}
 		b.emit(model.MessageEvent{Msg: m, New: isNew})
 		b.emitChat(chat)
+		b.noteStatusReply(ctx, r)
 		if isNew {
 			b.autoDownload(m)
 		}
@@ -1521,7 +1522,8 @@ func (b *Backend) onReceipt(e *events.Receipt) {
 			return
 		}
 	} else if isStatus(e.Chat) {
-		return // someone viewed one of yours
+		b.onStatusView(e) // someone viewed one of yours
+		return
 	}
 	switch e.Type {
 	case types.ReceiptTypeReadSelf:

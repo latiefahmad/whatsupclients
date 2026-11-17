@@ -9,6 +9,18 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.28] - 2026-11-17
+
+### ✨ New
+
+- **Viewed by** - one of your own status updates now shows an eye with
+  its view count. Clicking it opens the people who saw it and when,
+  with anyone's reply to it on top; a click opens their chat.
+
+- **Status view counts** - the eye's count is live: whoever opens your
+  status (with read receipts on) is counted at once, like on your
+  phone, and the count goes when the status expires after 24 hours.
+
 ## [v1.9.27] - 2026-11-17
 
 ### ✨ New

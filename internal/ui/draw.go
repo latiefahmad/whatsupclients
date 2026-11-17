@@ -223,6 +223,11 @@ func clickable(gtx C, c *widget.Clickable, w layout.Widget) D {
 	})
 }
 
+// noFocus keeps c out of Tab's way: a scrim, or an area that swallows
+// clicks. Without the keyboard feature (keyboard.go) and the gio.patch
+// that gives Clickable.NoFocus, this passes c through.
+func noFocus(c *widget.Clickable) *widget.Clickable { return c }
+
 // iconButton is a round, hover-highlighted icon button of size box dp.
 func (u *UI) iconButton(gtx C, c *widget.Clickable, ic *icon.Icon, box, size unit.Dp, col color.NRGBA) D {
 	return clickable(gtx, c, func(gtx C) D {

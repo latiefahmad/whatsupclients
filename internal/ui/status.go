@@ -358,6 +358,7 @@ type statusViewer struct {
 	vidHeld  bool          // the video is paused while the timer waits
 	reply    widget.Editor
 	send     widget.Clickable
+	views    statusViews // who saw your own update (statusviews.go)
 }
 
 // statusDuration is how long a picture or text update stays on screen. A
@@ -377,6 +378,7 @@ func (v *statusViewer) show(t *model.StatusThread) {
 	}
 	v.shownAt, v.zp, v.frac, v.held, v.paused = time.Time{}, zoomPan{}, 0, 0, false
 	v.reply.SingleLine, v.reply.Submit = true, true
+	v.views.open, v.views.loaded = false, false
 	v.reply.SetText("")
 }
 
@@ -385,6 +387,7 @@ func (v *statusViewer) close() {
 	if v.thread != nil {
 		v.closing = true
 	}
+	v.views.open = false
 	v.video.stop()
 }
 
@@ -592,7 +595,7 @@ func (u *UI) layoutStatusViewer(gtx C) {
 	if v.isOpen() {
 		u.syncStatusVideo(t, up)
 		// Its menu, and the dialog Hide asks in, hold it too.
-		hold := v.paused || v.zp.zoomed() || v.replying(gtx) || u.ctx.isOpen() || u.dialog.isOpen()
+		hold := v.paused || v.zp.zoomed() || v.replying(gtx) || u.ctx.isOpen() || u.dialog.isOpen() || v.views.open
 		if u.statusTick(gtx, now, hold) {
 			advance(1)
 			gtx.Execute(op.InvalidateCmd{})
@@ -626,7 +629,7 @@ func (u *UI) layoutStatusViewer(gtx C) {
 	// The update itself, centered in a portrait frame, with the reply box
 	// under it for someone else's status.
 	replyH := 0
-	if !t.Mine && !t.Group {
+	if !t.Group {
 		replyH = gtx.Dp(64)
 	}
 	frameH := sz.Y - gtx.Dp(120) - replyH
@@ -748,6 +751,9 @@ func (u *UI) layoutStatusViewer(gtx C) {
 
 	if !t.Mine && !t.Group {
 		u.layoutStatusReply(gtx, image.Rect(frame.Min.X, frame.Max.Y+gtx.Dp(14), frame.Max.X, frame.Max.Y+gtx.Dp(14)+gtx.Dp(48)))
+	}
+	if t.Mine && !t.Group {
+		u.layoutStatusViews(gtx, up, frame)
 	}
 }
 

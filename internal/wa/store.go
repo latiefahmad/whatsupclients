@@ -202,7 +202,7 @@ func (s *msgStore) init(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("drop old messages: %w", err)
 	}
-	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+stickerSchema+packSchema+votesSchema+reactionsSchema+stickerReactSchema+snippetSchema+channelPostsSchema); err != nil {
+	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+statusRepliesSchema+stickerSchema+packSchema+votesSchema+reactionsSchema+stickerReactSchema+snippetSchema+channelPostsSchema); err != nil {
 		return err
 	}
 	for _, m := range migrations {
@@ -283,7 +283,8 @@ func (s *msgStore) wipe(ctx context.Context, keep ...string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages; DELETE FROM wz_chats;
 		DELETE FROM wz_status; DELETE FROM wz_channels; DELETE FROM wz_channel_posts; DELETE FROM wz_lists; DELETE FROM wz_list_chats; DELETE FROM wz_stickers;
 		DELETE FROM wz_sticker_packs; DELETE FROM wz_pack_stickers;
-		DELETE FROM wz_edits; DELETE FROM wz_votes; DELETE FROM wz_reactions; DELETE FROM wz_sticker_reacts; DELETE FROM wz_snippets;`)
+		DELETE FROM wz_edits; DELETE FROM wz_votes; DELETE FROM wz_reactions; DELETE FROM wz_sticker_reacts; DELETE FROM wz_snippets;
+		DELETE FROM wz_receipts; DELETE FROM wz_status_replies;`)
 	if err != nil {
 		return err
 	}
