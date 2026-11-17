@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -201,7 +202,7 @@ func (s *msgStore) init(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("drop old messages: %w", err)
 	}
-	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+stickerSchema+packSchema+votesSchema+reactionsSchema+snippetSchema+channelPostsSchema); err != nil {
+	if _, err := s.db.ExecContext(ctx, schema+receiptsSchema+stickerSchema+packSchema+votesSchema+reactionsSchema+stickerReactSchema+snippetSchema+channelPostsSchema); err != nil {
 		return err
 	}
 	for _, m := range migrations {
@@ -211,6 +212,9 @@ func (s *msgStore) init(ctx context.Context) error {
 	}
 	if err := s.keepOldReactions(ctx); err != nil {
 		return fmt.Errorf("keep old reactions: %w", err)
+	}
+	if err := s.foldStickerReacts(ctx); err != nil {
+		return fmt.Errorf("fold sticker reactions: %w", err)
 	}
 	if err := s.rereadRichResponses(ctx); err != nil {
 		return fmt.Errorf("reread rich responses: %w", err)
@@ -247,6 +251,7 @@ func (s *msgStore) dropOldMessages(ctx context.Context) (bool, error) {
 		`DROP TABLE IF EXISTS wz_votes`,
 		`DROP TABLE IF EXISTS wz_receipts`,
 		`DROP TABLE IF EXISTS wz_reactions`,
+		`DROP TABLE IF EXISTS wz_sticker_reacts`,
 		`UPDATE wz_chats SET unread = 0`,
 		`DELETE FROM wz_meta WHERE key IN ('legacy_media_migrated', 'file_info_migrated')`,
 	} {
@@ -274,11 +279,24 @@ func (s *msgStore) failStale(ctx context.Context) error {
 	return err
 }
 
-func (s *msgStore) wipe(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages; DELETE FROM wz_chats; DELETE FROM wz_meta;
+func (s *msgStore) wipe(ctx context.Context, keep ...string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages; DELETE FROM wz_chats;
 		DELETE FROM wz_status; DELETE FROM wz_channels; DELETE FROM wz_channel_posts; DELETE FROM wz_lists; DELETE FROM wz_list_chats; DELETE FROM wz_stickers;
 		DELETE FROM wz_sticker_packs; DELETE FROM wz_pack_stickers;
-		DELETE FROM wz_edits; DELETE FROM wz_votes; DELETE FROM wz_reactions; DELETE FROM wz_snippets;`)
+		DELETE FROM wz_edits; DELETE FROM wz_votes; DELETE FROM wz_reactions; DELETE FROM wz_sticker_reacts; DELETE FROM wz_snippets;`)
+	if err != nil {
+		return err
+	}
+	// The meta rows named in keep stay (the app's preferences).
+	args := make([]any, len(keep))
+	for i, k := range keep {
+		args[i] = k
+	}
+	q := `DELETE FROM wz_meta`
+	if len(keep) > 0 {
+		q += ` WHERE key NOT IN (?` + strings.Repeat(", ?", len(keep)-1) + `)`
+	}
+	_, err = s.db.ExecContext(ctx, q, args...)
 	return err
 }
 
@@ -601,7 +619,8 @@ func (s *msgStore) markDeleted(ctx context.Context, chat, id, by string) error {
 		WHERE chat = ?1 AND id = ?2;
 		DELETE FROM wz_edits WHERE chat = ?1 AND id = ?2;
 		DELETE FROM wz_votes WHERE chat = ?1 AND id = ?2;
-		DELETE FROM wz_reactions WHERE chat = ?1 AND id = ?2`, chat, id, int(model.KindDeleted), by)
+		DELETE FROM wz_reactions WHERE chat = ?1 AND id = ?2;
+		DELETE FROM wz_sticker_reacts WHERE rchat = ?1 AND parent = ?2`, chat, id, int(model.KindDeleted), by)
 	return err
 }
 
@@ -722,6 +741,11 @@ func (s *msgStore) mediaBlob(ctx context.Context, chat, id string) (media model.
 	var raw []byte
 	err = s.db.QueryRowContext(ctx, `SELECT media, raw_payload FROM wz_messages WHERE chat = ? AND id = ?`, chat, id).
 		Scan(&media, &raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		// A sticker someone reacted with (stickerreact.go).
+		blob, err = s.stickerReactBlob(ctx, chat, id)
+		return model.MediaSticker, blob, err
+	}
 	_, blob = rawMedia(raw)
 	return
 }
@@ -744,7 +768,7 @@ type rawMsg struct {
 
 // msgColumns are what scanMessage reads.
 const msgColumns = `chat, id, sender_jid, sender_push, from_me, ts, kind, media, text, receipt, reaction, starred, pinned,
-	edited, revoked, revoked_by, opened, raw_payload, edit_payload`
+	edited, revoked, revoked_by, opened, ` + stickerColumn + `, raw_payload, edit_payload`
 
 type scanner interface{ Scan(dest ...any) error }
 
@@ -757,10 +781,10 @@ func scanMessage(sc scanner) (rawMsg, error) {
 		edited, revoked         int64
 		fromMe, starred, opened bool
 		raw, edit               []byte
-		react                   string
+		react, stickers         string
 	)
 	err := sc.Scan(&m.ChatID, &m.ID, &r.senderJID, &r.senderPush, &fromMe, &ts, &kind, &media, &m.Text, &receipt,
-		&react, &starred, &pinned, &edited, &revoked, &r.revokedBy, &opened, &raw, &edit)
+		&react, &starred, &pinned, &edited, &revoked, &r.revokedBy, &opened, &stickers, &raw, &edit)
 	if err != nil {
 		return r, err
 	}
@@ -771,6 +795,9 @@ func scanMessage(sc scanner) (rawMsg, error) {
 	m.Receipt = model.Receipt(receipt)
 	m.Starred, m.Pinned = starred, pinned != 0
 	fillReactions(&m, react)
+	if kind != int(model.KindDeleted) {
+		m.Stickers = readStickers(stickers)
+	}
 	if edited != 0 {
 		m.Edited = time.UnixMilli(edited)
 	}

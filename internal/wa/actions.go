@@ -1216,7 +1216,8 @@ func (s *msgStore) deleteMessageEvery(ctx context.Context, chats []string, id st
 	_, err = s.db.ExecContext(ctx, `DELETE FROM wz_edits WHERE id = ?1 AND chat IN (`+in+`);
 		DELETE FROM wz_receipts WHERE id = ?1 AND chat IN (`+in+`);
 		DELETE FROM wz_votes WHERE id = ?1 AND chat IN (`+in+`);
-		DELETE FROM wz_reactions WHERE id = ?1 AND chat IN (`+in+`)`, args...)
+		DELETE FROM wz_reactions WHERE id = ?1 AND chat IN (`+in+`);
+		DELETE FROM wz_sticker_reacts WHERE parent = ?1 AND rchat IN (`+in+`)`, args...)
 	if err == nil {
 		err = s.refreshLastTS(ctx, chats)
 	}
@@ -1249,7 +1250,7 @@ func (s *msgStore) clearChatEvery(ctx context.Context, chats []string, upTo int6
 	args := append([]any{upTo}, stringsToAny(chats)...)
 	in := numbered(len(chats), 2)
 	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat IN (`+in+`) AND starred = 0 AND (?1 = 0 OR ts <= ?1);
-		`+orphanEditsFor("chat IN ("+in+")"), args...)
+		`+orphanEditsFor(in), args...)
 	if err != nil {
 		return err
 	}
@@ -1269,7 +1270,7 @@ func (s *msgStore) deleteChatEvery(ctx context.Context, chats []string, upTo int
 	args := append([]any{upTo}, stringsToAny(chats)...)
 	in := numbered(len(chats), 2)
 	_, err := s.db.ExecContext(ctx, `DELETE FROM wz_messages WHERE chat IN (`+in+`) AND (?1 = 0 OR ts <= ?1);
-		`+orphanEditsFor("chat IN ("+in+")"), args...)
+		`+orphanEditsFor(in), args...)
 	if err != nil {
 		return err
 	}
@@ -1291,17 +1292,20 @@ func stringsToAny(ss []string) []any {
 	return out
 }
 
-// orphanEditsFor deletes the versions, receipts, votes and reactions of the
-// messages that are gone, for the chats matching cond.
-func orphanEditsFor(cond string) string {
-	return `DELETE FROM wz_edits WHERE ` + cond + ` AND NOT EXISTS
+// orphanEditsFor deletes the versions, receipts, votes and reactions
+// (sticker ones too) of the messages that are gone, for the chats matching
+// the chat list in.
+func orphanEditsFor(in string) string {
+	return `DELETE FROM wz_edits WHERE chat IN (` + in + `) AND NOT EXISTS
 	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_edits.chat AND m.id = wz_edits.id);
-	DELETE FROM wz_receipts WHERE ` + cond + ` AND NOT EXISTS
+	DELETE FROM wz_receipts WHERE chat IN (` + in + `) AND NOT EXISTS
 	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_receipts.chat AND m.id = wz_receipts.id);
-	DELETE FROM wz_votes WHERE ` + cond + ` AND NOT EXISTS
+	DELETE FROM wz_votes WHERE chat IN (` + in + `) AND NOT EXISTS
 	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_votes.chat AND m.id = wz_votes.id);
-	DELETE FROM wz_reactions WHERE ` + cond + ` AND NOT EXISTS
-	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_reactions.chat AND m.id = wz_reactions.id)`
+	DELETE FROM wz_reactions WHERE chat IN (` + in + `) AND NOT EXISTS
+	(SELECT 1 FROM wz_messages m WHERE m.chat = wz_reactions.chat AND m.id = wz_reactions.id);
+	DELETE FROM wz_sticker_reacts WHERE rchat IN (` + in + `) AND NOT EXISTS
+	(SELECT 1 FROM wz_messages m WHERE m.chat = rchat AND m.id = parent)`
 }
 
 func (s *msgStore) putList(ctx context.Context, id, name string, custom, deleted bool, order int) error {

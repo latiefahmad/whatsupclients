@@ -429,6 +429,7 @@ func (b *Backend) resolve(ctx context.Context, r rawMsg, isGroup bool) *model.Me
 		m.Text, m.Notice = b.systemText(ctx, r, r.stub, r.stubParams)
 		return m
 	}
+	b.nameStickers(ctx, m)
 	if isGroup && !m.FromMe && r.senderJID != "" {
 		m.Sender = b.senderNameStr(ctx, r.senderJID, r.senderPush)
 		if l, ok := b.memberLabelOf(ctx, m.ChatID, r.senderJID); ok {

@@ -789,6 +789,13 @@ func (a *Backend) sent() {
 // Ghost reports whether ghost mode is on.
 func (a *Backend) Ghost() bool { return a.ghost }
 
+// KeepPrefs passes on to the backend it wraps (model.PrefKeeper).
+func (a *Backend) KeepPrefs(keys []string) {
+	if b, ok := a.Backend.(model.PrefKeeper); ok {
+		b.KeepPrefs(keys)
+	}
+}
+
 // SetPref keeps a pref, and notices ghost mode turning on or off.
 func (a *Backend) SetPref(key, value string) {
 	a.Backend.SetPref(key, value)
@@ -910,6 +917,12 @@ func (a *Backend) PressButton(m *model.Message, i int, row string) *model.Messag
 func (a *Backend) React(m *model.Message, emoji string) {
 	if !a.refused() {
 		a.Backend.React(m, emoji)
+	}
+}
+
+func (a *Backend) ReactSticker(m *model.Message, sticker *model.Message) {
+	if !a.refused() {
+		a.Backend.ReactSticker(m, sticker)
 	}
 }
 

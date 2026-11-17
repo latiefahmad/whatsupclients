@@ -332,6 +332,20 @@ Gotchas already found in the pinned version (v0.10.x):
   messages) and marks the setting in `wz_chats.settled`, so the history's older
   copy (`setMeta`) doesn't undo it. Reading on the phone with read receipts on comes
   as a plain read receipt from your own device, not `read-self`.
+- A sticker reaction is a `stickerMessage` of its own whose `messageContextInfo` points to the
+  message it reacts to (a `STICKER_ANNOTATION` association, 11); taking it back is deleting
+  that sticker message for everyone. It's no message here: `parse` files it under the message,
+  in `wz_sticker_reacts` (`internal/wa/stickerreact.go`), its file downloads under the chat and
+  its own ID (`mediaBlob`), and `msgColumns` reads a message's with a subquery
+  (`Message.Stickers`, each person's latest). Phones show up to three
+  in a row along the bubble's bottom edge, from its edge or from the emoji pill, the newest
+  first and in front; a new one pops in while the others move over (`stickerReactions`,
+  `internal/ui/stickerreact.go`; read off screenshots of an unreleased feature, and other
+  screenshots had them on the bubble's corners). The first and third lean clockwise, the middle
+  one the other way, and their corners are rounded.
+  WhatsApp shows none in a channel, in a community's announcements or on a sticker message
+  (`takesStickers`), and its phones can't give one yet, so the reaction picker's Sticker tab is
+  an extra feature (`prefStickerReact`).
 
 If a doc and the source disagree, trust the source for the pinned version. If you bump a
 dependency, re-read the changelog and fix any deprecations in the same change.
@@ -391,7 +405,7 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    Snippets, the snippets /snippet send offers in the slash picker, their {variables}
                    and /catch's payload dialog) in snippets.go; and
                    the Extra features settings page in extras.go (the app's own features,
-                   such as slash commands, Extended mentions (one switch for @admin, custom mentions, @Tim frontend: people you
+                   such as slash commands, Sticker reactions (the reaction picker's Sticker tab), Extended mentions (one switch for @admin, custom mentions, @Tim frontend: people you
                    pick in a group, named and mentioned like @admin, in custommention.go, and mentions in private chats, of the other person only), the Privacy mode toggle, Block screen
                    recording and Raw photos: each off until turned on), and
                    its Ethically gray features page (Edit history, Keep deleted messages, Replay view
@@ -406,7 +420,9 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    a contact's Hide/Unhide menu in statusprivacy.go; the Status list's Hidden
                    section (contacts you hid) in status.go;
                    animation helpers in anim.go; the "N unread messages" divider a chat
-                   opens at in unread.go; the ⌄ button that goes back to the newest message
+                   opens at in unread.go; sticker reactions (a row of stickers along
+                   the bubble's bottom edge, the reaction picker's Sticker tab, and their rows in who reacted)
+                   in stickerreact.go; the ⌄ button that goes back to the newest message
                    (with the unread count) and the day pinned at the top while a chat
                    scrolls in scrolldown.go; system messages ("Alice added Bob", missed
                    calls: grey chips down the middle) in system.go; group invite links (the dialog that joins
@@ -468,6 +484,8 @@ internal/wa/       hypermeow backend: pairing, events, SQLite message store, nam
                    what a stored message shows, read from its payload (raw_payload, which
                    /catch shows, and edit_payload), in payload.go;
                    albums (an albumMessage, then each picture pointing back to it) in album.go;
+                   sticker reactions (sticker messages filed under the message they react
+                   to, wz_sticker_reacts) in stickerreact.go;
                    polls, locations, contact cards and events (cards in bubbles) and the
                    votes and event answers they get (wz_votes) in polls.go;
                    system messages (model.KindSystem), stored with a waWeb stub as their
@@ -676,7 +694,7 @@ go run ./cmd/screenshot -compare info.png -crop 0,0,795,1597 -win 2560,1600 -rig
     -scale 1.5616 -view info -infoscroll 7 -infooffset 40
 # Render one overlay with demo data (menu, accounts, loginaccounts, slash, slashkick, slashcalc, slashschedule, slashrun, scheduled, ghost (/ghost; open a
 #                     group: -ochat work), chatmenu, mute, lists, msgmenu, stickermenu, emoji, sticker, viewer, forward, forwardpick, reply, replyphoto, linkpreview, invite, groupedit (a group's info being edited: -ochat fams, groupname/groupdesc/groupphoto), picview, linkbar (the WhatsApp links bar), channellink,
-# delete, select, edit, edits, reactions (who reacted: -ochat work), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
+# delete, select, edit, edits, reactions (who reacted: -ochat work), stickerreact (sticker reactions on the chat's last messages), stickerreactors (who gave them), reactpicker (the reaction picker, with its Sticker tab), mention, mentioned, shortcode (the :emoji: picker), votes (a poll's or event's votes: -ochat design or fams), search (WHATSUP_DEMO_SEARCH=<query>), membersearch, listsearch (the chat list's search, the same variable), listchip, newlist, listpick (a bot's list of choices: -ochat shop), reactbar (a hovered message's React button's), report (Report's question for the last message received), selectchats, applock (setting it up), applockon, lockscreen, afklist (the AFK list settings), zoombubble, zoommenu, privacy (also
 # privacystatus, privacycommunities), pack and packtab (a sticker pack's dialog, and the picker with the chat's packs added: -ochat ririiiin), mypacks and mypacksdrag (Your stickers with them, and its first pack dragged); the Media panel:
 # gallery, gallerydocs, gallerylinks, galleryselect, chatgallery, starredall (the ⋮ menu's Starred messages); the open chat's convmenu, timer, theme,
 # encryption, addmember, invitelink, left (a group you left: -ochat fams), and its info pages perms, starred, changes;

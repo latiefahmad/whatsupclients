@@ -9,6 +9,26 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.27] - 2026-11-17
+
+### ✨ New
+
+- **Sticker reactions** - react to a message with a sticker from the
+  reaction picker's new Sticker tab. Turn it on under *Settings > Extra
+  features > Reactions > Sticker reactions*. The sticker reactions other
+  people gave sit in a row along the bubble's bottom edge; click one to
+  see who reacted, and take yours back there.
+
+- **Preferences survive logout** - the theme, palette, font size and
+  other app settings now stay when you log an account out or switch
+  accounts, instead of going back to the defaults.
+
+### 🚀 Improved
+
+- **Lighter on memory** - cached pictures' pixels now live outside the
+  Go heap, so long sessions collect far less garbage and use noticeably
+  less memory.
+
 ## [v1.9.26] - 2026-11-17
 
 ### ✨ New
