@@ -43,6 +43,7 @@ type content struct {
 	media    model.Media
 	duration int
 	thumb    []byte
+	round    bool          // a video note (ptvMessage)
 	inner    proto.Message // the media message, which downloading the media takes
 	lottie   bool          // a Lottie sticker (application/was)
 	bg       uint32        // ARGB background of a text status
@@ -134,7 +135,7 @@ func unwrapOnce(m *waE2E.Message) *waE2E.Message {
 func isViewOnce(m *waE2E.Message) bool {
 	for i := 0; i < 5 && m != nil; i++ {
 		if m.GetViewOnceMessage() != nil || m.GetViewOnceMessageV2() != nil || m.GetViewOnceMessageV2Extension() != nil ||
-			m.GetImageMessage().GetViewOnce() || m.GetVideoMessage().GetViewOnce() || m.GetAudioMessage().GetViewOnce() {
+			m.GetImageMessage().GetViewOnce() || m.GetVideoMessage().GetViewOnce() || m.GetPtvMessage().GetViewOnce() || m.GetAudioMessage().GetViewOnce() {
 			return true
 		}
 		m = unwrapOnce(m)
@@ -158,6 +159,8 @@ func hasMediaKey(m *waE2E.Message) bool {
 		e = m.GetImageMessage()
 	case m.GetVideoMessage() != nil:
 		e = m.GetVideoMessage()
+	case m.GetPtvMessage() != nil:
+		e = m.GetPtvMessage()
 	case m.GetAudioMessage() != nil:
 		e = m.GetAudioMessage()
 	default:
@@ -235,7 +238,7 @@ func describe(m *waE2E.Message) content {
 			thumb: e.GetJPEGThumbnail(), inner: e, ctx: e.GetContextInfo()}
 	case m.GetPtvMessage() != nil:
 		e := m.GetPtvMessage()
-		return content{kind: model.KindImage, media: model.MediaVideo, duration: int(e.GetSeconds()),
+		return content{kind: model.KindImage, media: model.MediaVideo, round: true, duration: int(e.GetSeconds()),
 			thumb: e.GetJPEGThumbnail(), inner: e, ctx: e.GetContextInfo()}
 	case m.GetAudioMessage() != nil:
 		e := m.GetAudioMessage()
@@ -487,6 +490,7 @@ func (b *Backend) parse(ctx context.Context, evt *events.Message) (p parsed, ok 
 	msg.ID = evt.Info.ID
 	msg.Kind = c.kind
 	msg.Media = c.media
+	msg.Round = c.round
 	msg.Duration = c.duration
 	msg.FromMe = evt.Info.IsFromMe
 	msg.Text = c.text

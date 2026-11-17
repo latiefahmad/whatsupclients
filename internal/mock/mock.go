@@ -457,6 +457,8 @@ func demo(now time.Time) []*demoChat {
 		}},
 		{ID: "pelatnas", Name: "Pelatnas Badminton", IsGroup: true, Muted: true, Unread: 27, Presence: "Jess, Ona, Aji, Sil", Messages: []*model.Message{
 			grp("Aji", day(1, 21, 40), "Leg day tomorrow, no excuses 🦵"),
+			{Sender: "Sil", SenderID: "sil", Kind: model.KindImage, Media: model.MediaVideo, Round: true, Duration: 12,
+				Time: day(1, 21, 46), ImageA: 0x3a6073, ImageB: 0x16222a},
 			{Sender: "Jess", Kind: model.KindImage, Media: model.MediaVideo, Duration: 18, Text: "New PR on squats 💪",
 				Time: day(1, 21, 52), ImageA: 0x232526, ImageB: 0x414345},
 		}},

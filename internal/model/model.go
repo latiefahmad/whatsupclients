@@ -125,6 +125,7 @@ type Quote struct {
 	SenderID string
 	Text     string
 	Media    Media
+	Round    bool // it quotes a video note (see Message.Round)
 }
 
 // Message is a single conversation entry.
@@ -133,6 +134,9 @@ type Message struct {
 	ChatID string
 	Kind   Kind
 	Media  Media
+	// Round marks a video note (a ptvMessage): a MediaVideo that plays in a
+	// circle in the chat instead of a bubble.
+	Round bool
 	// Lottie marks a Lottie sticker (application/was): its media is a zip
 	// of animations, and a premium one's second animation is an effect
 	// played around it.
@@ -437,7 +441,7 @@ func (m *Message) CanEdit(now time.Time) bool {
 	case MediaNone:
 		return m.Text != ""
 	case MediaImage, MediaVideo, MediaGIF:
-		return true
+		return !m.Round // a video note has no caption
 	}
 	return false
 }

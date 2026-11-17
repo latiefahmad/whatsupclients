@@ -9,6 +9,18 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.30] - 2026-11-17
+
+### ✨ New
+
+- **Video notes** - the round voice-and-video messages now play in a
+  circle in the chat, like a sticker: no bubble, muted, looping on its
+  own once the file is here. A click plays it with sound, with a
+  progress ring around it.
+
+- **A video note stays one** - forwarding or quoting a video note sends
+  it as a video note again, and its caption can't be edited.
+
 ## [v1.9.29] - 2026-11-17
 
 ### ✨ New

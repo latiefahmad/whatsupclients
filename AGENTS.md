@@ -122,6 +122,9 @@ Gotchas already found in the pinned version (v0.10.x):
   `internal/webpanim`; `stickerFrame` (`player.go`) plays the ones on screen.
   GIFs are MP4s: `gifFrame` (`gifplayer.go`) plays the ones on screen in their bubbles,
   muted and looping (`Player.SetLoop`), at most `maxGIFs` at once.
+- A video note is a `ptvMessage`, the same protobuf as a `videoMessage`, so its stored
+  blob doesn't say which it was. It keeps `media` = `MediaVideo`, `Message.Round` is read
+  from the payload, and `asVideoNote` turns the blob back when it's forwarded or quoted.
 - Lottie stickers (`isLottie`, mimetype `application/was`) are a zip holding
   `animation/animation.json`; WhatsApp Web plays them with lottie-web 5.12.2's SVG
   renderer. `internal/lottie` draws them in Go, a frame at a time at the size shown
@@ -466,7 +469,9 @@ internal/ui/       Gio UI: login/QR, nav rail, pages (chats, status, channels, c
                    changes) in infopages.go; the Media panel (the rail's Media button:
                    media, docs and links from every chat, or one chat's) in gallery.go; the list column's
                    draggable edge and hiding it (the open page's rail button, Ctrl+Shift+L) in split.go; a sender's run of stickers, side by side as many to a
-                   line as fit, in stickerrow.go; sticker packs (a shared pack's card, the
+                   line as fit, in stickerrow.go; video notes (a circle like a sticker, without a
+                   bubble, muted and looping through `gifFrame` once the file is here, a click plays
+                   them with sound and a progress ring) in roundvideo.go; sticker packs (a shared pack's card, the
                    "View sticker pack" dialog, which sends its stickers and adds the pack to
                    the picker, and the picker's tabs of added packs) in stickerpack.go, and Your stickers (the
                    picker's last tab: the added packs, removed or dragged by a handle into
