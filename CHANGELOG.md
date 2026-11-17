@@ -9,6 +9,28 @@ for the tagged version to GitHub **verbatim** as the release notes. Conventions:
 - Everything under the heading until the next `## [` heading is published as-is.
 - Write for end users: what is new, what is fixed, and which file to download.
 
+## [v1.9.25] - 2026-11-17
+
+### ✨ New
+
+- **Chat themes** - give every chat (or all chats at once) one of
+  WhatsApp's color schemes - vibrant, tonal or minimal - under
+  *Settings > Appearance > Chat theme*.
+
+- **Wallpapers** - a chat's wallpaper is its theme's, a plain color, or
+  one of your photos. A photo is cropped around a point you pick on its
+  Photo position page, and only the part that shows is decoded.
+
+- **App theme color** - pick an accent under *Settings > Appearance >
+  App theme*; it colors buttons, chips, links and read ticks across the
+  app.
+
+### 🚀 Improved
+
+- **Colors from WhatsApp Web** - the light and dark palettes use
+  WhatsApp's own design tokens now, so the app matches your phone more
+  closely.
+
 ## [v1.9.24] - 2026-11-13
 
 ### ✨ New
